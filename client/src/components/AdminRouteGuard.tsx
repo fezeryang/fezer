@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl, isOAuthConfigured } from "@/const";
 import { AlertTriangle, Lock, LogIn } from "lucide-react";
 import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "./ui/button";
 
 export type AdminRouteGuardProps = {
@@ -17,6 +18,7 @@ export function AdminRouteGuard({
   redirectOnUnauthenticated = true,
 }: AdminRouteGuardProps) {
   const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
@@ -78,7 +80,7 @@ export function AdminRouteGuard({
           <Button
             variant="outline"
             onClick={() => {
-              window.location.href = "/";
+              setLocation("/");
             }}
             className="w-full max-w-xs"
           >
@@ -117,7 +119,7 @@ export function AdminRouteGuard({
           <Button
             variant="outline"
             onClick={() => {
-              window.location.href = "/";
+              setLocation("/");
             }}
             className="w-full max-w-xs"
           >

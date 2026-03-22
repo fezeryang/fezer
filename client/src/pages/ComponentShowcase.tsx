@@ -172,6 +172,7 @@ import {
 import { useState } from "react";
 import { toast as sonnerToast } from "sonner";
 import { AIChatBox, type Message } from "@/components/AIChatBox";
+import { withBasePath } from "@/lib/base-path";
 
 export default function ComponentsShowcase() {
   const { theme, toggleTheme } = useTheme();
@@ -847,11 +848,11 @@ export default function ComponentsShowcase() {
                   <Breadcrumb>
                     <BreadcrumbList>
                       <BreadcrumbItem>
-                        <BreadcrumbLink href="/">Home</BreadcrumbLink>
+                        <BreadcrumbLink href={withBasePath("/")}>Home</BreadcrumbLink>
                       </BreadcrumbItem>
                       <BreadcrumbSeparator />
                       <BreadcrumbItem>
-                        <BreadcrumbLink href="/components">
+                        <BreadcrumbLink href={withBasePath("/components")}>
                           Components
                         </BreadcrumbLink>
                       </BreadcrumbItem>

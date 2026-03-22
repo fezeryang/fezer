@@ -1,10 +1,11 @@
 import { trpc } from "@/lib/trpc";
+import { routerBase } from "@/lib/base-path";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
-import { useLocation } from "wouter";
+import { Router, useLocation } from "wouter";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
@@ -80,5 +81,7 @@ function Root() {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <Root />
+  <Router base={routerBase || undefined}>
+    <Root />
+  </Router>
 );

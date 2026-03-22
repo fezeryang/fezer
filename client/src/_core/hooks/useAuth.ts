@@ -1,4 +1,5 @@
 import { getLoginUrl } from "@/const";
+import { isAbsoluteUrl, stripBasePath, withBasePath } from "@/lib/base-path";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -67,9 +68,13 @@ export function useAuth(options?: UseAuthOptions) {
 
     const targetUrl = redirectPath ?? getLoginUrl();
     if (!targetUrl) return;
-    if (window.location.pathname === targetUrl) return;
 
-    window.location.href = targetUrl;
+    if (!isAbsoluteUrl(targetUrl)) {
+      const currentPath = stripBasePath(window.location.pathname);
+      if (currentPath === targetUrl) return;
+    }
+
+    window.location.href = withBasePath(targetUrl);
   }, [
     redirectOnUnauthenticated,
     redirectPath,
