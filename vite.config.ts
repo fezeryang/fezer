@@ -154,6 +154,11 @@ const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(
 
 export default defineConfig({
   plugins,
+  // Base path for GitHub Pages deployment:
+  // - User-page (username.github.io): VITE_BASE_PATH="/" or unset
+  // - Repo-page (username.github.io/repo): VITE_BASE_PATH="/repo/"
+  // Set via workflow env or local .env for preview. Must include trailing slash.
+  base: process.env.VITE_BASE_PATH || "/",
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

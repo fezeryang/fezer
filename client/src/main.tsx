@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
+import { useLocation } from "wouter";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
@@ -18,7 +19,10 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  window.location.href = getLoginUrl();
+  const loginUrl = getLoginUrl();
+  if (loginUrl) {
+    window.location.href = loginUrl;
+  }
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -52,10 +56,29 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-createRoot(document.getElementById("root")!).render(
-  <trpc.Provider client={trpcClient} queryClient={queryClient}>
-    <QueryClientProvider client={queryClient}>
+function AdminRuntimeProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </trpc.Provider>
+  );
+}
+
+function Root() {
+  const [location] = useLocation();
+  const isAdminRoute = location === "/admin" || location.startsWith("/admin/");
+
+  if (!isAdminRoute) {
+    return <App />;
+  }
+
+  return (
+    <AdminRuntimeProviders>
       <App />
-    </QueryClientProvider>
-  </trpc.Provider>
+    </AdminRuntimeProviders>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(
+  <Root />
 );

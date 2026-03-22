@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
+import { loadPosts } from "@/content/loaders";
 
 declare global {
   interface Window {
@@ -11,39 +12,43 @@ declare global {
 
 export default function Blog() {
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const [activeEntry, setActiveEntry] = useState(1);
+  const [activeEntry, setActiveEntry] = useState<string | null>(null);
   const p5InstanceRef = useRef<any>(null);
 
-  const blogEntries = [
-    {
-      id: 1,
-      date: "MAR. 24 / 2024",
-      title: "The Brutalist Resonance",
-      preview:
-        "Exploring the intersection of raw concrete forms and low-frequency synthesis...",
-    },
-    {
-      id: 2,
-      date: "FEB. 12 / 2024",
-      title: "Parametric Rhythms",
-      preview:
-        "Applying Voronoi tessellation to rhythmic structures. Each cell represents...",
-    },
-    {
-      id: 3,
-      date: "JAN. 05 / 2024",
-      title: "Extruded Blueprints",
-      preview:
-        "A study on the verticality of technical drawings. When the 2D plan becomes...",
-    },
-    {
-      id: 4,
-      date: "DEC. 18 / 2023",
-      title: "Void & Silence",
-      preview:
-        "Negative space in architecture is the visual equivalent of silence...",
-    },
-  ];
+  const { posts, loadError } = useMemo(() => {
+    try {
+      return { posts: loadPosts(), loadError: null as string | null };
+    } catch (error) {
+      console.error("[Blog] Failed to load static posts:", error);
+      return { posts: [], loadError: "文章加载失败，请稍后重试。" };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (posts.length === 0) {
+      setActiveEntry(null);
+      return;
+    }
+
+    const hasActiveEntry = activeEntry !== null && posts.some((post) => post.slug === activeEntry);
+    if (!hasActiveEntry) {
+      setActiveEntry(posts[0].slug);
+    }
+  }, [posts, activeEntry]);
+
+  const formatDate = (dateString?: string | Date | null) => {
+    if (!dateString) return "未知日期";
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return "未知日期";
+      const year = d.getFullYear();
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const day = d.getDate().toString().padStart(2, '0');
+      return `${year}.${month}.${day}`;
+    } catch (e) {
+      return "未知日期";
+    }
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -186,32 +191,38 @@ export default function Blog() {
       <aside className="w-[450px] bg-blueprint-dark bg-opacity-80 backdrop-blur border-r border-blueprint-blue border-opacity-15 overflow-y-auto p-16 z-10">
         <div className="mb-20">
           <h2 className="text-xs font-mono tracking-widest text-blueprint-cyan mb-2">
-            Archive / V.04
+            Fezer / 个人日志
           </h2>
           <h1 className="text-5xl font-bold text-white">
-            Architectural<br />Sonics
+            思考与<br />沉淀
           </h1>
         </div>
 
-        {blogEntries.map((entry) => (
-          <div
-            key={entry.id}
-            className={`log-entry cursor-pointer mb-12 ${
-              activeEntry === entry.id ? "active" : ""
-            }`}
-            onClick={() => setActiveEntry(entry.id)}
-          >
-            <span className="text-xs font-mono text-blue-300 opacity-60 block mb-2">
-              {entry.date}
-            </span>
-            <h3 className="text-lg font-semibold text-white mb-3">
-              {entry.title}
-            </h3>
-            <p className="text-sm text-blue-200 opacity-70 line-clamp-3">
-              {entry.preview}
-            </p>
-          </div>
-        ))}
+        {loadError ? (
+          <div className="text-red-400 opacity-60 font-mono text-sm">{loadError}</div>
+        ) : posts.length === 0 ? (
+          <div className="text-blue-300 opacity-60 font-mono text-sm">暂无文章</div>
+        ) : (
+          posts.map((post) => (
+            <div
+              key={post.slug}
+              className={`log-entry cursor-pointer mb-12 ${
+                activeEntry === post.slug ? "active" : ""
+              }`}
+              onClick={() => setActiveEntry(post.slug)}
+            >
+              <span className="text-xs font-mono text-blue-300 opacity-60 block mb-2">
+                {formatDate(post.date)}
+              </span>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                {post.title}
+              </h3>
+              <p className="text-sm text-blue-200 opacity-70 line-clamp-3">
+                {post.excerpt || "暂无预览..."}
+              </p>
+            </div>
+          ))
+        )}
       </aside>
 
       {/* Canvas Container */}

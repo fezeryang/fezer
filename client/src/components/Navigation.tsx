@@ -5,18 +5,18 @@ export default function Navigation() {
   const [location] = useLocation();
 
   const navItems = [
-    { label: "HOME", href: "/" },
-    { label: "PORTFOLIO", href: "/portfolio" },
-    { label: "LAB", href: "/lab" },
-    { label: "BLOG", href: "/blog" },
-    { label: "ABOUT", href: "/about" },
+    { label: "首页", href: "/" },
+    { label: "作品", href: "/portfolio" },
+    { label: "实验室", href: "/lab" },
+    { label: "博客", href: "/blog" },
+    { label: "关于", href: "/about" },
   ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center p-8 pointer-events-none">
       <div className="pointer-events-auto">
         <div className="text-xs font-bold tracking-widest font-mono text-text-main">
-          KINETIC_PORTFOLIO // 01
+          FEZER_PORTFOLIO // 01
         </div>
       </div>
 

@@ -251,14 +251,14 @@ export default function Lab() {
       <div className="fixed inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
         <div className="pointer-events-auto">
           <h1 className="text-6xl md:text-8xl font-bold text-white mix-blend-difference">
-            Hyper<br />Static
+            Fezer<br />实验室
           </h1>
         </div>
 
         <div className="text-right text-sm font-mono pointer-events-auto">
-          <div>FRAME_RATE: <span id="fps">60</span></div>
-          <div>SCROLL_POS: <span id="scrollVal">{Math.round(scrollT * 100)}%</span></div>
-          <div>PHASE: {scrollT < 0.6 ? "01" : scrollT < 0.85 ? "02" : "03"}</div>
+          <div>帧率: <span id="fps">60</span></div>
+          <div>滚动位置: <span id="scrollVal">{Math.round(scrollT * 100)}%</span></div>
+          <div>阶段: {scrollT < 0.6 ? "01" : scrollT < 0.85 ? "02" : "03"}</div>
         </div>
       </div>
     </div>

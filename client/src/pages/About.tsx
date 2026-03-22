@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
+import { marked } from "marked";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
+import { getDefaultProfile } from "@/content/loaders";
 
 declare global {
   interface Window {
@@ -11,6 +13,7 @@ declare global {
 
 export default function About() {
   const p5InstanceRef = useRef<any>(null);
+  const profile = getDefaultProfile();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.p5) return;
@@ -124,9 +127,9 @@ export default function About() {
         {/* Left Navigation */}
         <div className="flex flex-col justify-between border-l border-text-main border-opacity-10 pl-8">
           <div className="writing-mode-vertical text-xs font-bold tracking-widest text-text-main opacity-60 space-y-8">
-            <span>Archive Index — 2024</span>
-            <span>Refractive Studies</span>
-            <span>Architectural Echo</span>
+            <span>归档索引 — 2024</span>
+            <span>个人叙事</span>
+            <span>技术探索</span>
           </div>
         </div>
 
@@ -134,70 +137,111 @@ export default function About() {
         <main className="col-span-1 pt-32">
           <header className="mb-32">
             <h1 className="text-6xl md:text-7xl font-bold mb-8 leading-tight">
-              Prismatic<br />Alabaster.
+              {profile?.name ?? "待补充"}
             </h1>
             <p className="text-lg text-text-main opacity-70 max-w-md">
-              A repository of spatial observations, sonic architecture, and the
-              intersection of light and text.
+              {profile?.bio ?? "待补充"}
             </p>
           </header>
 
-          {/* Record Feed */}
-          <section className="space-y-32">
+          {/* Profile Sections */}
+          <section className="space-y-16">
             <article className="grid grid-cols-2 gap-10">
               <div className="text-sm font-mono text-text-main opacity-60">
-                001 / JUN
+                简介
               </div>
-              <div>
-                <span className="text-xs font-bold tracking-widest text-text-main opacity-50 block mb-3">
-                  Acoustic Geometry
-                </span>
-                <h2 className="text-3xl font-light mb-6 leading-tight">
-                  The weight of silence in brutalist concrete voids.
-                </h2>
-                <p className="text-lg leading-relaxed text-text-main opacity-70">
-                  Architecture is frozen music, but what happens when the music
-                  is purely ambient? Observations on how sound reflects off raw
-                  aggregate surfaces in the afternoon sun.
-                </p>
+              <div className="text-lg text-text-main opacity-70">
+                {profile?.body ? (
+                  <div 
+                    className="prose max-w-none text-inherit"
+                    dangerouslySetInnerHTML={{ __html: marked.parse(profile.body) as string }}
+                  />
+                ) : (
+                  "待补充"
+                )}
               </div>
             </article>
 
+            {/* Skills Section */}
             <article className="grid grid-cols-2 gap-10">
               <div className="text-sm font-mono text-text-main opacity-60">
-                002 / MAY
+                技能与兴趣
               </div>
               <div>
                 <span className="text-xs font-bold tracking-widest text-text-main opacity-50 block mb-3">
-                  Refraction Theory
+                  技能与兴趣
                 </span>
-                <h2 className="text-3xl font-light mb-6 leading-tight">
-                  Light as a structural load-bearing element.
-                </h2>
-                <p className="text-lg leading-relaxed text-text-main opacity-70">
-                  If we treat photon density as a physical weight, our glass
-                  structures would collapse under the noon sun. Exploring the
-                  visual metaphor of structural transparency.
-                </p>
+                {profile?.skills && profile.skills.length > 0 ? (
+                  <ul className="space-y-2">
+                    {profile.skills.map((skill, idx) => (
+                      <li key={idx} className="text-lg text-text-main opacity-70">
+                        • {skill}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-lg text-text-main opacity-50">待补充</p>
+                )}
               </div>
             </article>
 
+            {/* Projects Section */}
             <article className="grid grid-cols-2 gap-10">
               <div className="text-sm font-mono text-text-main opacity-60">
-                003 / MAY
+                项目
               </div>
               <div>
                 <span className="text-xs font-bold tracking-widest text-text-main opacity-50 block mb-3">
-                  Harmonic Grid
+                  项目
                 </span>
-                <h2 className="text-3xl font-light mb-6 leading-tight">
-                  Twelve-tone rows applied to urban planning.
-                </h2>
-                <p className="text-lg leading-relaxed text-text-main opacity-70">
-                  Designing a city block where the zoning height is determined
-                  by the frequency of a Schoenberg composition. Rhythmic
-                  dissonance in the skyline.
-                </p>
+                {profile?.projects && profile.projects.length > 0 ? (
+                  <ul className="space-y-2">
+                    {profile.projects.map((project, idx) => (
+                      <li key={idx} className="text-lg text-text-main opacity-70">
+                        <a 
+                          href={project.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="hover:opacity-100 transition-opacity"
+                        >
+                          {project.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-lg text-text-main opacity-50">待补充</p>
+                )}
+              </div>
+            </article>
+
+            {/* Contact Section */}
+            <article className="grid grid-cols-2 gap-10">
+              <div className="text-sm font-mono text-text-main opacity-60">
+                联系方式
+              </div>
+              <div>
+                <span className="text-xs font-bold tracking-widest text-text-main opacity-50 block mb-3">
+                  联系方式
+                </span>
+                {profile?.contact && Object.keys(profile.contact).length > 0 ? (
+                  <ul className="space-y-2">
+                    {Object.entries(profile.contact).map(([platform, link]) => (
+                      <li key={platform} className="text-lg text-text-main opacity-70">
+                        <a 
+                          href={link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="hover:opacity-100 transition-opacity"
+                        >
+                          {platform}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-lg text-text-main opacity-50">待补充</p>
+                )}
               </div>
             </article>
           </section>
@@ -208,25 +252,24 @@ export default function About() {
           <div className="glass-card p-8">
             <div className="space-y-4 text-xs font-mono text-text-main opacity-70 mb-6">
               <div className="flex justify-between pb-2 border-b border-text-main border-opacity-10">
-                <span>LATITUDE</span>
-                <span>40.7128 N</span>
+                <span>姓名</span>
+                <span>{profile?.name ?? "待补充"}</span>
               </div>
               <div className="flex justify-between pb-2 border-b border-text-main border-opacity-10">
-                <span>REFRACTION</span>
-                <span>1.458 η</span>
+                <span>地区</span>
+                <span>{profile?.locale ?? "待补充"}</span>
               </div>
               <div className="flex justify-between pb-2 border-b border-text-main border-opacity-10">
-                <span>FREQUENCY</span>
-                <span>440 Hz</span>
+                <span>技能</span>
+                <span>{profile?.skills.length ?? 0} 项</span>
               </div>
               <div className="flex justify-between">
-                <span>OPACITY</span>
-                <span>82%</span>
+                <span>项目</span>
+                <span>{profile?.projects.length ?? 0} 个</span>
               </div>
             </div>
             <p className="text-sm leading-relaxed text-text-main opacity-60">
-              The interaction between mouse movement and the background prism
-              simulates the modulation of light through architectural glass.
+              个人简介与项目信息。缺失的内容将显示「待补充」标记。
             </p>
           </div>
         </aside>

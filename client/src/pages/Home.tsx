@@ -188,18 +188,17 @@ export default function Home() {
       {/* Hero Content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <h1 className="text-7xl md:text-9xl font-bold text-center leading-none mb-4 mix-blend-difference text-white">
-          KINETIC
+          FEZER
         </h1>
-        <h1 className="text-7xl md:text-9xl font-bold text-center leading-none text-accent-lava">
-          SAND
-        </h1>
+        <h2 className="text-2xl md:text-4xl font-medium text-center leading-none text-accent-lava tracking-widest mt-4">
+          AI爱好者 / 研究生在读
+        </h2>
       </div>
 
       {/* Bottom Stats */}
-      <div className="absolute bottom-8 right-8 text-xs font-mono text-text-main pointer-events-none">
-        <div>COORDINATES: {coords.x}, {coords.y}</div>
-        <div>DENSITY: 88.42%</div>
-        <div>STATUS: INTERACTIVE_FLOW</div>
+      <div className="absolute bottom-8 right-8 text-xs font-mono text-text-main pointer-events-none text-right">
+        <div>坐标: {coords.x}, {coords.y}</div>
+        <div>状态: 活跃</div>
       </div>
     </div>
   );

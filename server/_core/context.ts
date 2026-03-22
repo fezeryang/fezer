@@ -1,5 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
+import { ENV } from "./env";
 import { sdk } from "./sdk";
 
 export type TrpcContext = {
@@ -11,6 +12,25 @@ export type TrpcContext = {
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
+  if (ENV.enableLocalAdminAuthBypass) {
+    const now = new Date();
+    return {
+      req: opts.req,
+      res: opts.res,
+      user: {
+        id: 1,
+        openId: "local-dev-admin",
+        email: "local-dev-admin@example.local",
+        name: "Local Dev Admin",
+        loginMethod: "local-bypass",
+        role: "admin",
+        createdAt: now,
+        updatedAt: now,
+        lastSignedIn: now,
+      },
+    };
+  }
+
   let user: User | null = null;
 
   try {
