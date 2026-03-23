@@ -205,6 +205,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
         p.pixelDensity(1);
         const canvas = p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
         canvas.parent("p5-cover-canvas");
+        canvas.elt.style.pointerEvents = "none";
 
         for (let i = 0; i < cols; i++) {
           monoliths[i] = [];
@@ -307,6 +308,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
         p.pixelDensity(1);
         const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
         canvas.parent("p5-transition-mask");
+        canvas.elt.style.pointerEvents = "none";
 
         for (let i = 0; i < particleCount; i++) {
             particles.push({
