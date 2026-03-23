@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluidic Membrane Hub</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600;800&family=JetBrains+Mono:wght@300&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #fcfdfa;
+            --accent-1: #e0f2f1;
+            --accent-2: #fff9c4;
+            --accent-3: #fce4ec;
+            --text-main: #1a1a1a;
+            --text-mono: #5a5a5a;
+            --membrane-blur: 12px;
+            --transition-speed: 0.8s;
+            --bezier: cubic-bezier(0.85, 0, 0.15, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* View Management */
+        .view {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform var(--transition-speed) var(--bezier), opacity var(--transition-speed) ease;
+            z-index: 10;
+        }
+
+        .view-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95) translateY(20px);
+        }
+
+        /* Initial Page */
+        .initial-trigger {
+            cursor: pointer;
+            padding: 2rem 4rem;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 100px;
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -0.02em;
+            transition: all 0.4s ease;
+        }
+
+        .initial-trigger:hover {
+            transform: scale(1.05);
+            background: #fff;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+        }
+
+        /* Hub Page - Fluidic Cluster */
+        .hub-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            filter: url('#gooey');
+        }
+
+        .membrane-cluster {
+            position: relative;
+            width: 800px;
+            height: 800px;
+            display: grid;
+            grid-template-areas: 
+                "a b"
+                "c d";
+            gap: 40px;
+            padding: 50px;
+        }
+
+        .membrane-item {
+            position: relative;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 45% 55% 70% 30% / 30% 40% 60% 70%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.6s var(--bezier);
+            animation: morphing 15s infinite alternate ease-in-out;
+            border: 1px solid rgba(255,255,255,0.8);
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.5);
+            overflow: hidden;
+            pointer-events: auto;
+        }
+
+        .membrane-item:hover {
+            transform: scale(1.1) rotate(2deg);
+            z-index: 50;
+            background: #fff;
+        }
+
+        .membrane-item:nth-child(2) { animation-delay: -2s; border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+        .membrane-item:nth-child(3) { animation-delay: -4s; border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+        .membrane-item:nth-child(4) { animation-delay: -6s; border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%; }
+
+        @keyframes morphing {
+            0% { border-radius: 45% 55% 70% 30% / 30% 40% 60% 70%; }
+            50% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            100% { border-radius: 45% 55% 70% 30% / 30% 40% 60% 70%; }
+        }
+
+        .membrane-content {
+            filter: blur(0) !important; /* Counteract gooey filter for text */
+            text-align: center;
+            padding: 20px;
+            z-index: 2;
+        }
+
+        /* SVG Gooey Filter */
+        #svg-filters {
+            position: absolute;
+            visibility: hidden;
+        }
+
+        .membrane-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: #222;
+        }
+
+        .membrane-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-mono);
+            letter-spacing: 0.1em;
+        }
+
+        /* Page View */
+        .page-view {
+            background: white;
+            z-index: 100;
+            padding: 10vh 15vw;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 40px;
+            left: 40px;
+            background: #f0f0f0;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            border: none;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover { background: #e0e0e0; }
+
+        .page-header {
+            max-width: 800px;
+        }
+
+        .page-header h1 {
+            font-size: 5rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .page-content {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #444;
+            max-width: 600px;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            transform: rotate(-90deg);
+            left: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <svg id="svg-filters">
+        <defs>
+            <filter id="gooey">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="goo" />
+                <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+            </filter>
+        </defs>
+    </svg>
+
+    <div id="canvas-container"></div>
+
+    <!-- MAIN ENTRANCE -->
+    <section class="view" id="view-initial">
+        <div class="initial-trigger" onclick="navigateTo('hub')">
+            ENTER ECOSYSTEM
+        </div>
+    </section>
+
+    <!-- CLUSTER HUB -->
+    <section class="view view-hidden" id="view-hub">
+        <div class="hub-container">
+            <div class="membrane-cluster">
+                <div class="membrane-item" style="background: var(--accent-1)" onclick="openPage('LUMINA', 'The geometry of light and space in digital membranes.')">
+                    <div class="membrane-content">
+                        <div class="membrane-meta">Project 01</div>
+                        <div class="membrane-title">LUMINA</div>
+                    </div>
+                </div>
+                <div class="membrane-item" style="background: var(--accent-2)" onclick="openPage('OSMOSIS', 'Fluid transitions between states of existence.')">
+                    <div class="membrane-content">
+                        <div class="membrane-meta">Project 02</div>
+                        <div class="membrane-title">OSMOSIS</div>
+                    </div>
+                </div>
+                <div class="membrane-item" style="background: var(--accent-3)" onclick="openPage('KINETIC', 'Moving parts within a static universe.')">
+                    <div class="membrane-content">
+                        <div class="membrane-meta">Project 03</div>
+                        <div class="membrane-title">KINETIC</div>
+                    </div>
+                </div>
+                <div class="membrane-item" style="background: #e8eaf6" onclick="openPage('VOID', 'Exploring the beauty of negative space.')">
+                    <div class="membrane-content">
+                        <div class="membrane-meta">Project 04</div>
+                        <div class="membrane-title">VOID</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTENT PAGE -->
+    <section class="view view-hidden page-view" id="view-page">
+        <button class="back-btn" onclick="navigateTo('hub')">← RETURN TO HUB</button>
+        <div class="page-header">
+            <div class="membrane-meta" style="margin-bottom: 2rem;">Selected Works // 2024</div>
+            <h1 id="page-title">MEMBRANE</h1>
+            <div class="page-content" id="page-desc">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.
+            </div>
+        </div>
+        <div class="scroll-indicator">SCROLL TO DISCOVER</div>
+    </section>
+
+    <script>
+        // P5.js Background Animation
+        let bubbles = [];
+
+        function setup() {
+            const canvas = createCanvas(windowWidth, windowHeight);
+            canvas.parent('canvas-container');
+            for (let i = 0; i < 8; i++) {
+                bubbles.push(new Bubble());
+            }
+        }
+
+        function draw() {
+            clear();
+            bubbles.forEach(b => {
+                b.move();
+                b.display();
+            });
+        }
+
+        class Bubble {
+            constructor() {
+                this.x = random(width);
+                this.y = random(height);
+                this.radius = random(100, 300);
+                this.xOff = random(1000);
+                this.yOff = random(1000);
+                this.color = color(random(200, 255), random(200, 255), random(200, 255), 150);
+            }
+
+            move() {
+                this.x = noise(this.xOff) * width;
+                this.y = noise(this.yOff) * height;
+                this.xOff += 0.002;
+                this.yOff += 0.002;
+            }
+
+            display() {
+                noStroke();
+                fill(this.color);
+                ellipse(this.x, this.y, this.radius * 2);
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        // Navigation Logic
+        function navigateTo(viewId) {
+            document.querySelectorAll('.view').forEach(v => {
+                v.classList.add('view-hidden');
+            });
+            document.getElementById('view-' + viewId).classList.remove('view-hidden');
+        }
+
+        function openPage(title, desc) {
+            document.getElementById('page-title').innerText = title;
+            document.getElementById('page-desc').innerText = desc;
+            navigateTo('page');
+        }
+
+        // Interaction Effect: Hover over cluster
+        const cluster = document.querySelector('.membrane-cluster');
+        document.addEventListener('mousemove', (e) => {
+            if (!document.getElementById('view-hub').classList.contains('view-hidden')) {
+                const moveX = (e.clientX - window.innerWidth / 2) * 0.05;
+                const moveY = (e.clientY - window.innerHeight / 2) * 0.05;
+                cluster.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            }
+        });
+    </script>
+</body>
+</html>

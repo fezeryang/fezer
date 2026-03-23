@@ -13,13 +13,7 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center p-8 pointer-events-none">
-      <div className="pointer-events-auto">
-        <div className="text-xs font-bold tracking-widest font-mono text-text-main">
-          FEZER_PORTFOLIO // 01
-        </div>
-      </div>
-
+    <nav className="fixed top-0 left-0 right-0 z-50 flex justify-end items-center p-8 pointer-events-none">
       <div className="flex gap-8 pointer-events-auto">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
