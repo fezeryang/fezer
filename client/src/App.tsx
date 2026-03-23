@@ -12,6 +12,9 @@ import Blog from "./pages/Blog";
 import BlogSurface from "./pages/BlogSurface";
 import BlogPostDetail from "./pages/BlogPostDetail";
 import About from "./pages/About";
+import AboutLogo from "./pages/AboutLogo";
+import AboutLogoOne from "./pages/AboutLogoOne";
+import AboutLogoTwo from "./pages/AboutLogoTwo";
 import WebPet from "./components/WebPet";
 
 const AdminRouteGuard = lazy(() => import("./components/AdminRouteGuard"));
@@ -41,6 +44,9 @@ function Router() {
       <Route path={"/blog/:slug"}>
         {(params) => <BlogPostDetail slug={params.slug} />}
       </Route>
+      <Route path={"/about/logo/logo1"} component={AboutLogoOne} />
+      <Route path={"/about/logo/logo2"} component={AboutLogoTwo} />
+      <Route path={"/about/logo"} component={AboutLogo} />
       <Route path={"/about"} component={About} />
       <Route path={"/admin/blog"}>
         <Suspense fallback={<AdminRouteLoading />}>
