@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fezer - Tactile Terrestrial Assemblage</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fcfaf7;
+            --accent-color: #2d3436;
+            --texture-opacity: 0.03;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            cursor: crosshair;
+        }
+
+        /* Tactile Paper Texture Overlay */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3External %3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: var(--texture-opacity);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.05);
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    <div class="ui-overlay">Procedural Assemblage v1.0 / Nature Morph</div>
+
+    <script>
+        let font;
+        let particles = [];
+        const letterData = [
+            { char: 'F', color: [45, 85, 255], type: 'fish' },
+            { char: 'e', color: [76, 153, 0], type: 'leaf' },
+            { char: 'z', color: [40, 30, 20], type: 'ant' },
+            { char: 'e', color: [255, 100, 150], type: 'butterfly' },
+            { char: 'r', color: [139, 69, 19], type: 'sprout' }
+        ];
+
+        function preload() {
+            // High fidelity serif font for the path generation
+            font = loadFont('https://cdnjs.cloudflare.com/ajax/libs/topcoat/0.8.0/font/SourceCodePro-Bold.otf');
+        }
+
+        function setup() {
+            const cnv = createCanvas(1000, 500);
+            cnv.parent('canvas-container');
+            textFont(font);
+            textSize(220);
+            
+            let xOffset = 120;
+            letterData.forEach((data, index) => {
+                let points = font.textToPoints(data.char, xOffset, height / 2 + 70, 220, {
+                    sampleFactor: 0.12
+                });
+                
+                points.forEach(p => {
+                    particles.push(new MorphParticle(p.x, p.y, data.color, data.type, index));
+                });
+                xOffset += data.char === 'F' ? 140 : 130;
+            });
+        }
+
+        function draw() {
+            clear();
+            background(255, 253, 250);
+
+            particles.forEach(p => {
+                p.update();
+                p.display();
+            });
+        }
+
+        class MorphParticle {
+            constructor(tx, ty, col, type, index) {
+                this.target = createVector(tx, ty);
+                this.pos = createVector(tx + random(-600, 600), ty + random(-600, 600));
+                this.vel = createVector(random(-1, 1), random(-1, 1));
+                this.acc = createVector();
+                this.maxSpeed = random(3, 6);
+                this.maxForce = random(0.1, 0.3);
+                this.color = col;
+                this.type = type;
+                this.angle = random(TWO_PI);
+                this.size = random(4, 8);
+                this.phase = random(TWO_PI);
+                this.delay = index * 40; // Staggered formation
+            }
+
+            update() {
+                if (frameCount > this.delay) {
+                    let arrive = this.arrive(this.target);
+                    this.applyForce(arrive);
+                } else {
+                    // Idle behavior before transforming
+                    let idle = createVector(cos(this.phase + frameCount * 0.02), sin(this.phase + frameCount * 0.02));
+                    this.applyForce(idle.mult(0.1));
+                }
+
+                this.vel.add(this.acc);
+                this.vel.limit(this.maxSpeed);
+                this.pos.add(this.vel);
+                this.acc.mult(0);
+                
+                this.angle = this.vel.heading();
+            }
+
+            applyForce(f) {
+                this.acc.add(f);
+            }
+
+            arrive(target) {
+                let desired = p5.Vector.sub(target, this.pos);
+                let d = desired.mag();
+                let speed = this.maxSpeed;
+                if (d < 100) {
+                    speed = map(d, 0, 100, 0, this.maxSpeed);
+                }
+                desired.setMag(speed);
+                let steer = p5.Vector.sub(desired, this.vel);
+                steer.limit(this.maxForce);
+                return steer;
+            }
+
+            display() {
+                push();
+                translate(this.pos.x, this.pos.y);
+                rotate(this.angle);
+                noStroke();
+                fill(this.color[0], this.color[1], this.color[2], 200);
+
+                // Add tactile shadows
+                drawingContext.shadowOffsetX = 2;
+                drawingContext.shadowOffsetY = 2;
+                drawingContext.shadowBlur = 4;
+                drawingContext.shadowColor = 'rgba(0,0,0,0.1)';
+
+                if (this.type === 'fish') {
+                    // F - Small Fish
+                    ellipse(0, 0, this.size * 2, this.size);
+                    let tailWiggle = sin(frameCount * 0.2 + this.phase) * 5;
+                    triangle(-this.size, 0, -this.size - 5, -3 + tailWiggle, -this.size - 5, 3 + tailWiggle);
+                    fill(255, 100);
+                    ellipse(this.size/2, -1, 2, 2); // eye
+                } 
+                else if (this.type === 'leaf') {
+                    // e - Leaf
+                    rotate(sin(frameCount * 0.05 + this.phase) * 0.2);
+                    beginShape();
+                    vertex(0, 0);
+                    bezierVertex(this.size, -this.size, this.size * 2, 0, 0, this.size);
+                    bezierVertex(-this.size * 2, 0, -this.size, -this.size, 0, 0);
+                    endShape();
+                    stroke(this.color[0]-20, this.color[1]-20, this.color[2], 100);
+                    line(0,0, 0, this.size); // vein
+                } 
+                else if (this.type === 'ant') {
+                    // z - Ant
+                    fill(40, 30, 20);
+                    ellipse(0, 0, 4, 3); // Body
+                    ellipse(4, 0, 3, 3); // Head
+                    ellipse(-4, 0, 5, 4); // Rear
+                    stroke(40, 30, 20);
+                    let legMove = sin(frameCount * 0.5 + this.phase) * 2;
+                    line(0, 0, 2, 4 + legMove); // legs
+                    line(0, 0, -2, 4 - legMove);
+                    line(0, 0, 2, -4 + legMove);
+                } 
+                else if (this.type === 'butterfly') {
+                    // e - Petal/Butterfly
+                    let flap = abs(sin(frameCount * 0.1 + this.phase));
+                    ellipse(0, 0, 2, 6); // body
+                    fill(this.color[0], this.color[1], this.color[2], 150);
+                    ellipse(4 * flap, -3, 8 * flap, 6); // wing
+                    ellipse(4 * flap, 3, 6 * flap, 5);  // wing
+                    ellipse(-4 * flap, -3, 8 * flap, 6);
+                    ellipse(-4 * flap, 3, 6 * flap, 5);
+                }
+                else if (this.type === 'sprout') {
+                    // r - Sprout
+                    stroke(this.color[0], this.color[1], this.color[2]);
+                    strokeWeight(2);
+                    line(0, 0, 0, -this.size);
+                    noStroke();
+                    fill(100, 200, 50);
+                    push();
+                    rotate(0.5);
+                    ellipse(2, -this.size, 5, 3);
+                    pop();
+                }
+
+                pop();
+            }
+        }
+
+        // Responsive resize
+        function windowResized() {
+            // Maintain aspect ratio or center
+        }
+
+        // Add interaction: mouse repels particles
+        function mouseMoved() {
+            let mousePos = createVector(mouseX, mouseY);
+            particles.forEach(p => {
+                let d = p5.Vector.dist(mousePos, p.pos);
+                if (d < 50) {
+                    let escape = p5.Vector.sub(p.pos, mousePos);
+                    escape.setMag(2);
+                    p.applyForce(escape);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

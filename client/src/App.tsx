@@ -10,6 +10,7 @@ import Portfolio from "./pages/Portfolio";
 import Lab from "./pages/Lab";
 import Blog from "./pages/Blog";
 import About from "./pages/About";
+import WebPet from "./components/WebPet";
 
 const AdminRouteGuard = lazy(() => import("./components/AdminRouteGuard"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -84,6 +85,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <WebPet />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

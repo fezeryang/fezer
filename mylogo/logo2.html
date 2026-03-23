@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fezer - Biotic Choreography</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fcfaf7;
+            --accent-color: #2d3436;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Playfair Display', serif;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            bottom: 40px;
+            font-size: 0.8rem;
+            letter-spacing: 0.2rem;
+            text-transform: uppercase;
+            color: rgba(0,0,0,0.3);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* Subtle grain texture overlay */
+        .grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.04;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+        }
+    </style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div id="canvas-container"></div>
+<div class="ui-overlay">Procedural Biotic Animation — Tap to Replay</div>
+
+<script>
+let font;
+let characters = [];
+let state = 'wandering'; // wandering -> forming -> formed
+let timer = 0;
+
+function preload() {
+    // Using a serif font that matches the "Fezer" aesthetic
+    font = loadFont('https://cdnjs.cloudflare.com/ajax/libs/topcoat/0.8.0/font/SourceCodePro-Bold.otf');
+}
+
+function setup() {
+    const canvas = createCanvas(windowWidth, windowHeight);
+    canvas.parent('canvas-container');
+    
+    initSimulation();
+}
+
+function initSimulation() {
+    characters = [];
+    const str = "Fezer";
+    const fontSize = 180;
+    const totalWidth = 500;
+    let startX = width / 2 - totalWidth / 2;
+    
+    // Create specific creatures for each letter
+    // F - Fish, e - Leaf, z - Ant, e - Sprout, r - Butterfly
+    characters.push(new FishCreature('F', startX, height / 2, fontSize));
+    characters.push(new LeafCreature('e', startX + 110, height / 2, fontSize));
+    characters.push(new AntCreature('z', startX + 220, height / 2, fontSize));
+    characters.push(new SproutCreature('e', startX + 330, height / 2, fontSize));
+    characters.push(new ButterflyCreature('r', startX + 440, height / 2, fontSize));
+
+    state = 'wandering';
+    timer = millis();
+}
+
+function draw() {
+    background(252, 250, 247);
+    
+    let elapsed = millis() - timer;
+    if (state === 'wandering' && elapsed > 3000) {
+        state = 'forming';
+    }
+
+    for (let char of characters) {
+        if (state === 'wandering') {
+            char.wander();
+        } else {
+            char.form();
+        }
+        char.update();
+        char.display();
+    }
+}
+
+class BioticBase {
+    constructor(char, x, y, size) {
+        this.char = char;
+        this.targetX = x;
+        this.targetY = y;
+        this.size = size;
+        this.points = font.textToPoints(char, x, y, size, { sampleFactor: 0.15 });
+        this.particles = this.points.map(p => ({
+            pos: createVector(random(width), random(height)),
+            target: createVector(p.x, p.y),
+            vel: p5.Vector.random2D().mult(random(2, 5)),
+            acc: createVector(0, 0),
+            noiseSeed: random(1000)
+        }));
+    }
+
+    update() {
+        for (let p of this.particles) {
+            p.vel.add(p.acc);
+            p.vel.limit(this.state === 'forming' ? 6 : 3);
+            p.pos.add(p.vel);
+            p.acc.mult(0);
+        }
+    }
+
+    wander() {
+        for (let p of this.particles) {
+            let n = noise(p.noiseSeed + frameCount * 0.01);
+            let angle = map(n, 0, 1, 0, TWO_PI * 2);
+            let force = p5.Vector.fromAngle(angle).mult(0.1);
+            p.acc.add(force);
+            
+            // Boundary check
+            if (p.pos.x < 0 || p.pos.x > width) p.vel.x *= -1;
+            if (p.pos.y < 0 || p.pos.y > height) p.vel.y *= -1;
+        }
+    }
+
+    form() {
+        for (let p of this.particles) {
+            let arrive = p5.Vector.sub(p.target, p.pos);
+            let dist = arrive.mag();
+            let speed = map(dist, 0, 100, 0, 5);
+            arrive.setMag(speed);
+            let steer = p5.Vector.sub(arrive, p.vel);
+            steer.limit(0.2);
+            p.acc.add(steer);
+        }
+    }
+}
+
+class FishCreature extends BioticBase {
+    display() {
+        noStroke();
+        fill(230, 100, 50, 200); // Koi Orange
+        for (let i = 0; i < this.particles.length; i++) {
+            let p = this.particles[i];
+            push();
+            translate(p.pos.x, p.pos.y);
+            rotate(p.vel.heading());
+            // Draw fish body
+            ellipse(0, 0, 8, 4);
+            // Tail wiggle
+            let tailWiggle = sin(frameCount * 0.2 + i) * 3;
+            triangle(-4, 0, -8, tailWiggle - 2, -8, tailWiggle + 2);
+            pop();
+        }
+    }
+}
+
+class LeafCreature extends BioticBase {
+    display() {
+        noStroke();
+        fill(100, 140, 80, 200); // Leaf Green
+        for (let i = 0; i < this.particles.length; i++) {
+            let p = this.particles[i];
+            push();
+            translate(p.pos.x, p.pos.y);
+            rotate(p.vel.heading() + PI/4);
+            // Organic leaf shape
+            beginShape();
+            vertex(0, -6);
+            bezierVertex(4, -4, 4, 4, 0, 6);
+            bezierVertex(-4, 4, -4, -4, 0, -6);
+            endShape();
+            // Vein
+            stroke(80, 110, 60, 100);
+            line(0, -5, 0, 5);
+            noStroke();
+            pop();
+        }
+    }
+}
+
+class AntCreature extends BioticBase {
+    display() {
+        noStroke();
+        fill(45, 30, 25); // Dark Ant color
+        for (let i = 0; i < this.particles.length; i++) {
+            let p = this.particles[i];
+            push();
+            translate(p.pos.x, p.pos.y);
+            rotate(p.vel.heading());
+            // Head, Thorax, Abdomen
+            ellipse(3, 0, 3, 2);
+            ellipse(0, 0, 4, 2.5);
+            ellipse(-4, 0, 5, 3);
+            // Legs (jittery)
+            stroke(45, 30, 25);
+            let legMove = sin(frameCount * 0.5 + i) * 2;
+            line(0, 0, legMove, 4);
+            line(0, 0, -legMove, -4);
+            noStroke();
+            pop();
+        }
+    }
+}
+
+class SproutCreature extends BioticBase {
+    display() {
+        noStroke();
+        fill(140, 190, 60, 200); // Bright Green
+        for (let i = 0; i < this.particles.length; i++) {
+            let p = this.particles[i];
+            push();
+            translate(p.pos.x, p.pos.y);
+            // Little budding seeds/leaves
+            ellipse(0, 0, 4, 6);
+            rotate(PI/3);
+            ellipse(2, -2, 3, 5);
+            pop();
+        }
+    }
+}
+
+class ButterflyCreature extends BioticBase {
+    display() {
+        noStroke();
+        fill(70, 130, 180, 180); // Azure Blue
+        for (let i = 0; i < this.particles.length; i++) {
+            let p = this.particles[i];
+            push();
+            translate(p.pos.x, p.pos.y);
+            let flap = sin(frameCount * 0.3 + i) * 1;
+            // Left wing
+            ellipse(-3 * flap, 0, 6 * flap, 10);
+            // Right wing
+            ellipse(3 * flap, 0, 6 * flap, 10);
+            // Body
+            fill(30);
+            ellipse(0, 0, 1.5, 8);
+            fill(70, 130, 180, 180);
+            pop();
+        }
+    }
+}
+
+function mousePressed() {
+    initSimulation();
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    initSimulation();
+}
+</script>
+</body>
+</html>
