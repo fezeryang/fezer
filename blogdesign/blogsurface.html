@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alabaster Kinetic Archive</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;800&family=JetBrains+Mono:wght@300&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F2F0ED;
+            --stone-surface: #F9F8F6;
+            --stone-shadow: #D1CDC7;
+            --stone-highlight: #FFFFFF;
+            --accent: #2A2A2A;
+            --text-main: #3E3C3A;
+            --text-muted: #8E8A85;
+            --kinetic-glow: rgba(255, 255, 255, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg);
+            font-family: 'Manrope', sans-serif;
+            color: var(--text-main);
+            overflow-x: hidden;
+            line-height: 1.4;
+        }
+
+        /* Smooth Scroll Container */
+        .viewport {
+            width: 100vw;
+            padding: 80px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        header {
+            position: fixed;
+            top: 40px;
+            left: 40px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 0.7rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: var(--stone-surface);
+            padding: 10px 15px;
+            border-radius: 4px;
+            box-shadow: 
+                4px 4px 10px var(--stone-shadow),
+                -4px -4px 10px var(--stone-highlight);
+        }
+
+        /* The Kinetic Block */
+        .blog-entry {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            background: var(--stone-surface);
+            border-radius: 24px;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 120px 1fr auto;
+            align-items: center;
+            gap: 24px;
+            cursor: pointer;
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            
+            /* Embossed Alabaster Effect */
+            box-shadow: 
+                12px 12px 24px var(--stone-shadow),
+                -12px -12px 24px var(--stone-highlight),
+                inset 0 0 0 1px rgba(255,255,255,0.5);
+            
+            opacity: 0;
+            transform: translateY(30px) scale(0.98);
+        }
+
+        .blog-entry.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .blog-entry:hover {
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 
+                20px 20px 40px var(--stone-shadow),
+                -20px -20px 40px var(--stone-highlight);
+        }
+
+        .blog-entry:active {
+            transform: scale(0.97);
+            box-shadow: 
+                inset 6px 6px 12px var(--stone-shadow),
+                inset -6px -6px 12px var(--stone-highlight);
+        }
+
+        /* p5 Canvas Container */
+        .canvas-container {
+            width: 120px;
+            height: 120px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #eee;
+            position: relative;
+            box-shadow: inset 2px 2px 5px var(--stone-shadow);
+        }
+
+        .content-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .entry-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .entry-title {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--accent);
+            letter-spacing: -0.02em;
+        }
+
+        .entry-excerpt {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .entry-arrow {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--stone-surface);
+            box-shadow: 
+                3px 3px 6px var(--stone-shadow),
+                -3px -3px 6px var(--stone-highlight);
+            transition: 0.3s ease;
+        }
+
+        .blog-entry:hover .entry-arrow {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Scroll Progress */
+        .scroll-indicator {
+            position: fixed;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--stone-shadow);
+            transition: 0.4s;
+        }
+
+        .dot.active {
+            height: 24px;
+            border-radius: 10px;
+            background: var(--accent);
+        }
+
+        @media (max-width: 650px) {
+            .blog-entry {
+                grid-template-columns: 80px 1fr;
+                padding: 16px;
+            }
+            .canvas-container {
+                width: 80px;
+                height: 80px;
+            }
+            .entry-arrow { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">KINETIC.LAB</div>
+    </header>
+
+    <div class="scroll-indicator" id="dots"></div>
+
+    <main class="viewport" id="feed">
+        <!-- Entries will be injected here -->
+    </main>
+
+    <script>
+        const blogData = [
+            { title: "Materiality in Digital Space", date: "2024.05.12", excerpt: "Exploring the tactile boundaries of UI design.", type: "perlin" },
+            { title: "The Alabaster Aesthetic", date: "2024.04.28", excerpt: "Why stone-like textures are returning to the web.", type: "orbit" },
+            { title: "Generative Systems", date: "2024.04.15", excerpt: "Using p5js to create living components.", type: "wave" },
+            { title: "Shadow & Light", date: "2024.03.30", excerpt: "Mastering the art of CSS elevation.", type: "particles" },
+            { title: "Minimalist Motion", date: "2024.03.10", excerpt: "Less is more when it comes to transitions.", type: "grid" },
+            { title: "The Future of Blogs", date: "2024.02.22", excerpt: "Moving beyond the standard card layout.", type: "perlin" },
+            { title: "Tactile Response", date: "2024.02.05", excerpt: "Designing for the sense of touch.", type: "wave" }
+        ];
+
+        const feed = document.getElementById('feed');
+        const dotsContainer = document.getElementById('dots');
+
+        // Factory for p5 instances
+        const createKineticArt = (container, type) => {
+            new p5((p) => {
+                let t = 0;
+                p.setup = () => {
+                    p.createCanvas(120, 120).parent(container);
+                    p.noFill();
+                };
+
+                p.draw = () => {
+                    p.clear();
+                    p.strokeWeight(1.5);
+                    
+                    if (type === 'perlin') {
+                        p.stroke(42, 42, 42, 180);
+                        for (let i = 0; i < 5; i++) {
+                            p.beginShape();
+                            for (let x = 0; x < p.width; x += 5) {
+                                let y = p.noise(x * 0.01, t + i * 0.1) * p.height;
+                                p.vertex(x, y);
+                            }
+                            p.endShape();
+                        }
+                    } else if (type === 'orbit') {
+                        p.stroke(42, 42, 42, 150);
+                        p.translate(p.width/2, p.height/2);
+                        for (let i = 0; i < 8; i++) {
+                            p.rotate(t + i);
+                            p.rect(-20, -20, 40, 40, 4);
+                        }
+                    } else if (type === 'wave') {
+                        p.stroke(42, 42, 42, 200);
+                        for (let i = 0; i < 10; i++) {
+                            let y = 20 + i * 8;
+                            p.line(10, y + p.sin(t + i) * 10, 110, y + p.sin(t + i + 1) * 10);
+                        }
+                    } else {
+                        p.stroke(42, 42, 42, 100);
+                        for (let i = 0; i < 20; i++) {
+                            p.point(p.random(p.width), p.random(p.height));
+                        }
+                    }
+                    t += 0.02;
+                };
+            });
+        };
+
+        // Initialize Feed
+        blogData.forEach((data, index) => {
+            const entry = document.createElement('div');
+            entry.className = 'blog-entry';
+            entry.innerHTML = `
+                <div class="canvas-container" id="canvas-${index}"></div>
+                <div class="content-wrap">
+                    <span class="entry-meta">${data.date} — ISSUE #${100 - index}</span>
+                    <h2 class="entry-title">${data.title}</h2>
+                    <p class="entry-excerpt">${data.excerpt}</p>
+                </div>
+                <div class="entry-arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                </div>
+            `;
+            feed.appendChild(entry);
+
+            // Create dot
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dotsContainer.appendChild(dot);
+
+            // Init p5
+            createKineticArt(document.getElementById(`canvas-${index}`), data.type);
+        });
+
+        // Intersection Observer for Animations
+        const observerOptions = {
+            threshold: 0.2
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    // Sync dots
+                    const index = Array.from(feed.children).indexOf(entry.target);
+                    document.querySelectorAll('.dot').forEach((d, i) => {
+                        d.classList.toggle('active', i === index);
+                    });
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.blog-entry').forEach(el => observer.observe(el));
+
+        // Smooth interaction sound placeholder (visual click effect is in CSS)
+        document.querySelectorAll('.blog-entry').forEach(el => {
+            el.addEventListener('click', () => {
+                // Potential navigation or expansion logic
+                console.log("Navigating to article...");
+            });
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viscous Obsidian Displacement</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --obsidian: #0a0a0a;
+            --eggshell: #f5f5f5;
+            --accent: #333;
+            --transition-speed: 0.8s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--eggshell);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            color: var(--obsidian);
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        section {
+            position: relative;
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 10vw;
+            z-index: 10;
+        }
+
+        #cover {
+            background-color: transparent;
+            color: var(--eggshell);
+            height: 100vh;
+        }
+
+        #content {
+            background-color: transparent;
+            color: var(--obsidian);
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 1s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #content.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            margin-bottom: 2rem;
+            display: block;
+        }
+
+        h1 {
+            font-weight: 900;
+            font-size: clamp(3rem, 15vw, 12rem);
+            line-height: 0.85;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+        }
+
+        .metadata {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 4rem;
+        }
+
+        .mono-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            max-width: 300px;
+            line-height: 1.6;
+            color: rgba(245, 245, 245, 0.5);
+        }
+
+        #content .mono-text {
+            color: rgba(10, 10, 10, 0.5);
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 5vh;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 80px;
+            background: linear-gradient(to bottom, var(--eggshell), transparent);
+            overflow: hidden;
+        }
+
+        .scroll-indicator::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--eggshell);
+            animation: scrollLine 2s infinite cubic-bezier(0.76, 0, 0.24, 1);
+        }
+
+        @keyframes scrollLine {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            margin-top: 5vh;
+        }
+
+        .grid-item {
+            grid-column: span 6;
+        }
+
+        .grid-item p {
+            font-size: 1.5rem;
+            line-height: 1.4;
+            max-width: 90%;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-item { grid-column: span 12; }
+            h1 { font-size: 5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <section id="cover">
+        <span class="label">Project Obsidian // 2024</span>
+        <h1>VISCOUS<br>SHIFT</h1>
+        <div class="metadata">
+            <div class="mono-text">
+                [SYSTEM_INIT] DISPLACEMENT MODE ACTIVE. SCROLL TO REVEAL UNDERLYING GEOMETRY. 
+            </div>
+            <div class="mono-text" style="text-align: right;">
+                COORD: 34.0522° N<br>118.2437° W
+            </div>
+        </div>
+        <div class="scroll-indicator"></div>
+    </section>
+
+    <section id="content">
+        <span class="label">Architecture of Flow</span>
+        <div class="grid-layout">
+            <div class="grid-item">
+                <p>The transition between states is not a jump, but a liquefaction of boundaries. High-viscosity displacement simulates the resistance of obsidian as it yields to light.</p>
+            </div>
+            <div class="grid-item">
+                <div class="mono-text">
+                    01 — MATERIALITY<br>
+                    Density: 2.6g/cm³<br>
+                    Refractive Index: 1.5<br><br>
+                    02 — MOTION<br>
+                    Fluid Dynamics: Perlin Noise<br>
+                    Interpolation: Quintic
+                </div>
+            </div>
+        </div>
+        <h1 style="margin-top: 10vh; color: #eee; -webkit-text-stroke: 1px #0a0a0a;">CLARITY</h1>
+    </section>
+
+    <script>
+        let scrollY = 0;
+        let targetScrollY = 0;
+        let canvas;
+        let points = [];
+        let numPoints = 120;
+        let noiseOffset = 0;
+
+        function setup() {
+            canvas = createCanvas(windowWidth, windowHeight);
+            canvas.parent('canvas-container');
+            
+            // Initialize flow points
+            for (let i = 0; i < numPoints; i++) {
+                points.push({
+                    x: random(width),
+                    y: random(height),
+                    size: random(100, 300),
+                    speed: random(0.5, 2)
+                });
+            }
+        }
+
+        function draw() {
+            targetScrollY = window.scrollY;
+            // Smooth scroll interpolation
+            scrollY = lerp(scrollY, targetScrollY, 0.08);
+            
+            let progress = constrain(scrollY / windowHeight, 0, 1);
+            
+            // Background logic: Obsidian fades to Eggshell
+            let bgColor = lerpColor(color(10, 10, 10), color(245, 245, 245), progress);
+            clear();
+            background(bgColor);
+
+            // The "Viscous Obsidian" Displacement Layer
+            noStroke();
+            fill(10, 10, 10);
+
+            // Shape the liquid obsidian
+            beginShape();
+            vertex(0, 0);
+            
+            // Generate a viscous, wavy bottom edge that reacts to scroll
+            let segments = 20;
+            let step = width / segments;
+            
+            // The "Drip" effect
+            let baseHeight = height * (1 - progress * 1.5);
+            
+            for (let i = 0; i <= segments; i++) {
+                let x = i * step;
+                // Use noise for fluid motion, intensity increases during scroll
+                let n = noise(i * 0.2, scrollY * 0.005);
+                let wave = map(n, 0, 1, -100, 100) * (1 - progress);
+                let drip = sin(i * 0.5 + scrollY * 0.01) * 30 * progress;
+                
+                let y = baseHeight + wave + drip;
+                
+                // Add "gravity" pull at specific points to feel viscous
+                if (i % 4 == 0) y += 150 * progress * noise(i);
+                
+                vertex(x, y);
+            }
+            
+            vertex(width, 0);
+            endShape(CLOSE);
+
+            // Add some floating "obsidian" particles that drift away
+            if (progress > 0.1) {
+                fill(10, 10, 10, (1 - progress) * 255);
+                for (let p of points) {
+                    let driftY = p.y - (scrollY * p.speed);
+                    if (driftY < -200) driftY = height + 200;
+                    ellipse(p.x, driftY, p.size * (1 - progress));
+                }
+            }
+
+            // Trigger content visibility
+            const content = document.getElementById('content');
+            if (progress > 0.6) {
+                content.classList.add('visible');
+            } else {
+                content.classList.remove('visible');
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        // Custom cursor or subtle parallax can be added here
+        document.addEventListener('mousemove', (e) => {
+            let x = (e.clientX / window.innerWidth) - 0.5;
+            let y = (e.clientY / window.innerHeight) - 0.5;
+            
+            document.querySelector('h1').style.transform = `translate(${x * 20}px, ${y * 20}px)`;
+        });
+    </script>
+</body>
+</html>
