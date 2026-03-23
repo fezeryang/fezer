@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporal Prism | Kinetic Mirrored Assembly</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --accent: #000;
+            --prism-1: rgba(255, 0, 150, 0.15);
+            --prism-2: rgba(0, 200, 255, 0.15);
+            --prism-3: rgba(255, 255, 0, 0.15);
+            --glass: rgba(255, 255, 255, 0.4);
+            --border: rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--accent);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            perspective: 1000px;
+        }
+
+        /* Material Overlay */
+        .grain {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0.04;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC42NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==');
+        }
+
+        /* UI Layers */
+        .container {
+            position: relative;
+            width: 90vw;
+            height: 80vh;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .meta-top {
+            grid-column: 1 / span 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            animation: slideDown 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #888;
+        }
+
+        .brand {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .canvas-wrapper {
+            grid-column: 1 / span 1;
+            grid-row: 2 / span 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            mix-blend-mode: multiply;
+        }
+
+        .data-panel {
+            grid-column: 2 / span 1;
+            grid-row: 2 / span 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 60px;
+        }
+
+        .time-block {
+            margin-bottom: 60px;
+            animation: slideRight 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .real-time {
+            font-family: 'Space Mono', monospace;
+            font-size: 84px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -0.05em;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .uptime-counter {
+            font-family: 'Space Mono', monospace;
+            font-size: 18px;
+            color: #666;
+            background: linear-gradient(90deg, #000 0%, #666 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .footer-info {
+            grid-column: 1 / span 2;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+            font-size: 12px;
+            font-weight: 400;
+            color: #999;
+        }
+
+        /* Glass Prism Elements */
+        .prism-card {
+            position: absolute;
+            width: 300px;
+            height: 400px;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 20px 20px 60px rgba(0,0,0,0.05);
+            z-index: -1;
+            transform: rotateY(-15deg) rotateX(10deg);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .canvas-wrapper:hover .prism-card {
+            transform: rotateY(-5deg) rotateX(5deg) translateZ(50px);
+            box-shadow: 40px 40px 80px rgba(0,0,0,0.08);
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        #defaultCanvas0 {
+            border-radius: 4px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 10px rgba(0,255,136,0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="grain"></div>
+
+    <div class="container">
+        <header class="meta-top">
+            <div>
+                <div class="label">Architecture</div>
+                <div class="brand">KINETIC CHRONOS</div>
+            </div>
+            <div style="text-align: right">
+                <div class="label">System Status</div>
+                <div style="font-weight: 700; font-size: 14px;"><span class="status-dot"></span>OPERATIONAL</div>
+            </div>
+        </header>
+
+        <main class="canvas-wrapper">
+            <div class="prism-card"></div>
+            <div id="p5-container"></div>
+        </main>
+
+        <section class="data-panel">
+            <div class="time-block">
+                <div class="label">Local Meridian</div>
+                <div class="real-time" id="clock-text">00:00:00</div>
+                <div style="display: flex; gap: 20px;">
+                    <div>
+                        <div class="label">Seconds Flux</div>
+                        <div id="sec-flux" style="font-family: 'Space Mono'; font-weight: 700;">00ms</div>
+                    </div>
+                    <div>
+                        <div class="label">Phase</div>
+                        <div id="time-phase" style="font-family: 'Space Mono'; font-weight: 700;">AM</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="time-block">
+                <div class="label">Establishment Uptime</div>
+                <div class="uptime-counter" id="uptime-text">00D 00H 00M 00S</div>
+                <div class="label" style="margin-top: 10px; font-weight: 400; font-size: 9px;">Calculated from Unix Epoch: 1715670000</div>
+            </div>
+        </section>
+
+        <footer class="footer-info">
+            <div>&copy; 2024 TEMPORAL ASSEMBLY</div>
+            <div>REFRACTION ENGINE V2.0.4</div>
+            <div>MIRRORED PERSPECTIVE</div>
+        </footer>
+    </div>
+
+    <script>
+        // --- UPTIME LOGIC ---
+        const creationDate = new Date('2024-05-14T00:00:00').getTime();
+
+        function updateUptime() {
+            const now = new Date().getTime();
+            const diff = now - creationDate;
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('uptime-text').innerText = 
+                `${String(days).padStart(2, '0')}D ${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M ${String(seconds).padStart(2, '0')}S`;
+            
+            const time = new Date();
+            const h = String(time.getHours()).padStart(2, '0');
+            const m = String(time.getMinutes()).padStart(2, '0');
+            const s = String(time.getSeconds()).padStart(2, '0');
+            document.getElementById('clock-text').innerText = `${h}:${m}:${s}`;
+            document.getElementById('sec-flux').innerText = `${time.getMilliseconds()}ms`;
+            document.getElementById('time-phase').innerText = time.getHours() >= 12 ? 'POST MERIDIEM' : 'ANTE MERIDIEM';
+        }
+
+        setInterval(updateUptime, 50);
+
+        // --- P5.JS KINETIC ART ---
+        let rotation = 0;
+        let cubes = [];
+
+        function setup() {
+            const canvas = createCanvas(500, 500, WEBGL);
+            canvas.parent('p5-container');
+            smooth();
+        }
+
+        function draw() {
+            clear();
+            
+            // Subtle ambient light to emphasize prism edges
+            ambientLight(200);
+            pointLight(255, 255, 255, 200, -200, 300);
+            
+            let h = hour();
+            let m = minute();
+            let s = second();
+            let ms = new Date().getMilliseconds();
+
+            rotateX(frameCount * 0.005);
+            rotateY(frameCount * 0.008);
+
+            // Create the Mirrored Assembly
+            // The assembly is composed of 3 primary glass rings representing H, M, S
+            
+            push();
+            drawTimeRing(s + ms/1000, 60, 180, [0, 200, 255, 100]); // Seconds
+            pop();
+
+            push();
+            rotateZ(PI/3);
+            drawTimeRing(m + s/60, 60, 140, [255, 0, 150, 100]); // Minutes
+            pop();
+
+            push();
+            rotateX(PI/4);
+            drawTimeRing(h + m/60, 24, 100, [255, 200, 0, 100]); // Hours
+            pop();
+
+            // Central Core - The "Singularity"
+            push();
+            noFill();
+            stroke(0, 40);
+            strokeWeight(0.5);
+            sphere(40 + sin(frameCount * 0.05) * 5);
+            pop();
+        }
+
+        function drawTimeRing(val, maxVal, radius, col) {
+            let segments = 24;
+            let step = TWO_PI / segments;
+            let activeAngle = map(val, 0, maxVal, 0, TWO_PI);
+
+            for (let i = 0; i < segments; i++) {
+                let angle = i * step;
+                let x = cos(angle) * radius;
+                let y = sin(angle) * radius;
+                
+                push();
+                translate(x, y, 0);
+                rotateZ(angle);
+                
+                // Prism materiality
+                let isActive = angle < activeAngle;
+                if (isActive) {
+                    fill(col[0], col[1], col[2], 180);
+                    stroke(col[0], col[1], col[2], 255);
+                    strokeWeight(2);
+                } else {
+                    noFill();
+                    stroke(0, 15);
+                    strokeWeight(1);
+                }
+
+                // The "Mirror Box"
+                box(10, 30, 10);
+                
+                // Refraction lines
+                if (isActive && i % 4 === 0) {
+                    strokeWeight(0.5);
+                    line(0, 0, 0, -x, -y, -50);
+                }
+                pop();
+            }
+        }
+
+        function windowResized() {
+            // Static size for the design feel, but could be responsive
+        }
+    </script>
+</body>
+</html>

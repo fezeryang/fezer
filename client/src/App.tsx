@@ -9,6 +9,8 @@ import Home from "./pages/Home";
 import Portfolio from "./pages/Portfolio";
 import Lab from "./pages/Lab";
 import Blog from "./pages/Blog";
+import BlogSurface from "./pages/BlogSurface";
+import BlogPostDetail from "./pages/BlogPostDetail";
 import About from "./pages/About";
 import WebPet from "./components/WebPet";
 
@@ -35,6 +37,10 @@ function Router() {
       <Route path={"/portfolio"} component={Portfolio} />
       <Route path={"/lab"} component={Lab} />
       <Route path={"/blog"} component={Blog} />
+      <Route path={"/blog/surface"} component={BlogSurface} />
+      <Route path={"/blog/:slug"}>
+        {(params) => <BlogPostDetail slug={params.slug} />}
+      </Route>
       <Route path={"/about"} component={About} />
       <Route path={"/admin/blog"}>
         <Suspense fallback={<AdminRouteLoading />}>

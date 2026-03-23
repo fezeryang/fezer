@@ -115,3 +115,6 @@ temp/
 
 # Ignore all .sisyphus folders
 .sisyphus/
+
+# Ignore PNG files
+*.png
