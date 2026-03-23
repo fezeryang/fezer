@@ -184,6 +184,39 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
   }, [applyTransitionStyles]);
 
   useEffect(() => {
+    let rafId = 0;
+    let scheduled = false;
+
+    const syncByScroll = () => {
+      scheduled = false;
+      const nextProgress = window.innerHeight > 0 ? clamp01(window.scrollY / window.innerHeight) : 0;
+      progressRef.current = nextProgress;
+      applyTransitionStyles(nextProgress);
+    };
+
+    const scheduleSync = () => {
+      if (scheduled) {
+        return;
+      }
+
+      scheduled = true;
+      rafId = window.requestAnimationFrame(syncByScroll);
+    };
+
+    scheduleSync();
+    window.addEventListener("scroll", scheduleSync, { passive: true });
+    window.addEventListener("resize", scheduleSync);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleSync);
+      window.removeEventListener("resize", scheduleSync);
+      if (rafId) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [applyTransitionStyles]);
+
+  useEffect(() => {
     if (typeof window === "undefined" || !window.p5) {
       return;
     }
@@ -222,12 +255,6 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
         const targetScrollY = window.scrollY;
         smoothedScrollY = p.lerp(smoothedScrollY, targetScrollY, 0.08);
         const progress = p.constrain(smoothedScrollY / p.height, 0, 1);
-        const immediateProgress = p.constrain(targetScrollY / p.height, 0, 1);
-
-        if (Math.abs(progressRef.current - immediateProgress) > 0.006) {
-          progressRef.current = immediateProgress;
-          applyTransitionStyles(immediateProgress);
-        }
 
         if (progress > 0.93) {
           p.clear();
@@ -279,10 +306,6 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
 
       p.windowResized = function () {
         p.resizeCanvas(window.innerWidth, window.innerHeight);
-        const resizedProgress =
-          window.innerHeight > 0 ? p.constrain(window.scrollY / window.innerHeight, 0, 1) : 0;
-        progressRef.current = resizedProgress;
-        applyTransitionStyles(resizedProgress);
       };
     };
 
@@ -434,7 +457,10 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
   }, [posts]);
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-[#f5f5f5] text-[#0a0a0a]">
+    <div
+      className="relative min-h-screen w-full overflow-x-hidden bg-[#f5f5f5] text-[#0a0a0a]"
+      style={{ touchAction: "pan-y" }}
+    >
 
       <div
         ref={visualContainerRef}
