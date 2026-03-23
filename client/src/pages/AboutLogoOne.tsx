@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import logo1Html from "../../../mylogo/logo1.html?raw";
 
 export default function AboutLogoOne() {
@@ -8,6 +9,26 @@ export default function AboutLogoOne() {
         srcDoc={logo1Html}
         className="block h-full w-full border-0"
       />
+
+      <div className="pointer-events-none fixed left-4 top-4 z-[10001] flex flex-wrap gap-2">
+        <Link href="/about/logo">
+          <a className="pointer-events-auto rounded-full border border-black/25 bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white">
+            ← Back to Hub
+          </a>
+        </Link>
+
+        <Link href="/about/logo/logo2">
+          <a className="pointer-events-auto rounded-full border border-black/25 bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white">
+            Go Logo2
+          </a>
+        </Link>
+
+        <Link href="/about">
+          <a className="pointer-events-auto rounded-full border border-black/25 bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white">
+            About
+          </a>
+        </Link>
+      </div>
     </div>
   );
 }
