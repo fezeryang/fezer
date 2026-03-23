@@ -124,7 +124,12 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
-    cursor: none;
+    cursor: auto;
+  }
+
+  html.rue-cursor-enabled,
+  html.rue-cursor-enabled body {
+    cursor: url("../../cursor/rue/Normal.cur"), auto;
   }
   
   button:not(:disabled),
@@ -137,6 +142,75 @@
   input[type="checkbox"]:not(:disabled),
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
+  }
+
+  html.rue-cursor-enabled button:not(:disabled),
+  html.rue-cursor-enabled [role="button"]:not([aria-disabled="true"]),
+  html.rue-cursor-enabled [type="button"]:not(:disabled),
+  html.rue-cursor-enabled [type="submit"]:not(:disabled),
+  html.rue-cursor-enabled [type="reset"]:not(:disabled),
+  html.rue-cursor-enabled a[href],
+  html.rue-cursor-enabled select:not(:disabled),
+  html.rue-cursor-enabled input[type="checkbox"]:not(:disabled),
+  html.rue-cursor-enabled input[type="radio"]:not(:disabled) {
+    cursor: url("../../cursor/rue/Link.cur"), pointer;
+  }
+
+  html.rue-cursor-enabled input,
+  html.rue-cursor-enabled textarea,
+  html.rue-cursor-enabled [contenteditable="true"] {
+    cursor: url("../../cursor/rue/Text.cur"), text;
+  }
+
+  html.rue-cursor-enabled button:disabled,
+  html.rue-cursor-enabled [aria-disabled="true"] {
+    cursor: url("../../cursor/rue/Unavailable.cur"), not-allowed;
+  }
+
+  html.rue-cursor-enabled [aria-busy="true"] {
+    cursor: url("../../cursor/rue/Working.cur"), progress;
+  }
+
+  html.rue-cursor-enabled [draggable="true"] {
+    cursor: url("../../cursor/rue/Move.cur"), move;
+  }
+
+  html.rue-cursor-enabled.rue-cursor-dragging,
+  html.rue-cursor-enabled.rue-cursor-dragging body,
+  html.rue-cursor-enabled.rue-cursor-dragging * {
+    cursor: url("../../cursor/rue/Move.cur"), grabbing !important;
+  }
+
+  html.rue-cursor-enabled.rue-cursor-resizing,
+  html.rue-cursor-enabled.rue-cursor-resizing body,
+  html.rue-cursor-enabled.rue-cursor-resizing * {
+    cursor: url("../../cursor/rue/Move.cur"), col-resize !important;
+  }
+
+  html.rue-cursor-enabled .cursor-pointer {
+    cursor: url("../../cursor/rue/Link.cur"), pointer !important;
+  }
+
+  html.rue-cursor-enabled .cursor-grab,
+  html.rue-cursor-enabled .cursor-grabbing,
+  html.rue-cursor-enabled .cursor-move,
+  html.rue-cursor-enabled .cursor-col-resize,
+  html.rue-cursor-enabled .cursor-row-resize {
+    cursor: url("../../cursor/rue/Move.cur"), move !important;
+  }
+
+  html.rue-cursor-enabled .cursor-not-allowed {
+    cursor: url("../../cursor/rue/Unavailable.cur"), not-allowed !important;
+  }
+
+  html.rue-cursor-enabled .cursor-wait,
+  html.rue-cursor-enabled .cursor-progress {
+    cursor: url("../../cursor/rue/Working.cur"), progress !important;
+  }
+
+  html.rue-cursor-enabled .cursor-text,
+  html.rue-cursor-enabled .cursor-vertical-text {
+    cursor: url("../../cursor/rue/Text.cur"), text !important;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -163,29 +237,6 @@
     opacity: 0.04;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     mix-blend-mode: multiply;
-  }
-  
-  /* Custom Cursor */
-  .custom-cursor {
-    width: 40px;
-    height: 40px;
-    border: 2px solid var(--accent-lava);
-    border-radius: 50%;
-    position: fixed;
-    pointer-events: none;
-    z-index: 10000;
-    transition: transform 0.1s ease-out;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .custom-cursor::after {
-    content: '';
-    width: 6px;
-    height: 6px;
-    background: var(--accent-lava);
-    border-radius: 50%;
   }
   
   /* Container utility */

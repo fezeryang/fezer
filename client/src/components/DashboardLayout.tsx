@@ -147,14 +147,14 @@ function DashboardLayoutContent({
     if (isResizing) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
+      document.documentElement.classList.add("rue-cursor-resizing");
       document.body.style.userSelect = "none";
     }
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
+      document.documentElement.classList.remove("rue-cursor-resizing");
       document.body.style.userSelect = "";
     };
   }, [isResizing, setSidebarWidth]);

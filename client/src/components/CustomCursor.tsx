@@ -1,18 +1,53 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export default function CustomCursor() {
-  const cursorRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (cursorRef.current) {
-        cursorRef.current.style.transform = `translate(${e.clientX - 20}px, ${e.clientY - 20}px)`;
-      }
+    const root = document.documentElement;
+
+    const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+    const hoverQuery = window.matchMedia("(any-hover: hover)");
+    const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const updateCursorMode = () => {
+      const shouldEnableCursor =
+        hoverQuery.matches &&
+        !coarsePointerQuery.matches &&
+        !reducedMotionQuery.matches;
+
+      root.classList.toggle("rue-cursor-enabled", shouldEnableCursor);
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    return () => document.removeEventListener("mousemove", handleMouseMove);
+    updateCursorMode();
+
+    const addListener = (query: MediaQueryList) => {
+      if (query.addEventListener) {
+        query.addEventListener("change", updateCursorMode);
+        return;
+      }
+
+      query.addListener(updateCursorMode);
+    };
+
+    const removeListener = (query: MediaQueryList) => {
+      if (query.removeEventListener) {
+        query.removeEventListener("change", updateCursorMode);
+        return;
+      }
+
+      query.removeListener(updateCursorMode);
+    };
+
+    addListener(coarsePointerQuery);
+    addListener(hoverQuery);
+    addListener(reducedMotionQuery);
+
+    return () => {
+      removeListener(coarsePointerQuery);
+      removeListener(hoverQuery);
+      removeListener(reducedMotionQuery);
+      root.classList.remove("rue-cursor-enabled");
+    };
   }, []);
 
-  return <div ref={cursorRef} className="custom-cursor" />;
+  return null;
 }

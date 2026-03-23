@@ -313,12 +313,12 @@ describe("WebPet component", () => {
       const petContainer = screen.getByTestId(TEST_IDS.WEB_PET);
       fireEvent.mouseDown(petContainer, { clientX: 100, clientY: 100 });
 
-      expect(document.body.style.cursor).toBe("grabbing");
+      expect(document.documentElement.classList.contains("rue-cursor-dragging")).toBe(true);
       expect(document.body.style.userSelect).toBe("none");
 
       unmount();
 
-      expect(document.body.style.cursor).toBe("");
+      expect(document.documentElement.classList.contains("rue-cursor-dragging")).toBe(false);
       expect(document.body.style.userSelect).toBe("");
     });
 
@@ -333,13 +333,13 @@ describe("WebPet component", () => {
       fireEvent.mouseDown(petContainer, { clientX: 100, clientY: 100 });
       fireEvent.click(petContainer);
       expect(speechBubble.style.display).not.toBe("none");
-      expect(document.body.style.cursor).toBe("grabbing");
+      expect(document.documentElement.classList.contains("rue-cursor-dragging")).toBe(true);
 
       fireEvent.click(toggleButton);
 
       expect(petContainer.style.display).toBe("none");
       expect(speechBubble.style.display).toBe("none");
-      expect(document.body.style.cursor).toBe("");
+      expect(document.documentElement.classList.contains("rue-cursor-dragging")).toBe(false);
       expect(document.body.style.userSelect).toBe("");
 
       const hiddenLeft = petContainer.style.left;
