@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - VOID GESTURE</title>
+    <style>
+        :root {
+            --bg-color: #e8e8e6;
+            --charcoal: #1a1a1a;
+            --grain-opacity: 0.15;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: "Impact", "Arial Black", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Texture Overlay */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            opacity: var(--grain-opacity);
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+        }
+
+        .paper-texture {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 99;
+            opacity: 0.4;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Container */
+        .stage {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5vw;
+        }
+
+        /* Hand SVG Styling */
+        .hand {
+            width: 35vw;
+            height: auto;
+            max-height: 80vh;
+            filter: url(#charcoal-filter);
+            transition: transform 0.3s ease;
+        }
+
+        .hand-left {
+            transform: scaleX(1);
+            animation: breatheLeft 6s ease-in-out infinite;
+        }
+
+        .hand-right {
+            transform: scaleX(-1);
+            animation: breatheRight 6s ease-in-out infinite;
+        }
+
+        /* Middle Finger Retraction */
+        .middle-finger {
+            transition: transform 2s cubic-bezier(0.45, 0.05, 0.55, 0.95), opacity 1.5s ease;
+            transform-origin: bottom center;
+        }
+
+        .retracted .middle-finger {
+            transform: translateY(80px) scaleY(0.1);
+            opacity: 0;
+        }
+
+        /* Center Fist */
+        .center-fist-container {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 30vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .fist-svg {
+            width: 100%;
+            height: auto;
+            filter: url(#charcoal-filter);
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 3s ease, transform 4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .fist-svg.visible {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        /* Typography */
+        .ui-overlay {
+            position: absolute;
+            bottom: 10%;
+            text-align: center;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .error-code {
+            font-size: 12rem;
+            line-height: 0.8;
+            color: var(--charcoal);
+            letter-spacing: -5px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 2s ease 3s;
+        }
+
+        .error-message {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            color: var(--charcoal);
+            margin-top: 20px;
+            font-weight: 300;
+            opacity: 0;
+            transition: all 2s ease 4s;
+        }
+
+        .visible-text .error-code, 
+        .visible-text .error-message {
+            opacity: 0.9;
+            transform: translateY(0);
+        }
+
+        /* Animations */
+        @keyframes breatheLeft {
+            0%, 100% { transform: scaleX(1) translate(0, 0) rotate(0deg); }
+            50% { transform: scaleX(1) translate(-10px, -5px) rotate(-1deg); }
+        }
+
+        @keyframes breatheRight {
+            0%, 100% { transform: scaleX(-1) translate(0, 0) rotate(0deg); }
+            50% { transform: scaleX(-1) translate(10px, -5px) rotate(1deg); }
+        }
+
+        /* SVG Filter for Hand-drawn effect */
+        svg filter {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="noise-overlay"></div>
+    <div class="paper-texture"></div>
+
+    <!-- SVG Filters Definition -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <filter id="charcoal-filter">
+                <!-- Roughen Edges -->
+                <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="5" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" />
+                
+                <!-- Line Thickening -->
+                <feMorphology operator="dilate" radius="0.5" />
+                
+                <!-- Hatching Effect Simulation -->
+                <feComponentTransfer>
+                    <feFuncR type="discrete" tableValues="0 0.1 0.5 1"/>
+                    <feFuncG type="discrete" tableValues="0 0.1 0.5 1"/>
+                    <feFuncB type="discrete" tableValues="0 0.1 0.5 1"/>
+                </feComponentTransfer>
+            </filter>
+        </defs>
+    </svg>
+
+    <div class="stage">
+        <!-- Left Hand -->
+        <svg class="hand hand-left" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Palm Base -->
+            <path d="M120 450 C 120 450, 100 550, 200 550 C 300 550, 280 450, 280 450 L 300 300 L 100 300 Z" stroke="black" stroke-width="8" stroke-linecap="round" fill="white"/>
+            <!-- Hatching on palm -->
+            <path d="M150 480 L 180 520 M 200 480 L 230 520 M 130 460 L 160 500" stroke="black" stroke-width="2" opacity="0.6"/>
+            
+            <!-- Fingers -->
+            <!-- Thumb -->
+            <path d="M100 350 Q 20 350 40 280 Q 60 230 110 300" stroke="black" stroke-width="10" stroke-linecap="round" fill="white"/>
+            <!-- Index -->
+            <path d="M120 300 L 110 100 Q 110 70 140 70 Q 170 70 160 100 L 165 300" stroke="black" stroke-width="10" stroke-linecap="round" fill="white"/>
+            <!-- Middle (The one that retracts) -->
+            <g class="middle-finger">
+                <path d="M175 300 L 170 50 Q 170 20 200 20 Q 230 20 225 50 L 220 300" stroke="black" stroke-width="11" stroke-linecap="round" fill="white"/>
+                <path d="M185 80 L 210 80 M 185 120 L 210 120" stroke="black" stroke-width="3" opacity="0.4"/>
+            </g>
+            <!-- Ring -->
+            <path d="M230 300 L 240 80 Q 240 50 270 50 Q 300 50 290 80 L 275 300" stroke="black" stroke-width="10" stroke-linecap="round" fill="white"/>
+            <!-- Pinky -->
+            <path d="M290 310 L 330 150 Q 340 120 370 130 Q 390 140 350 180 L 310 310" stroke="black" stroke-width="9" stroke-linecap="round" fill="white"/>
+            
+            <!-- Rough Outline Hatching -->
+            <path d="M200 560 Q 205 580 190 590" stroke="black" stroke-width="3" fill="none"/>
+        </svg>
+
+        <!-- Center Element -->
+        <div class="center-fist-container">
+            <svg class="fist-svg" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Fist Front View -->
+                <!-- Main Body -->
+                <path d="M100 200 Q 100 120 200 120 Q 300 120 300 200 L 280 350 L 120 350 Z" stroke="black" stroke-width="12" fill="white"/>
+                <!-- Knuckles -->
+                <path d="M110 160 Q 110 140 145 140 Q 180 140 180 160" stroke="black" stroke-width="8" fill="white"/>
+                <path d="M185 155 Q 185 135 220 135 Q 255 135 255 155" stroke="black" stroke-width="8" fill="white"/>
+                <path d="M260 165 Q 260 145 290 145 Q 320 145 320 165" stroke="black" stroke-width="8" fill="white"/>
+                <!-- Thumb wrapped -->
+                <path d="M100 220 Q 100 300 200 320 Q 280 310 280 260" stroke="black" stroke-width="10" fill="white"/>
+                <!-- Sketch Lines -->
+                <path d="M130 180 L 130 240 M 170 170 L 170 230 M 210 170 L 210 230 M 250 180 L 250 240" stroke="black" stroke-width="2" opacity="0.5"/>
+                <path d="M150 340 L 250 340" stroke="black" stroke-width="4" stroke-dasharray="10 5"/>
+            </svg>
+            
+            <div class="ui-overlay">
+                <div class="error-code">404</div>
+                <div class="error-message">Access denied by the physical realm.</div>
+            </div>
+        </div>
+
+        <!-- Right Hand -->
+        <svg class="hand hand-right" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M120 450 C 120 450, 100 550, 200 550 C 300 550, 280 450, 280 450 L 300 300 L 100 300 Z" stroke="black" stroke-width="8" stroke-linecap="round" fill="white"/>
+            <path d="M100 350 Q 20 350 40 280 Q 60 230 110 300" stroke="black" stroke-width="10" stroke-linecap="round" fill="white"/>
+            <path d="M120 300 L 110 100 Q 110 70 140 70 Q 170 70 160 100 L 165 300" stroke="black" stroke-width="10" stroke-linecap="round" fill="white"/>
+            <g class="middle-finger">
+                <path d="M175 300 L 170 50 Q 170 20 200 20 Q 230 20 225 50 L 220 300" stroke="black" stroke-width="11" stroke-linecap="round" fill="white"/>
+            </g>
+            <path d="M230 300 L 240 80 Q 240 50 270 50 Q 300 50 290 80 L 275 300" stroke="black" stroke-width="10" stroke-linecap="round" fill="white"/>
+            <path d="M290 310 L 330 150 Q 340 120 370 130 Q 390 140 350 180 L 310 310" stroke="black" stroke-width="9" stroke-linecap="round" fill="white"/>
+        </svg>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const hands = document.querySelectorAll('.hand');
+            const fist = document.querySelector('.fist-svg');
+            const centerContainer = document.querySelector('.center-fist-container');
+            const uiOverlay = document.querySelector('.ui-overlay');
+
+            // Sequence Timing
+            
+            // 1. Initial pause for breathing
+            setTimeout(() => {
+                // 2. Retract middle fingers
+                hands.forEach(hand => hand.classList.add('retracted'));
+                
+                // 3. Bring in the fist
+                setTimeout(() => {
+                    fist.classList.add('visible');
+                    
+                    // 4. Show text
+                    setTimeout(() => {
+                        centerContainer.classList.add('visible-text');
+                    }, 1000);
+
+                }, 1500);
+
+            }, 2500);
+
+            // Subtle mouse parallax for the heavy charcoal feel
+            document.addEventListener('mousemove', (e) => {
+                const moveX = (e.clientX - window.innerWidth / 2) / 50;
+                const moveY = (e.clientY - window.innerHeight / 2) / 50;
+                
+                document.querySelector('.hand-left').style.transform = `scaleX(1) translate(${moveX}px, ${moveY}px)`;
+                document.querySelector('.hand-right').style.transform = `scaleX(-1) translate(${-moveX}px, ${moveY}px)`;
+                fist.style.transform = `scale(1.1) translate(${moveX * 0.5}px, ${moveY * 0.5}px)`;
+            });
+        });
+    </script>
+</body>
+</html>
