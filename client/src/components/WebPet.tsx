@@ -82,7 +82,7 @@ export default function WebPet() {
 
   const endDrag = useCallback(() => {
     setIsDragging(false);
-    document.body.style.cursor = "";
+    document.documentElement.classList.remove("rue-cursor-dragging");
     document.body.style.userSelect = "";
   }, []);
 
@@ -237,7 +237,7 @@ export default function WebPet() {
       document.addEventListener("touchend", handlePointerUp);
       document.addEventListener("touchcancel", handlePointerCancel);
       window.addEventListener("blur", handlePointerCancel);
-      document.body.style.cursor = "grabbing";
+      document.documentElement.classList.add("rue-cursor-dragging");
       document.body.style.userSelect = "none";
     }
 
@@ -248,7 +248,7 @@ export default function WebPet() {
       document.removeEventListener("touchend", handlePointerUp);
       document.removeEventListener("touchcancel", handlePointerCancel);
       window.removeEventListener("blur", handlePointerCancel);
-      document.body.style.cursor = "";
+      document.documentElement.classList.remove("rue-cursor-dragging");
       document.body.style.userSelect = "";
     };
   }, [isDragging, clampPosition, endDrag]);
@@ -369,6 +369,7 @@ export default function WebPet() {
       <div
         data-testid={TEST_IDS.WEB_PET}
         draggable="true"
+        onDragStart={(e) => e.preventDefault()}
         onMouseDown={handlePointerDown}
         onTouchStart={handlePointerDown}
         onClick={handleClick}
@@ -382,7 +383,6 @@ export default function WebPet() {
           top: `${position.y}px`,
           width: `${petDimensions.width}px`,
           height: `${petDimensions.height}px`,
-          cursor: "grab",
           userSelect: "none",
           display: isVisible ? "block" : "none",
           zIndex: 9999,
@@ -426,7 +426,6 @@ export default function WebPet() {
           bottom: "16px",
           right: "16px",
           padding: "8px 16px",
-          cursor: "pointer",
           zIndex: 9999,
         }}
       >
