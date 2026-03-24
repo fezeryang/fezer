@@ -26,11 +26,10 @@ const WorksAdmin = lazy(() => import("./pages/admin/WorksAdmin"));
 
 const LAYER_DURATION_SECONDS = 1.3;
 const LAYER_STAGGER_SECONDS = 0.3;
-const CENTER_PAUSE_SECONDS = 0;
 const OVERLAY_RADIUS = "3rem";
 const GSAP_EASE = "power4.out";
 
-type RouteTransitionPhase = "idle" | "covering" | "revealing";
+type RouteTransitionPhase = "idle" | "revealing";
 
 const isAdminPath = (path: string) => path === "/admin" || path.startsWith("/admin/");
 
@@ -113,22 +112,20 @@ function Router() {
         return;
       }
 
-      currentTargetRef.current = nextLocation;
-      setPhase("covering");
+      const locationToDisplay = queuedLocationRef.current ?? nextLocation;
+      queuedLocationRef.current = null;
+      currentTargetRef.current = locationToDisplay;
+      setPhase("revealing");
 
-      const animationStartPercent = -100;
-      const transitionStartPercent = -108;
-      const coverCompleteAtSeconds = LAYER_STAGGER_SECONDS + LAYER_DURATION_SECONDS;
-      const swapAtSeconds = coverCompleteAtSeconds + CENTER_PAUSE_SECONDS;
-      const timelineEndSeconds = swapAtSeconds + LAYER_STAGGER_SECONDS + LAYER_DURATION_SECONDS;
+      const timelineEndSeconds = LAYER_STAGGER_SECONDS + LAYER_DURATION_SECONDS;
 
       gsap.set(loadingAnimation, {
-        xPercent: animationStartPercent,
-        borderRadius: OVERLAY_RADIUS,
+        xPercent: 0,
+        borderRadius: "0rem",
       });
       gsap.set(loadingTransition, {
-        xPercent: transitionStartPercent,
-        borderRadius: OVERLAY_RADIUS,
+        xPercent: 0,
+        borderRadius: "0rem",
       });
       gsap.set(loadingInner, {
         autoAlpha: 1,
@@ -137,60 +134,30 @@ function Router() {
       });
 
       showLoadingBox();
+      setDisplayLocation(locationToDisplay);
 
       const timeline = gsap.timeline({ defaults: { ease: GSAP_EASE } });
       timelineRef.current = timeline;
 
       timeline
         .to(
-          loadingAnimation,
+          loadingInner,
           {
-            xPercent: 0,
-            duration: LAYER_DURATION_SECONDS,
-            borderRadius: "0rem",
+            autoAlpha: 0,
+            y: -8,
+            duration: 0.28,
+            ease: "power2.inOut",
           },
           0
         )
         .to(
           loadingTransition,
           {
-            xPercent: 0,
-            duration: LAYER_DURATION_SECONDS,
-            borderRadius: "0rem",
-          },
-          LAYER_STAGGER_SECONDS
-        )
-        .to(
-          loadingInner,
-          {
-            autoAlpha: 0,
-            y: -8,
-            duration: 0.4,
-            ease: "power2.inOut",
-          },
-          Math.max(0, swapAtSeconds - 0.08)
-        )
-        .add(() => {
-          if (transitionIdRef.current !== transitionId) {
-            return;
-          }
-
-          const locationToDisplay = queuedLocationRef.current ?? nextLocation;
-          queuedLocationRef.current = null;
-          currentTargetRef.current = locationToDisplay;
-          setDisplayLocation(locationToDisplay);
-          setPhase("revealing");
-        },
-        swapAtSeconds
-        )
-        .to(
-          loadingTransition,
-          {
             xPercent: 100,
             duration: LAYER_DURATION_SECONDS,
             borderRadius: OVERLAY_RADIUS,
           },
-          swapAtSeconds
+          0
         )
         .to(
           loadingAnimation,
@@ -199,7 +166,7 @@ function Router() {
             duration: LAYER_DURATION_SECONDS,
             borderRadius: OVERLAY_RADIUS,
           },
-          swapAtSeconds + LAYER_STAGGER_SECONDS
+          LAYER_STAGGER_SECONDS
         )
         .add(() => {
           if (transitionIdRef.current !== transitionId) {
