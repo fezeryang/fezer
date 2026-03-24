@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { Link } from "wouter";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
+import { loadPosts, loadWorks } from "@/content/loaders";
 
 declare global {
   interface Window {
@@ -9,24 +11,398 @@ declare global {
   }
 }
 
-export default function Home() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const p5InstanceRef = useRef<any>(null);
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
+function ShutterItem({
+  index,
+  title,
+  tag,
+  href,
+  imageUrl,
+  isProject = false,
+}: {
+  index: string;
+  title: string;
+  tag: string;
+  href: string;
+  imageUrl?: string;
+  isProject?: boolean;
+}) {
+  const itemRef = useRef<HTMLAnchorElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const item = itemRef.current;
+    const preview = previewRef.current;
+    if (!item || !preview) return;
+
     const handleMouseMove = (e: MouseEvent) => {
-      setCoords({ x: Math.floor(e.clientX), y: Math.floor(e.clientY) });
+      const { clientX, clientY } = e;
+      const { left, top, width, height } = item.getBoundingClientRect();
+      const x = (clientX - left) / width;
+      const y = (clientY - top) / height;
+
+      preview.style.transform = `translate(${(x - 0.5) * 30}px, ${(y - 0.5) * 10}px) scale(1.05)`;
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    const handleMouseLeave = () => {
+      preview.style.transform = `translateX(40px) scale(1.1)`;
+    };
+
+    if (window.matchMedia("(hover: hover)").matches) {
+      item.addEventListener("mousemove", handleMouseMove);
+      item.addEventListener("mouseleave", handleMouseLeave);
+    }
+
+    return () => {
+      item.removeEventListener("mousemove", handleMouseMove);
+      item.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
+  return (
+    <div className="reveal opacity-0 translate-y-8 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]">
+      <Link href={href}>
+        <a
+          ref={itemRef}
+          className={`group relative flex w-full cursor-pointer items-center overflow-hidden border-b border-black/10 bg-transparent transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-[80px] hover:h-[180px] ${
+            isProject ? "border-l-4 border-l-transparent hover:border-l-accent-lava" : ""
+          }`}
+        >
+          <div className="absolute inset-0 z-[1] origin-top bg-white/60 backdrop-blur-md transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-full" />
+
+          <div
+            ref={previewRef}
+            className="pointer-events-none absolute right-0 top-0 z-0 h-full w-2/5 translate-x-10 scale-110 opacity-0 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100 group-hover:translate-x-0 group-hover:opacity-15"
+            style={{ filter: "grayscale(1) contrast(1.1)" }}
+          >
+            {imageUrl ? (
+              <img src={imageUrl} alt={title} className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full bg-black/20" />
+            )}
+          </div>
+
+          <div className="relative z-[2] flex w-full items-center justify-between px-4 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:px-8">
+            <div className="flex items-center gap-8 md:gap-16">
+              <span className="font-mono text-xs text-black/40">{index}</span>
+              <h2 className={`text-xl md:text-2xl font-normal tracking-tight transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-5 ${!isProject ? "group-hover:text-black/60" : ""}`}>
+                {title}
+              </h2>
+            </div>
+            <span className="rounded-full border border-black/10 px-3 py-1 font-mono text-[10px] md:text-[11px] text-black/40 opacity-50 transition-all duration-400 group-hover:border-accent-lava group-hover:bg-accent-lava group-hover:text-white group-hover:opacity-100">
+              {tag}
+            </span>
+          </div>
+        </a>
+      </Link>
+    </div>
+  );
+}
+
+function TimePrismSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const p5InstanceRef = useRef<any>(null);
+  const visibleRef = useRef(false);
+  const [clockNow, setClockNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setClockNow(new Date());
+    }, 100);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.p5) return;
+    if (!sectionRef.current) {
+      return;
+    }
 
-    const p5 = window.p5 as any;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.isIntersecting;
+        visibleRef.current = visible;
+
+        if (p5InstanceRef.current) {
+          if (visible) {
+            p5InstanceRef.current.loop?.();
+          } else {
+            p5InstanceRef.current.noLoop?.();
+          }
+        }
+      },
+      { threshold: 0.12 }
+    );
+
+    observer.observe(sectionRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !canvasContainerRef.current) {
+      return;
+    }
+    let disposed = false;
+    let retryId: number | null = null;
+    let instance: any = null;
+
+    const mountSketch = () => {
+      if (disposed || !canvasContainerRef.current) {
+        return;
+      }
+
+      const p5 = window.p5;
+      if (!p5) {
+        retryId = window.setTimeout(mountSketch, 120);
+        return;
+      }
+
+      const sketch = (p: any) => {
+      const getCanvasSize = () => {
+        const width = Math.min(500, Math.max(280, window.innerWidth * 0.44));
+        return Math.floor(width);
+      };
+
+      const drawTimeRing = (
+        val: number,
+        maxVal: number,
+        radius: number,
+        color: [number, number, number, number]
+      ) => {
+        const segments = 24;
+        const step = p.TWO_PI / segments;
+        const activeAngle = p.map(val, 0, maxVal, 0, p.TWO_PI);
+
+        for (let i = 0; i < segments; i++) {
+          const angle = i * step;
+          const x = p.cos(angle) * radius;
+          const y = p.sin(angle) * radius;
+
+          p.push();
+          p.translate(x, y, 0);
+          p.rotateZ(angle);
+
+          const isActive = angle < activeAngle;
+          if (isActive) {
+            p.fill(color[0], color[1], color[2], 180);
+            p.stroke(color[0], color[1], color[2], 255);
+            p.strokeWeight(2);
+          } else {
+            p.noFill();
+            p.stroke(0, 15);
+            p.strokeWeight(1);
+          }
+
+          p.box(10, 30, 10);
+
+          if (isActive && i % 4 === 0) {
+            p.strokeWeight(0.5);
+            p.line(0, 0, 0, -x, -y, -50);
+          }
+
+          p.pop();
+        }
+      };
+
+      p.setup = function () {
+        p.pixelDensity(1);
+        p.disableFriendlyErrors = true;
+        const size = getCanvasSize();
+        const canvas = p.createCanvas(size, size, p.WEBGL);
+        canvas.parent(canvasContainerRef.current);
+        canvas.elt.style.pointerEvents = "none";
+        p.smooth();
+        if (!visibleRef.current) {
+          p.noLoop();
+        }
+      };
+
+      p.draw = function () {
+        if (!visibleRef.current) {
+          p.clear();
+          return;
+        }
+
+        const now = new Date();
+        const h = now.getHours();
+        const m = now.getMinutes();
+        const s = now.getSeconds();
+        const ms = now.getMilliseconds();
+
+        p.clear();
+        p.ambientLight(200);
+        p.pointLight(255, 255, 255, 200, -200, 300);
+
+        p.rotateX(p.frameCount * 0.005);
+        p.rotateY(p.frameCount * 0.008);
+
+        drawTimeRing(s + ms / 1000, 60, 180, [0, 200, 255, 100]);
+
+        p.push();
+        p.rotateZ(p.PI / 3);
+        drawTimeRing(m + s / 60, 60, 140, [255, 0, 150, 100]);
+        p.pop();
+
+        p.push();
+        p.rotateX(p.PI / 4);
+        drawTimeRing(h + m / 60, 24, 100, [255, 200, 0, 100]);
+        p.pop();
+
+        p.push();
+        p.noFill();
+        p.stroke(0, 40);
+        p.strokeWeight(0.5);
+        p.sphere(40 + p.sin(p.frameCount * 0.05) * 5);
+        p.pop();
+      };
+
+      p.windowResized = function () {
+        const size = getCanvasSize();
+        p.resizeCanvas(size, size);
+      };
+      };
+
+      instance = new p5(sketch);
+      p5InstanceRef.current = instance;
+    };
+
+    mountSketch();
+
+    return () => {
+      disposed = true;
+      if (retryId) {
+        window.clearTimeout(retryId);
+      }
+      instance?.remove();
+      p5InstanceRef.current = null;
+    };
+  }, []);
+
+  const creationDate = useMemo(() => {
+    const base = new Date();
+    base.setDate(base.getDate() - 1);
+    base.setHours(12, 0, 0, 0);
+    return base.getTime();
+  }, []);
+
+  const diff = Math.max(0, clockNow.getTime() - creationDate);
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+  const pad = (value: number, size = 2) => String(value).padStart(size, "0");
+  const clockText = `${pad(clockNow.getHours())}:${pad(clockNow.getMinutes())}:${pad(
+    clockNow.getSeconds()
+  )}`;
+  const uptimeText = `${pad(days)}天 ${pad(hours)}时 ${pad(minutes)}分 ${pad(seconds)}秒`;
+
+  return (
+    <section
+      ref={sectionRef}
+      className="reveal relative z-20 overflow-hidden bg-[#f8f9fa] px-6 py-20 opacity-0 translate-y-8 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] md:px-10 md:py-24"
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(circle_at_15%_20%,rgba(255,0,150,0.08),transparent_38%),radial-gradient(circle_at_85%_22%,rgba(0,200,255,0.08),transparent_40%),radial-gradient(circle_at_50%_88%,rgba(255,255,0,0.08),transparent_42%)]" />
+
+      <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+
+        <main className="relative flex items-center justify-center md:pr-6">
+          <div
+            className="pointer-events-none absolute h-[320px] w-[260px] border border-white/60 bg-white/40 shadow-[20px_20px_60px_rgba(0,0,0,0.05)] backdrop-blur-md transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] md:h-[400px] md:w-[300px]"
+            style={{ transform: "perspective(1000px) rotateY(-15deg) rotateX(10deg)" }}
+          />
+          <div ref={canvasContainerRef} className="relative z-10 flex h-[320px] w-[320px] items-center justify-center mix-blend-multiply md:h-[500px] md:w-[500px]" />
+        </main>
+
+        <section className="flex flex-col justify-center md:pl-8">
+          <div className="mb-10">
+            <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-black/45">Now</div>
+            <div
+              className="text-5xl font-bold leading-none tracking-[-0.05em] text-black/90 md:text-7xl"
+              style={{ fontFamily: "'Space Mono', monospace" }}
+            >
+              {clockText}
+            </div>
+            <div className="mt-3 text-sm">
+              <div className="font-mono font-bold text-black/80">{pad(clockNow.getMilliseconds(), 3)}毫秒</div>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-black/45">已经运行</div>
+            <div
+              className="bg-gradient-to-r from-black to-black/50 bg-clip-text text-xl font-bold text-transparent md:text-2xl"
+              style={{ fontFamily: "'Space Mono', monospace" }}
+            >
+              {uptimeText}
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+export default function Home() {
+  const p5InstanceRef = useRef<any>(null);
+  const coordsRef = useRef({ x: 0, y: 0 });
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+
+  const { latestWorks, latestPosts, loadError } = useMemo(() => {
+    try {
+      const works = loadWorks().slice(0, 3);
+      const posts = loadPosts().slice(0, 3);
+      return {
+        latestWorks: works,
+        latestPosts: posts,
+        loadError: null as string | null,
+      };
+    } catch (error) {
+      console.error("[Home] Failed to load latest previews:", error);
+      return {
+        latestWorks: [],
+        latestPosts: [],
+        loadError: "内容加载失败，请稍后重试。",
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      coordsRef.current = { x: Math.floor(e.clientX), y: Math.floor(e.clientY) };
+    };
+
+    const displayTick = window.setInterval(() => {
+      setCoords(coordsRef.current);
+    }, 120);
+
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.clearInterval(displayTick);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let disposed = false;
+    let retryId: number | null = null;
+    let instance: any = null;
+
+    const mountSketch = () => {
+      if (disposed) {
+        return;
+      }
+
+      const p5 = window.p5 as any;
+      if (!p5) {
+        retryId = window.setTimeout(mountSketch, 120);
+        return;
+      }
+
     let particles: any[] = [];
     let cols: number, rows: number;
     const scl = 25;
@@ -37,6 +413,9 @@ export default function Home() {
       p.setup = function () {
         const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
         canvas.parent("p5-container");
+        canvas.elt.style.pointerEvents = "none";
+        p.pixelDensity(1);
+        p.disableFriendlyErrors = true;
         
         cols = p.floor(p.width / scl);
         rows = p.floor(p.height / scl);
@@ -115,8 +494,17 @@ export default function Home() {
       follow(vectors: any[]) {
         let x = Math.floor(this.pos.x / scl);
         let y = Math.floor(this.pos.y / scl);
+
+        if (x < 0 || x >= cols || y < 0 || y >= rows) {
+          return;
+        }
+
         let index = x + y * cols;
         let force = vectors[index];
+
+        if (!force) {
+          return;
+        }
 
         let m = this.p.createVector(this.p.mouseX, this.p.mouseY);
         let d = this.p.dist(this.pos.x, this.pos.y, this.p.mouseX, this.p.mouseY);
@@ -170,36 +558,132 @@ export default function Home() {
       }
     }
 
-    const instance = new p5(sketch);
+    instance = new p5(sketch);
     p5InstanceRef.current = instance;
+    };
+
+    mountSketch();
 
     return () => {
-      instance.remove();
+      disposed = true;
+      if (retryId) {
+        window.clearTimeout(retryId);
+      }
+      instance?.remove();
+      p5InstanceRef.current = null;
     };
   }, []);
 
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: "0px 0px -50px 0px"
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("opacity-100", "translate-y-0");
+          entry.target.classList.remove("opacity-0", "translate-y-8");
+        }
+      });
+    }, observerOptions);
+
+    setTimeout(() => {
+      document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+    }, 100);
+
+    return () => observer.disconnect();
+  }, [latestWorks, latestPosts]);
+
   return (
-    <div className="w-full h-screen bg-sand-base overflow-hidden">
-      <div id="p5-container" className="w-full h-full" />
+    <div className="relative min-h-screen w-full bg-sand-base overflow-x-hidden">
+      <div id="p5-container" className="pointer-events-none fixed inset-0 z-[1] h-screen w-full" />
       <Navigation />
       <GrainOverlay />
       <CustomCursor />
 
-      {/* Hero Content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <h1 className="text-7xl md:text-9xl font-bold text-center leading-none mb-4 mix-blend-difference text-white">
+      <section className="relative z-10 flex h-screen flex-col items-center justify-center px-6 text-center pointer-events-none">
+        <h1 className="mb-4 text-7xl font-bold leading-none text-white mix-blend-difference md:text-9xl">
           FEZER
         </h1>
-        <h2 className="text-2xl md:text-4xl font-medium text-center leading-none text-accent-lava tracking-widest mt-4">
+        <h2 className="mt-4 text-2xl font-medium leading-none tracking-widest text-accent-lava md:text-4xl">
           AI爱好者 / 研究生在读
         </h2>
+
+        <div className="absolute bottom-8 right-8 text-right font-mono text-xs text-text-main">
+          <div>坐标: {coords.x}, {coords.y}</div>
+          <div>状态: 活跃</div>
+        </div>
+      </section>
+
+      <div className="relative z-20 bg-gradient-to-b from-transparent via-[#f5f4ef]/90 to-[#ece8dd] pt-32 pb-20 backdrop-blur-[2px]">
+        <section className="mx-auto w-full max-w-6xl px-6 md:px-10 mb-32">
+          <div className="mb-12 flex items-center gap-4">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">LATEST PROJECTS / RECENT WORKS</p>
+            <div className="h-px flex-grow bg-black/10" />
+          </div>
+
+          {loadError ? (
+            <div className="rounded-2xl border border-red-400/30 bg-red-100/70 px-4 py-3 text-sm text-red-900">
+              {loadError}
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {latestWorks.map((work, i) => (
+                <ShutterItem
+                  key={work.slug}
+                  index={String(i + 1).padStart(2, "0")}
+                  title={work.title}
+                  tag={work.tags?.[0] || "Project"}
+                  href={`/portfolio#${work.slug}`}
+                  imageUrl={work.imageUrl}
+                  isProject={true}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mx-auto w-full max-w-6xl px-6 md:px-10 mb-20">
+          <div className="mb-12 flex items-center gap-4">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">LATEST WRITING / JOURNAL</p>
+            <div className="h-px flex-grow bg-black/10" />
+          </div>
+
+          {loadError ? (
+            <div className="rounded-2xl border border-red-400/30 bg-red-100/70 px-4 py-3 text-sm text-red-900">
+              {loadError}
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {latestPosts.map((post) => {
+                const date = new Date(post.date);
+                const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                const day = date.getDate();
+                return (
+                  <ShutterItem
+                    key={post.slug}
+                    index={`${month} ${day}`}
+                    title={post.title}
+                    tag={post.category || post.tags?.[0] || "Article"}
+                    href={`/blog/${post.slug}`}
+                    isProject={false}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <div className="px-6 py-10 text-center md:px-10">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">End of homepage preview stream</p>
+        </div>
       </div>
 
-      {/* Bottom Stats */}
-      <div className="absolute bottom-8 right-8 text-xs font-mono text-text-main pointer-events-none text-right">
-        <div>坐标: {coords.x}, {coords.y}</div>
-        <div>状态: 活跃</div>
-      </div>
+      <div className="relative z-20 h-28 bg-gradient-to-b from-[#ece8dd] via-[#f2f4f6]/85 to-[#f8f9fa]" />
+
+      <TimePrismSection />
     </div>
   );
 }
