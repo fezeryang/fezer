@@ -1,5 +1,6 @@
 @import url("https://fontsapi.zeoseven.com/513/main/result.css");
 @import url("https://fontsapi.zeoseven.com/871/main/result.css");
+@import url("https://fontsapi.zeoseven.com/446/main/result.css");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -23,6 +24,11 @@
 
 .font-chill-huofangsong {
   font-family: "ChillHuoFangSong", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+  font-weight: normal;
+}
+
+.font-yffyt {
+  font-family: "YFFYT", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
   font-weight: normal;
 }
 

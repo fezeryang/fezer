@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
@@ -12,18 +12,7 @@ declare global {
 }
 
 export default function Portfolio() {
-  const [scrollY, setScrollY] = useState(0);
-  const p5InstanceRef = useRef<any>(null);
   const works = loadWorks();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.p5) return;
@@ -41,6 +30,20 @@ export default function Portfolio() {
       "#ffb703",
       "#fb8500",
     ];
+    const bookTitles = [
+      "战争与和平",
+      "百年孤独",
+      "追忆似水年华",
+      "红楼梦",
+      "堂吉诃德",
+      "卡拉马佐夫兄弟",
+      "悲惨世界",
+      "西游记",
+      "哈姆雷特",
+      "局外人",
+      "1984",
+      "活着",
+    ];
 
     class PaperPiece {
       pos: any;
@@ -52,6 +55,7 @@ export default function Portfolio() {
       h: number;
       color: any;
       type: number;
+      label: string;
       p: any;
 
       constructor(pInstance: any, x?: number, y?: number) {
@@ -61,16 +65,55 @@ export default function Portfolio() {
           y || pInstance.random(-pInstance.height, 0)
         );
         this.vel = pInstance.createVector(
-          pInstance.random(-1, 1),
-          pInstance.random(-1, 1)
+          pInstance.random(-0.6, 0.6),
+          pInstance.random(0.15, 0.75)
         );
         this.acc = pInstance.createVector(0, 0);
         this.angle = pInstance.random(pInstance.TWO_PI);
         this.angVel = pInstance.random(-0.05, 0.05);
-        this.w = pInstance.random(60, 180);
-        this.h = pInstance.random(80, 240);
+        this.label = pInstance.random(bookTitles);
+        const labelLength = Array.from(this.label).length;
+        const baseWidth = pInstance.map(labelLength, 2, 10, 112, 196, true);
+        const baseHeight = pInstance.map(labelLength, 2, 10, 132, 234, true);
+        this.w = pInstance.constrain(baseWidth + pInstance.random(-10, 10), 104, 208);
+        this.h = pInstance.constrain(baseHeight + pInstance.random(-12, 12), 126, 252);
         this.color = pInstance.color(pInstance.random(colors));
         this.type = pInstance.floor(pInstance.random(3));
+      }
+
+      fitLabel(label: string, availableWidth: number, availableHeight: number) {
+        let textSize = this.p.constrain(this.p.min(this.w, this.h) * 0.1, 8, 14);
+        let lines: string[] = [label];
+
+        while (textSize >= 8) {
+          this.p.textSize(textSize);
+
+          const approxCharWidth = textSize * 0.9;
+          const charsPerLine = Math.max(2, Math.floor(availableWidth / approxCharWidth));
+
+          lines = [];
+          for (let i = 0; i < label.length; i += charsPerLine) {
+            lines.push(label.slice(i, i + charsPerLine));
+          }
+
+          const widestLine = lines.reduce(
+            (maxWidth, line) => Math.max(maxWidth, this.p.textWidth(line)),
+            0
+          );
+          const lineHeight = textSize * 1.15;
+          const textBlockHeight = lines.length * lineHeight;
+
+          if (widestLine <= availableWidth && textBlockHeight <= availableHeight) {
+            break;
+          }
+
+          textSize -= 0.5;
+        }
+
+        return {
+          textSize: Math.max(textSize, 7.5),
+          lines,
+        };
       }
 
       applyForce(force: any) {
@@ -90,7 +133,7 @@ export default function Portfolio() {
 
       update() {
         this.vel.add(this.acc);
-        this.vel.limit(6);
+        this.vel.limit(2.4);
         this.pos.add(this.vel);
         this.acc.mult(0);
         this.angle += this.angVel;
@@ -100,7 +143,7 @@ export default function Portfolio() {
       edges() {
         if (this.pos.y > this.p.height + this.h) {
           this.pos.y = -this.h;
-          this.vel.y = this.p.random(1, 3);
+          this.vel.y = this.p.random(0.2, 0.85);
         }
         if (this.pos.x > this.p.width + this.w) this.pos.x = -this.w;
         if (this.pos.x < -this.w) this.pos.x = this.p.width + this.w;
@@ -139,6 +182,38 @@ export default function Portfolio() {
         this.p.line(-this.w / 3, -this.h / 4, this.w / 3, -this.h / 4);
         this.p.line(-this.w / 3, -this.h / 4 + 10, 0, -this.h / 4 + 10);
 
+        const availableTextWidth = this.w * 0.5;
+        const availableTextHeight = this.h * 0.34;
+        const fitted = this.fitLabel(this.label, availableTextWidth, availableTextHeight);
+        const lineHeight = fitted.textSize * 1.15;
+        const textBlockHeight = fitted.lines.length * lineHeight;
+
+        this.p.textAlign(this.p.CENTER, this.p.CENTER);
+        this.p.textSize(fitted.textSize);
+        this.p.textFont("YFFYT");
+        this.p.textLeading(lineHeight);
+        this.p.fill(0, 190);
+        this.p.noStroke();
+
+        const ctx = this.p.drawingContext as CanvasRenderingContext2D;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(
+          -availableTextWidth / 2,
+          -availableTextHeight / 2,
+          availableTextWidth,
+          availableTextHeight
+        );
+        ctx.clip();
+
+        let currentLineY = -textBlockHeight / 2 + lineHeight / 2;
+        for (const line of fitted.lines) {
+          this.p.text(line, 0, currentLineY);
+          currentLineY += lineHeight;
+        }
+
+        ctx.restore();
+
         this.p.pop();
       }
     }
@@ -147,7 +222,7 @@ export default function Portfolio() {
       p.setup = function () {
         const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
         canvas.parent("p5-container");
-        gravity = p.createVector(0, 0.15);
+        gravity = p.createVector(0, 0.05);
 
         for (let i = 0; i < 25; i++) {
           pieces.push(new PaperPiece(p));
@@ -160,12 +235,12 @@ export default function Portfolio() {
         p.clear();
 
         let scrollY = window.scrollY;
-        let gravY = p.map(p.sin(scrollY * 0.01), -1, 1, 0.05, 0.5);
+        let gravY = p.map(p.sin(scrollY * 0.01), -1, 1, 0.02, 0.18);
         gravity.y = gravY;
 
         wind = p.createVector(
-          (p.mouseX - p.pmouseX) * 0.05,
-          (p.mouseY - p.pmouseY) * 0.05
+          (p.mouseX - p.pmouseX) * 0.02,
+          (p.mouseY - p.pmouseY) * 0.02
         );
 
         for (let piece of pieces) {
@@ -202,7 +277,6 @@ export default function Portfolio() {
     };
 
     const instance = new p5(sketch);
-    p5InstanceRef.current = instance;
 
     return () => {
       instance.remove();
@@ -223,18 +297,6 @@ export default function Portfolio() {
             <h1 className="text-6xl md:text-8xl font-bold mb-12 text-text-main">
               作品集
             </h1>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-32 max-w-md">
-              <div className="stat-box">
-                <p className="text-xs opacity-50 mb-2">拼贴引擎</p>
-                <p className="font-mono font-bold">运行中</p>
-              </div>
-              <div className="stat-box">
-                <p className="text-xs opacity-50 mb-2">重力</p>
-                <p className="font-mono font-bold">9.81 m/s²</p>
-              </div>
-            </div>
 
             {/* Bio Section */}
             <div className="max-w-2xl mb-32">
