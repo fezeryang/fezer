@@ -309,10 +309,6 @@ function TimePrismSection() {
       <div className="relative mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
 
         <main className="relative flex items-center justify-center md:pr-6">
-          <div
-            className="pointer-events-none absolute h-[320px] w-[260px] border border-white/60 bg-white/40 shadow-[20px_20px_60px_rgba(0,0,0,0.05)] backdrop-blur-md transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] md:h-[400px] md:w-[300px]"
-            style={{ transform: "perspective(1000px) rotateY(-15deg) rotateX(10deg)" }}
-          />
           <div ref={canvasContainerRef} className="relative z-10 flex h-[320px] w-[320px] items-center justify-center mix-blend-multiply md:h-[500px] md:w-[500px]" />
         </main>
 
@@ -356,9 +352,17 @@ function TimePrismSection() {
 }
 
 export default function Home() {
+  const heroEnglishChars = useMemo(() => Array.from("All is coming into being."), []);
+  const heroTibetanChars = useMemo(() => Array.from("ཐམས་ཅད་རིམ་གྱིས་ཁ་ཕྱེ་བཞིན་འདུག།"), []);
+  const [typingIndex, setTypingIndex] = useState(0);
   const p5InstanceRef = useRef<any>(null);
   const coordsRef = useRef({ x: 0, y: 0 });
   const [coords, setCoords] = useState({ x: 0, y: 0 });
+
+  const maxTypingLength = Math.max(heroEnglishChars.length, heroTibetanChars.length);
+  const typedEnglish = heroEnglishChars.slice(0, Math.min(typingIndex, heroEnglishChars.length)).join("");
+  const typedTibetan = heroTibetanChars.slice(0, Math.min(typingIndex, heroTibetanChars.length)).join("");
+  const isTyping = typingIndex < maxTypingLength;
 
   const { latestWorks, latestPosts, loadError } = useMemo(() => {
     try {
@@ -378,6 +382,18 @@ export default function Home() {
       };
     }
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (typingIndex < maxTypingLength) {
+        setTypingIndex((prev) => prev + 1);
+      } else {
+        setTypingIndex(0);
+      }
+    }, typingIndex < maxTypingLength ? 95 : 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [maxTypingLength, typingIndex]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -616,13 +632,32 @@ export default function Home() {
 
       <DampedScrollView>
 
-      <section className="relative z-10 flex h-screen w-full flex-col items-center justify-center px-6 text-center pointer-events-none">
-        <h1 className="mb-4 text-7xl font-bold leading-none text-white mix-blend-difference md:text-9xl">
+      <section className="relative z-10 flex h-screen w-full flex-col items-center justify-center px-6 text-center">
+        <h1 className="mb-4 text-7xl font-bold leading-none text-black transition-colors duration-300 hover:text-transparent md:text-9xl">
           FEZER
         </h1>
-        <h2 className="mt-4 text-2xl font-medium leading-none tracking-widest text-accent-lava md:text-4xl">
-          AI爱好者 / 研究生在读
-        </h2>
+
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <h2 className="font-caveat-hand text-3xl font-semibold leading-none tracking-[0.04em] text-black md:text-5xl">
+            {typedEnglish}
+            <span
+              className={`ml-1 inline-block text-black transition-opacity duration-300 ${isTyping ? "animate-pulse-custom opacity-100" : "opacity-0"}`}
+              aria-hidden="true"
+            >
+              |
+            </span>
+          </h2>
+
+          <p className="font-zsft-hs text-xl leading-tight text-black/90 md:text-3xl">
+            {typedTibetan}
+            <span
+              className={`ml-1 inline-block text-black/80 transition-opacity duration-300 ${isTyping ? "animate-pulse-custom opacity-100" : "opacity-0"}`}
+              aria-hidden="true"
+            >
+              |
+            </span>
+          </p>
+        </div>
 
         <div className="absolute bottom-8 right-8 text-right font-mono text-xs text-text-main">
           <div>坐标: {coords.x}, {coords.y}</div>
