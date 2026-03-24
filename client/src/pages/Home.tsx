@@ -317,7 +317,12 @@ function TimePrismSection() {
 
         <section className="flex flex-col justify-center md:pl-8">
           <div className="mb-10">
-            <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-black/45">Now</div>
+            <div
+              className="mb-1 text-[17px] uppercase tracking-[0.2em] text-black/45"
+              style={{ fontFamily: "'Gravitas One', serif" }}
+            >
+              Now
+            </div>
             <div
               className="text-5xl font-bold leading-none tracking-[-0.05em] text-black/90 md:text-7xl"
               style={{ fontFamily: "'Space Mono', monospace" }}
@@ -330,7 +335,12 @@ function TimePrismSection() {
           </div>
 
           <div>
-            <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-black/45">已经运行</div>
+            <div
+              className="mb-1 text-[17px] uppercase tracking-[0.2em] text-black/45"
+              style={{ fontFamily: '"PING FANG YU TONG", sans-serif', fontWeight: "normal" }}
+            >
+              已经运行
+            </div>
             <div
               className="bg-gradient-to-r from-black to-black/50 bg-clip-text text-xl font-bold text-transparent md:text-2xl"
               style={{ fontFamily: "'Space Mono', monospace" }}
