@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
+import DampedScrollView from "@/components/DampedScrollView";
 
 declare global {
   interface Window {
@@ -241,26 +242,29 @@ export default function Lab() {
   }, []);
 
   return (
-    <div className="w-full bg-white overflow-x-hidden" style={{ height: "600vh" }}>
+    <div className="w-full bg-white overflow-x-hidden">
       <div id="p5-container" className="fixed inset-0 w-full h-screen" />
       <Navigation />
       <GrainOverlay />
       <CustomCursor />
 
-      {/* UI Layer */}
-      <div className="fixed inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
-        <div className="pointer-events-auto">
-          <h1 className="text-6xl md:text-8xl font-bold text-white mix-blend-difference">
-            Fezer<br />实验室
-          </h1>
-        </div>
+      <DampedScrollView>
+        <div className="relative w-full" style={{ height: "600vh" }}>
+          <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
+            <div className="pointer-events-auto">
+              <h1 className="text-6xl md:text-8xl font-bold text-white mix-blend-difference">
+                Fezer<br />实验室
+              </h1>
+            </div>
 
-        <div className="text-right text-sm font-mono pointer-events-auto">
-          <div>帧率: <span id="fps">60</span></div>
-          <div>滚动位置: <span id="scrollVal">{Math.round(scrollT * 100)}%</span></div>
-          <div>阶段: {scrollT < 0.6 ? "01" : scrollT < 0.85 ? "02" : "03"}</div>
+            <div className="text-right text-sm font-mono pointer-events-auto">
+              <div>帧率: <span id="fps">60</span></div>
+              <div>滚动位置: <span id="scrollVal">{Math.round(scrollT * 100)}%</span></div>
+              <div>阶段: {scrollT < 0.6 ? "01" : scrollT < 0.85 ? "02" : "03"}</div>
+            </div>
+          </div>
         </div>
-      </div>
+      </DampedScrollView>
     </div>
   );
 }

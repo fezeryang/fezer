@@ -52,6 +52,10 @@
   --text-main: #2a2a2a;
   --blueprint-blue: #0047FF;
   --blueprint-cyan: #00D1FF;
+  --icat-background: #18171d;
+  --icat-white: #f7f7fa;
+  --icat-green: #17f700;
+  --transition-ease: cubic-bezier(0.22, 1, 0.36, 1);
   
   --primary: var(--accent-lava);
   --primary-foreground: #ffffff;
@@ -402,4 +406,219 @@
 
 .animate-pulse-custom {
   animation: pulse 1s infinite alternate;
+}
+
+.route-transition-shell {
+  position: relative;
+  min-height: 100vh;
+}
+
+.route-transition-scene {
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+.route-transition-shell[data-phase="covering"] .route-transition-scene,
+.route-transition-shell[data-phase="revealing"] .route-transition-scene {
+  pointer-events: none;
+}
+
+.loadingbox {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100dvh;
+  z-index: 99999;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.loading-animation,
+.loading-transition {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform, border-radius;
+}
+
+.loading-animation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background: var(--icat-background);
+  z-index: 2;
+}
+
+.loading-transition {
+  background-color: var(--icat-green);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%23050505' stroke-width='2.4' stroke-linejoin='miter' stroke-linecap='square'%3E%3Cpath d='M0 0h180v180H0zM60 0v180M120 0v180M0 60h180M0 120h180'/%3E%3Cpath d='M0 0L60 30L120 0L180 30M0 60L60 30L120 60L180 30M0 120L60 90L120 120L180 90M0 180L60 150L120 180L180 150'/%3E%3Cpath d='M22 22h20v8H30v20h-8zM158 22h-20v8h12v20h8zM22 158h20v-8H30v-20h-8zM158 158h-20v-8h12v-20h8z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 30%;
+  z-index: 3;
+}
+
+.loading-inner {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loading-logo {
+  width: 16rem;
+  height: 16rem;
+}
+
+.loading-logo path {
+  fill: none;
+  stroke: var(--icat-white);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 0 1 359 0;
+  stroke-dashoffset: 365;
+  animation:
+    loading-dash-array 4.6s ease-in-out infinite,
+    loading-dash-offset 4.6s linear infinite;
+}
+
+.loading-logo path.accent {
+  stroke: var(--icat-green);
+  animation-duration: 4s, 4s;
+}
+
+.loading-text {
+  position: relative;
+  margin-top: 1rem;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.3rem;
+  color: var(--icat-white);
+  text-transform: uppercase;
+  animation: loading-shift 1s ease-in-out infinite alternate;
+}
+
+.loading-text::before,
+.loading-text::after {
+  content: attr(data-glitch);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loading-text::before {
+  color: var(--icat-green);
+  transform: translate3d(2px, 0, 0);
+  animation: loading-glitch 0.36s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.loading-text::after {
+  color: #111;
+  transform: translate3d(-2px, 0, 0);
+  animation: loading-glitch 0.36s cubic-bezier(0.25, 0.46, 0.45, 0.94) reverse infinite;
+}
+
+@keyframes loading-glitch {
+  0% {
+    transform: translate(0);
+  }
+
+  25% {
+    transform: translate(-2px, 2px);
+  }
+
+  50% {
+    transform: translate(2px, -2px);
+  }
+
+  75% {
+    transform: translate(2px, 2px);
+  }
+
+  100% {
+    transform: translate(0);
+  }
+}
+
+@keyframes loading-shift {
+  0%,
+  100%,
+  40%,
+  44%,
+  58%,
+  61%,
+  65%,
+  69%,
+  73% {
+    transform: skewX(0);
+  }
+
+  41% {
+    transform: skewX(10deg);
+  }
+
+  42% {
+    transform: skewX(-10deg);
+  }
+
+  59% {
+    transform: skewX(40deg) skewY(10deg);
+  }
+
+  60% {
+    transform: skewX(-40deg) skewY(-10deg);
+  }
+
+  63% {
+    transform: skewX(10deg) skewY(-5deg);
+  }
+
+  70% {
+    transform: skewX(-50deg) skewY(-20deg);
+  }
+
+  71% {
+    transform: skewX(10deg) skewY(-10deg);
+  }
+}
+
+@keyframes loading-dash-array {
+  0% {
+    stroke-dasharray: 0 1 359 0;
+  }
+
+  50% {
+    stroke-dasharray: 0 359 1 0;
+  }
+
+  100% {
+    stroke-dasharray: 359 1 0 0;
+  }
+}
+
+@keyframes loading-dash-offset {
+  0% {
+    stroke-dashoffset: 365;
+  }
+
+  100% {
+    stroke-dashoffset: 5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingbox {
+    display: none;
+  }
 }
