@@ -1,4 +1,5 @@
 @import url("https://fontsapi.zeoseven.com/513/main/result.css");
+@import url("https://fontsapi.zeoseven.com/871/main/result.css");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -17,6 +18,11 @@
 
 .font-zsft-hs {
   font-family: "ZSFT-hs", "Noto Sans Tibetan", "Microsoft Himalaya", serif;
+  font-weight: normal;
+}
+
+.font-chill-huofangsong {
+  font-family: "ChillHuoFangSong", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
   font-weight: normal;
 }
 

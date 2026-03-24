@@ -89,7 +89,9 @@ function ShutterItem({
                 {title}
               </h2>
             </div>
-            <span className="rounded-full border border-black/10 px-3 py-1 font-mono text-[10px] md:text-[11px] text-black/40 opacity-50 transition-all duration-400 group-hover:border-accent-lava group-hover:bg-accent-lava group-hover:text-white group-hover:opacity-100">
+            <span
+              className="font-chill-huofangsong rounded-full border border-black/10 px-3 py-1 text-[10px] md:text-[11px] text-black/40 opacity-50 transition-all duration-400 group-hover:border-accent-lava group-hover:bg-accent-lava group-hover:text-white group-hover:opacity-100"
+            >
               {tag}
             </span>
           </div>
@@ -333,8 +335,7 @@ function TimePrismSection() {
 
           <div>
             <div
-              className="mb-1 text-[17px] uppercase tracking-[0.2em] text-black/45"
-              style={{ fontFamily: '"PING FANG YU TONG", sans-serif', fontWeight: "normal" }}
+              className="font-chill-huofangsong mb-1 text-[17px] uppercase tracking-[0.2em] text-black/45"
             >
               已经运行
             </div>
@@ -668,7 +669,11 @@ export default function Home() {
       <div className="relative z-20 w-full bg-gradient-to-b from-transparent via-[#e9e5d9]/28 to-[#e9e5d9]/38 pt-32 pb-20 backdrop-blur-[1px]">
         <section className="mx-auto mb-32 w-full max-w-[1400px] px-6 md:px-10">
           <div className="mb-12 flex items-center gap-4">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">LATEST PROJECTS / RECENT WORKS</p>
+            <p
+              className="font-chill-huofangsong text-sm tracking-[0.14em] text-black/45"
+            >
+              最新项目 / 近期作品
+            </p>
             <div className="h-px flex-grow bg-black/10" />
           </div>
 
@@ -683,7 +688,7 @@ export default function Home() {
                   key={work.slug}
                   index={String(i + 1).padStart(2, "0")}
                   title={work.title}
-                  tag={work.tags?.[0] || "Project"}
+                  tag="项目"
                   href={`/portfolio#${work.slug}`}
                   imageUrl={work.imageUrl}
                   isProject={true}
@@ -695,7 +700,11 @@ export default function Home() {
 
         <section className="mx-auto mb-20 w-full max-w-[1400px] px-6 md:px-10">
           <div className="mb-12 flex items-center gap-4">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">LATEST WRITING / JOURNAL</p>
+            <p
+              className="font-chill-huofangsong text-sm tracking-[0.14em] text-black/45"
+            >
+              最新文章 / 日志
+            </p>
             <div className="h-px flex-grow bg-black/10" />
           </div>
 
@@ -707,14 +716,14 @@ export default function Home() {
             <div className="flex flex-col">
               {latestPosts.map((post) => {
                 const date = new Date(post.date);
-                const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                const month = date.getMonth() + 1;
                 const day = date.getDate();
                 return (
                   <ShutterItem
                     key={post.slug}
-                    index={`${month} ${day}`}
+                    index={`${month}月${day}日`}
                     title={post.title}
-                    tag={post.category || post.tags?.[0] || "Article"}
+                    tag="文章"
                     href={`/blog/${post.slug}`}
                     isProject={false}
                   />
@@ -725,7 +734,11 @@ export default function Home() {
         </section>
 
         <div className="px-6 py-10 text-center md:px-10">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">End of homepage preview stream</p>
+          <p
+            className="font-chill-huofangsong text-sm tracking-[0.14em] text-black/45"
+          >
+            主页预览流结束
+          </p>
         </div>
       </div>
 
