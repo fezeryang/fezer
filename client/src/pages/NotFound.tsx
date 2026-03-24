@@ -1,25 +1,23 @@
 import { Link } from "wouter";
-import Navigation from "@/components/Navigation";
-import GrainOverlay from "@/components/GrainOverlay";
-import CustomCursor from "@/components/CustomCursor";
-import DampedScrollView from "@/components/DampedScrollView";
+import notFoundHtml from "../../../mylogo/404.html?raw";
 
 export default function NotFound() {
   return (
-    <div className="w-full min-h-screen bg-sand-base">
-      <Navigation />
-      <GrainOverlay />
-      <CustomCursor />
+    <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-[#e8e8e6]">
+      <iframe title="404 - VOID GESTURE" srcDoc={notFoundHtml} className="block h-full w-full border-0" />
 
-      <DampedScrollView>
-        <div className="flex min-h-screen w-full flex-col items-center justify-center">
-          <h1 className="text-9xl font-bold text-text-main mb-4">404</h1>
-          <p className="text-2xl text-text-main opacity-70 mb-8">Page Not Found</p>
-          <Link href="/">
-            <a className="pill-btn">RETURN HOME</a>
-          </Link>
-        </div>
-      </DampedScrollView>
+      <div className="pointer-events-none fixed left-4 top-4 z-[101] flex flex-wrap gap-2">
+        <Link href="/">
+          <a className="pointer-events-auto rounded-full border border-black/30 bg-white/75 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white">
+            ← Home
+          </a>
+        </Link>
+        <Link href="/about">
+          <a className="pointer-events-auto rounded-full border border-black/30 bg-white/75 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white">
+            About
+          </a>
+        </Link>
+      </div>
     </div>
   );
 }

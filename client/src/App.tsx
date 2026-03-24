@@ -13,7 +13,11 @@ import Blog from "./pages/Blog";
 import BlogSurface from "./pages/BlogSurface";
 import BlogPostDetail from "./pages/BlogPostDetail";
 import About from "./pages/About";
+import AboutLogo from "./pages/AboutLogo";
+import AboutLogoOne from "./pages/AboutLogoOne";
+import AboutLogoTwo from "./pages/AboutLogoTwo";
 import WebPet from "./components/WebPet";
+import RouteLoadingScreen from "./components/RouteLoadingScreen";
 
 const AdminRouteGuard = lazy(() => import("./components/AdminRouteGuard"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -40,11 +44,11 @@ const getReducedMotionPreference = () => {
 
 function AdminRouteLoading() {
   return (
-    <div className="flex items-center justify-center min-h-screen" data-testid="admin-route-loading">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-12 w-12 rounded-full border-2 border-muted border-t-primary animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading admin area...</p>
-      </div>
+    <div data-testid="admin-route-loading">
+      <RouteLoadingScreen
+        title="Loading admin area..."
+        subtitle="Authenticating and preparing dashboard modules."
+      />
     </div>
   );
 }
@@ -274,6 +278,9 @@ function Router() {
           <Route path={"/blog/:slug"}>
             {(params) => <BlogPostDetail slug={params.slug} />}
           </Route>
+          <Route path={"/about/logo/logo1"} component={AboutLogoOne} />
+          <Route path={"/about/logo/logo2"} component={AboutLogoTwo} />
+          <Route path={"/about/logo"} component={AboutLogo} />
           <Route path={"/about"} component={About} />
           <Route path={"/admin/blog"}>
             <Suspense fallback={<AdminRouteLoading />}>

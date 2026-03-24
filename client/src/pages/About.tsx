@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { marked } from "marked";
+import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
@@ -14,7 +15,18 @@ declare global {
 
 export default function About() {
   const p5InstanceRef = useRef<any>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const bubbleMenuRef = useRef<HTMLDivElement>(null);
+  const [isBubbleOpen, setIsBubbleOpen] = useState(false);
   const profile = getDefaultProfile();
+
+  const scrollToSection = (sectionId: string) => {
+    setIsBubbleOpen(false);
+    const target = document.getElementById(sectionId);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.p5) return;
@@ -116,6 +128,38 @@ export default function About() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isBubbleOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      const clickedTrigger = triggerRef.current?.contains(target);
+      const clickedMenu = bubbleMenuRef.current?.contains(target);
+
+      if (!clickedTrigger && !clickedMenu) {
+        setIsBubbleOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsBubbleOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isBubbleOpen]);
+
   return (
     <div className="w-full min-h-screen bg-sand-base overflow-x-hidden">
       <div id="p5-container" className="fixed inset-0 w-full h-screen" />
@@ -138,9 +182,91 @@ export default function About() {
         {/* Main Content */}
         <main className="col-span-1 pt-32">
           <header className="mb-32">
-            <h1 className="text-6xl md:text-7xl font-bold mb-8 leading-tight">
-              {profile?.name ?? "待补充"}
-            </h1>
+            <div className="relative mb-8 inline-flex flex-col">
+              <div
+                ref={bubbleMenuRef}
+                className={`absolute -top-4 left-1/2 z-30 w-[280px] -translate-x-1/2 -translate-y-full border border-black bg-[#d1d5db] p-1 shadow-[inset_1px_1px_0px_#ffffff,inset_-1px_-1px_0px_#8e949e,10px_10px_0px_rgba(0,0,0,0.2)] transition-all duration-300 [transform-style:preserve-3d] ${
+                  isBubbleOpen
+                    ? "visible translate-y-0 opacity-100"
+                    : "invisible translate-y-4 opacity-0"
+                }`}
+                role="menu"
+                aria-label="FEZER bubble menu"
+              >
+                <div className="mb-1 flex items-center justify-between bg-gradient-to-r from-[#000080] to-[#1084d0] px-2 py-1 font-mono text-[11px] text-white">
+                  <span>ABOUT_MENU.EXE</span>
+                  <div className="flex gap-0.5">
+                    <span className="flex h-3.5 w-3.5 items-center justify-center border border-black bg-[#d1d5db] text-[9px] text-black shadow-[inset_1px_1px_0px_#fff]">
+                      _
+                    </span>
+                    <span className="flex h-3.5 w-3.5 items-center justify-center border border-black bg-[#d1d5db] text-[9px] text-black shadow-[inset_1px_1px_0px_#fff]">
+                      ×
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid gap-0.5">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => scrollToSection("about-intro")}
+                    className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
+                  >
+                    <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
+                    <span className="uppercase">intro</span>
+                    <span className="ml-auto font-mono text-[10px] opacity-70">F1</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => scrollToSection("about-projects")}
+                    className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
+                  >
+                    <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
+                    <span className="uppercase">projects</span>
+                    <span className="ml-auto font-mono text-[10px] opacity-70">F5</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => scrollToSection("about-contact")}
+                    className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
+                  >
+                    <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
+                    <span className="uppercase">contact</span>
+                    <span className="ml-auto font-mono text-[10px] opacity-70">CTRL+C</span>
+                  </button>
+
+                  <div className="mx-1 my-0.5 h-px bg-[#888] shadow-[0_1px_0_#fff]" />
+
+                  <Link href="/about/logo">
+                    <a
+                      role="menuitem"
+                      onClick={() => setIsBubbleOpen(false)}
+                      className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
+                    >
+                      <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
+                      <span className="uppercase">logo</span>
+                      <span className="ml-auto font-mono text-[10px] opacity-70">ENTER</span>
+                    </a>
+                  </Link>
+                </div>
+
+                <div className="absolute -bottom-[15px] left-1/2 h-0 w-0 -translate-x-1/2 border-l-[10px] border-r-[10px] border-t-[15px] border-l-transparent border-r-transparent border-t-black" />
+              </div>
+
+              <button
+                ref={triggerRef}
+                onClick={() => setIsBubbleOpen((current) => !current)}
+                className="cursor-pointer border-none bg-[#d1d5db] px-10 py-4 text-left text-6xl font-extrabold uppercase leading-tight tracking-[0.2rem] text-[#374151] shadow-[inset_3px_3px_0px_#ffffff,inset_-3px_-3px_0px_#8e949e,6px_6px_15px_rgba(0,0,0,0.4)] transition-transform duration-100 [clip-path:polygon(10%_0,100%_0,90%_100%,0_100%)] md:text-7xl"
+                aria-expanded={isBubbleOpen}
+                aria-haspopup="menu"
+              >
+                {profile?.name ?? "FEZER"}
+              </button>
+            </div>
             <p className="text-lg text-text-main opacity-70 max-w-md">
               {profile?.bio ?? "待补充"}
             </p>
@@ -148,7 +274,7 @@ export default function About() {
 
           {/* Profile Sections */}
           <section className="space-y-16">
-            <article className="grid grid-cols-2 gap-10">
+            <article id="about-intro" className="grid grid-cols-2 gap-10">
               <div className="text-sm font-mono text-text-main opacity-60">
                 简介
               </div>
@@ -165,7 +291,7 @@ export default function About() {
             </article>
 
             {/* Skills Section */}
-            <article className="grid grid-cols-2 gap-10">
+            <article id="about-skills" className="grid grid-cols-2 gap-10">
               <div className="text-sm font-mono text-text-main opacity-60">
                 技能与兴趣
               </div>
@@ -188,7 +314,7 @@ export default function About() {
             </article>
 
             {/* Projects Section */}
-            <article className="grid grid-cols-2 gap-10">
+            <article id="about-projects" className="grid grid-cols-2 gap-10">
               <div className="text-sm font-mono text-text-main opacity-60">
                 项目
               </div>
@@ -218,7 +344,7 @@ export default function About() {
             </article>
 
             {/* Contact Section */}
-            <article className="grid grid-cols-2 gap-10">
+            <article id="about-contact" className="grid grid-cols-2 gap-10">
               <div className="text-sm font-mono text-text-main opacity-60">
                 联系方式
               </div>
