@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
+import DampedScrollView from "@/components/DampedScrollView";
 import { loadPosts } from "@/content/loaders";
 
 declare global {
@@ -484,94 +485,96 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
         <div id="p5-transition-mask" className="h-full w-full" />
       </div>
 
-      <section className="relative z-10 h-screen w-full bg-transparent px-6 py-[10vh] md:px-10 lg:px-16">
-        <div className="mx-auto min-h-[80vh] w-full max-w-[1220px]" aria-hidden="true" />
-      </section>
+      <DampedScrollView>
+        <section className="relative z-10 h-screen w-full bg-transparent px-6 py-[10vh] md:px-10 lg:px-16">
+          <div className="mx-auto min-h-[80vh] w-full max-w-[1220px]" aria-hidden="true" />
+        </section>
 
-      <section
-        ref={contentSectionRef}
-        className="relative z-20 min-h-screen bg-[#f5f5f5] px-6 pb-24 pt-[14vh] text-[#3e3c3a] md:px-10 lg:px-16"
-        style={{
-          opacity: 0,
-          transform: "translate3d(0, 50px, 0)",
-          willChange: "opacity, transform",
-        }}
-      >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-transparent via-[#f2f0ed]/72 to-[#f2f0ed]" />
+        <section
+          ref={contentSectionRef}
+          className="relative z-20 min-h-screen bg-[#f5f5f5] px-6 pb-24 pt-[14vh] text-[#3e3c3a] md:px-10 lg:px-16"
+          style={{
+            opacity: 0,
+            transform: "translate3d(0, 50px, 0)",
+            willChange: "opacity, transform",
+          }}
+        >
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-transparent via-[#f2f0ed]/72 to-[#f2f0ed]" />
 
-        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-12" id="blog-feed-surface">
-          {loadError ? (
-            <div className="rounded-2xl border border-red-400/30 bg-red-100/70 p-4 text-sm text-red-900">
-              {loadError}
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="rounded-2xl border border-[#d1cdc7] bg-[#f9f8f6] p-4 text-sm text-[#6a6560]">
-              暂无文章
-            </div>
-          ) : (
-            posts.map((post, index) => {
-              const kineticType = KINETIC_TYPES[index % KINETIC_TYPES.length];
-              const isVisible = entryVisible[index];
+          <div className="mx-auto flex w-full max-w-[980px] flex-col gap-12" id="blog-feed-surface">
+            {loadError ? (
+              <div className="rounded-2xl border border-red-400/30 bg-red-100/70 p-4 text-sm text-red-900">
+                {loadError}
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="rounded-2xl border border-[#d1cdc7] bg-[#f9f8f6] p-4 text-sm text-[#6a6560]">
+                暂无文章
+              </div>
+            ) : (
+              posts.map((post, index) => {
+                const kineticType = KINETIC_TYPES[index % KINETIC_TYPES.length];
+                const isVisible = entryVisible[index];
 
-              return (
-                <Link key={post.slug} href={`/blog/${post.slug}`}>
-                  <a
-                    ref={(el) => {
-                      surfaceEntryRefs.current[index] = el;
-                    }}
-                    data-entry-index={index}
-                    className={`group relative grid w-full cursor-pointer items-center gap-5 rounded-[28px] bg-[#f9f8f6] p-5 ring-1 ring-black/[0.03] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff] md:grid-cols-[156px_1fr_auto] md:gap-8 md:p-8 ${
-                      isVisible
-                        ? "translate-y-0 scale-100 opacity-100"
-                        : "translate-y-4 scale-[0.99] opacity-0"
-                    }`}
-                    style={{
-                      boxShadow:
-                        "12px 12px 24px #d1cdc7, -12px -12px 24px #ffffff, inset 0 0 0 1px rgba(255,255,255,0.55)",
-                    }}
-                  >
-                    <BlogSurfaceThumbnail type={kineticType} />
-
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <span className="font-mono text-xs uppercase tracking-[0.12em] text-[#8e8a85]">
-                        {formatDate(post.date)} — ISSUE #{(100 - index).toString().padStart(3, "0")}
-                      </span>
-                      <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#2a2a2a] md:text-[1.65rem] md:leading-tight">
-                        {post.title}
-                      </h2>
-                      <p className="max-w-[540px] text-[0.95rem] leading-relaxed text-[#8e8a85] line-clamp-2">
-                        {post.excerpt || "暂无预览..."}
-                      </p>
-                    </div>
-
-                    <span
-                      className="hidden h-12 w-12 items-center justify-center rounded-full text-[#2a2a2a] transition-all duration-300 group-hover:bg-[#2a2a2a] group-hover:text-white md:flex"
+                return (
+                  <Link key={post.slug} href={`/blog/${post.slug}`}>
+                    <a
+                      ref={(el) => {
+                        surfaceEntryRefs.current[index] = el;
+                      }}
+                      data-entry-index={index}
+                      className={`group relative grid w-full cursor-pointer items-center gap-5 rounded-[28px] bg-[#f9f8f6] p-5 ring-1 ring-black/[0.03] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff] md:grid-cols-[156px_1fr_auto] md:gap-8 md:p-8 ${
+                        isVisible
+                          ? "translate-y-0 scale-100 opacity-100"
+                          : "translate-y-4 scale-[0.99] opacity-0"
+                      }`}
                       style={{
                         boxShadow:
-                          "3px 3px 6px #d1cdc7, -3px -3px 6px #ffffff",
+                          "12px 12px 24px #d1cdc7, -12px -12px 24px #ffffff, inset 0 0 0 1px rgba(255,255,255,0.55)",
                       }}
-                      aria-hidden="true"
                     >
-                      ↗
-                    </span>
-                  </a>
-                </Link>
-              );
-            })
-          )}
-        </div>
+                      <BlogSurfaceThumbnail type={kineticType} />
 
-        <div className="pointer-events-none fixed right-10 top-1/2 z-20 hidden -translate-y-1/2 flex-col gap-5 md:flex">
-          {posts.map((post, index) => (
-            <div
-              key={`dot-${post.slug}`}
-              className={`w-1.5 rounded-full transition-all duration-300 ${
-                activeDotIndex === index ? "h-6 bg-[#2a2a2a]" : "h-1.5 bg-[#d1cdc7]"
-              }`}
-            />
-          ))}
-        </div>
-      </section>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <span className="font-mono text-xs uppercase tracking-[0.12em] text-[#8e8a85]">
+                          {formatDate(post.date)} — ISSUE #{(100 - index).toString().padStart(3, "0")}
+                        </span>
+                        <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#2a2a2a] md:text-[1.65rem] md:leading-tight">
+                          {post.title}
+                        </h2>
+                        <p className="max-w-[540px] text-[0.95rem] leading-relaxed text-[#8e8a85] line-clamp-2">
+                          {post.excerpt || "暂无预览..."}
+                        </p>
+                      </div>
+
+                      <span
+                        className="hidden h-12 w-12 items-center justify-center rounded-full text-[#2a2a2a] transition-all duration-300 group-hover:bg-[#2a2a2a] group-hover:text-white md:flex"
+                        style={{
+                          boxShadow:
+                            "3px 3px 6px #d1cdc7, -3px -3px 6px #ffffff",
+                        }}
+                        aria-hidden="true"
+                      >
+                        ↗
+                      </span>
+                    </a>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+
+          <div className="pointer-events-none fixed right-10 top-1/2 z-20 hidden -translate-y-1/2 flex-col gap-5 md:flex">
+            {posts.map((post, index) => (
+              <div
+                key={`dot-${post.slug}`}
+                className={`w-1.5 rounded-full transition-all duration-300 ${
+                  activeDotIndex === index ? "h-6 bg-[#2a2a2a]" : "h-1.5 bg-[#d1cdc7]"
+                }`}
+              />
+            ))}
+          </div>
+        </section>
+      </DampedScrollView>
 
       <Navigation />
       <GrainOverlay />

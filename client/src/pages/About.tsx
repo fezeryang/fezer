@@ -3,6 +3,7 @@ import { marked } from "marked";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
+import DampedScrollView from "@/components/DampedScrollView";
 import { getDefaultProfile } from "@/content/loaders";
 
 declare global {
@@ -122,6 +123,7 @@ export default function About() {
       <GrainOverlay />
       <CustomCursor />
 
+      <DampedScrollView>
       {/* Content Wrapper */}
       <div className="relative z-10 grid grid-cols-3 gap-10 min-h-screen p-16">
         {/* Left Navigation */}
@@ -274,6 +276,7 @@ export default function About() {
           </div>
         </aside>
       </div>
+      </DampedScrollView>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
+import DampedScrollView from "@/components/DampedScrollView";
 import { loadPosts, loadWorks } from "@/content/loaders";
 
 declare global {
@@ -301,11 +302,11 @@ function TimePrismSection() {
   return (
     <section
       ref={sectionRef}
-      className="reveal relative z-20 overflow-hidden bg-[#f8f9fa] px-6 py-20 opacity-0 translate-y-8 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] md:px-10 md:py-24"
+      className="reveal relative z-20 w-full overflow-hidden px-6 py-20 opacity-0 translate-y-8 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] md:px-10 md:py-24"
     >
-      <div className="pointer-events-none absolute inset-0 opacity-40 [background:radial-gradient(circle_at_15%_20%,rgba(255,0,150,0.08),transparent_38%),radial-gradient(circle_at_85%_22%,rgba(0,200,255,0.08),transparent_40%),radial-gradient(circle_at_50%_88%,rgba(255,255,0,0.08),transparent_42%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(circle_at_15%_20%,rgba(255,0,150,0.08),transparent_38%),radial-gradient(circle_at_85%_22%,rgba(0,200,255,0.08),transparent_40%),radial-gradient(circle_at_50%_88%,rgba(255,255,0,0.08),transparent_42%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+      <div className="relative mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
 
         <main className="relative flex items-center justify-center md:pr-6">
           <div
@@ -613,7 +614,9 @@ export default function Home() {
       <GrainOverlay />
       <CustomCursor />
 
-      <section className="relative z-10 flex h-screen flex-col items-center justify-center px-6 text-center pointer-events-none">
+      <DampedScrollView>
+
+      <section className="relative z-10 flex h-screen w-full flex-col items-center justify-center px-6 text-center pointer-events-none">
         <h1 className="mb-4 text-7xl font-bold leading-none text-white mix-blend-difference md:text-9xl">
           FEZER
         </h1>
@@ -627,8 +630,8 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="relative z-20 bg-gradient-to-b from-transparent via-[#f5f4ef]/90 to-[#ece8dd] pt-32 pb-20 backdrop-blur-[2px]">
-        <section className="mx-auto w-full max-w-6xl px-6 md:px-10 mb-32">
+      <div className="relative z-20 w-full bg-gradient-to-b from-transparent via-[#e9e5d9]/28 to-[#e9e5d9]/38 pt-32 pb-20 backdrop-blur-[1px]">
+        <section className="mx-auto mb-32 w-full max-w-[1400px] px-6 md:px-10">
           <div className="mb-12 flex items-center gap-4">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">LATEST PROJECTS / RECENT WORKS</p>
             <div className="h-px flex-grow bg-black/10" />
@@ -655,7 +658,7 @@ export default function Home() {
           )}
         </section>
 
-        <section className="mx-auto w-full max-w-6xl px-6 md:px-10 mb-20">
+        <section className="mx-auto mb-20 w-full max-w-[1400px] px-6 md:px-10">
           <div className="mb-12 flex items-center gap-4">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">LATEST WRITING / JOURNAL</p>
             <div className="h-px flex-grow bg-black/10" />
@@ -691,9 +694,10 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="relative z-20 h-28 bg-gradient-to-b from-[#ece8dd] via-[#f2f4f6]/85 to-[#f8f9fa]" />
+      <div className="relative z-20 h-24 w-full bg-gradient-to-b from-transparent via-[#e9e5d9]/26 to-transparent" />
 
       <TimePrismSection />
+      </DampedScrollView>
     </div>
   );
 }
