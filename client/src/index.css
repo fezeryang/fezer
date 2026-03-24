@@ -2,6 +2,24 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "ZSFT-hs";
+  src: url("https://fontsapi.zeoseven.com/hs/main.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+.font-caveat-hand {
+  font-family: "Caveat", "Comic Sans MS", "Brush Script MT", cursive;
+  font-optical-sizing: auto;
+}
+
+.font-zsft-hs {
+  font-family: "ZSFT-hs", "Noto Sans Tibetan", "Microsoft Himalaya", serif;
+  font-weight: normal;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
