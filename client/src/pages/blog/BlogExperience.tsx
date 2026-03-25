@@ -124,7 +124,7 @@ function BlogSurfaceThumbnail({ type }: { type: string }) {
   return (
     <div
       ref={canvasRef}
-      className="h-24 w-24 overflow-hidden rounded-2xl bg-[#ece8e2] shadow-[inset_2px_2px_5px_#d1cdc7] md:h-[156px] md:w-[156px]"
+      className="h-24 w-24 overflow-hidden rounded-2xl bg-[#ece8e2] shadow-[inset_2px_2px_5px_#d1cdc7] md:h-[120px] md:w-[120px]"
     />
   );
 }
@@ -486,13 +486,13 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
       </div>
 
       <DampedScrollView>
-        <section className="relative z-10 h-screen w-full bg-transparent px-6 py-[10vh] md:px-10 lg:px-16">
-          <div className="mx-auto min-h-[80vh] w-full max-w-[1220px]" aria-hidden="true" />
+        <section className="relative z-10 h-screen w-full bg-transparent px-6 py-[10vh] md:px-10 xl:w-[60vw] xl:max-w-[60vw]">
+          <div className="mx-auto min-h-[80vh] w-full" aria-hidden="true" />
         </section>
 
         <section
           ref={contentSectionRef}
-          className="relative z-20 min-h-screen bg-[#f5f5f5] px-6 pb-24 pt-[14vh] text-[#3e3c3a] md:px-10 lg:px-16"
+          className="relative z-20 w-full min-h-screen bg-[#f5f5f5] px-6 pb-16 pt-[10vh] text-[#3e3c3a] md:px-10 xl:w-[60vw] xl:max-w-[60vw]"
           style={{
             opacity: 0,
             transform: "translate3d(0, 50px, 0)",
@@ -501,7 +501,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-transparent via-[#f2f0ed]/72 to-[#f2f0ed]" />
 
-          <div className="mx-auto flex w-full max-w-[980px] flex-col gap-12" id="blog-feed-surface">
+          <div className="mx-auto flex w-full flex-col gap-8" id="blog-feed-surface">
             {loadError ? (
               <div className="rounded-2xl border border-red-400/30 bg-red-100/70 p-4 text-sm text-red-900">
                 {loadError}
@@ -522,7 +522,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
                         surfaceEntryRefs.current[index] = el;
                       }}
                       data-entry-index={index}
-                      className={`group relative grid w-full cursor-pointer items-center gap-5 rounded-[28px] bg-[#f9f8f6] p-5 ring-1 ring-black/[0.03] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff] md:grid-cols-[156px_1fr_auto] md:gap-8 md:p-8 ${
+                      className={`group relative grid w-full cursor-pointer items-center gap-4 rounded-[28px] bg-[#f9f8f6] p-4 ring-1 ring-black/[0.03] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff] sm:grid-cols-[120px_minmax(0,1fr)_auto] sm:gap-6 sm:p-6 ${
                         isVisible
                           ? "translate-y-0 scale-100 opacity-100"
                           : "translate-y-4 scale-[0.99] opacity-0"
@@ -541,7 +541,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
                         <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#2a2a2a] md:text-[1.65rem] md:leading-tight">
                           {post.title}
                         </h2>
-                        <p className="max-w-[540px] text-[0.95rem] leading-relaxed text-[#8e8a85] line-clamp-2">
+                        <p className="max-w-[760px] text-[0.95rem] leading-relaxed text-[#8e8a85] line-clamp-2">
                           {post.excerpt || "暂无预览..."}
                         </p>
                       </div>
