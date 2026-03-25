@@ -13,16 +13,20 @@ export default function DampedScrollView({ children }: DampedScrollViewProps) {
       return;
     }
 
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
     const handleMode = () => {
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduceMotion = mediaQuery.matches;
       setIsDampingEnabled(document.body.clientWidth >= 768 && !reduceMotion);
     };
 
     handleMode();
     window.addEventListener("resize", handleMode);
+    mediaQuery.addEventListener("change", handleMode);
 
     return () => {
       window.removeEventListener("resize", handleMode);
+      mediaQuery.removeEventListener("change", handleMode);
     };
   }, []);
 
@@ -50,6 +54,11 @@ export default function DampedScrollView({ children }: DampedScrollViewProps) {
       syncScroll();
     };
 
+    const syncOnLoad = () => {
+      updateBodyHeight();
+      syncScroll();
+    };
+
     if (isDampingEnabled) {
       document.documentElement.style.scrollBehavior = "auto";
       document.body.style.scrollBehavior = "auto";
@@ -61,12 +70,14 @@ export default function DampedScrollView({ children }: DampedScrollViewProps) {
 
       window.addEventListener("scroll", syncScroll, { passive: true });
       window.addEventListener("resize", syncOnResize);
+      window.addEventListener("orientationchange", syncOnResize);
+      window.addEventListener("load", syncOnLoad);
 
       resizeObserver = new ResizeObserver(updateBodyHeight);
       resizeObserver.observe(scrollbox);
     } else {
-      document.documentElement.style.scrollBehavior = "smooth";
-      document.body.style.scrollBehavior = "smooth";
+      document.documentElement.style.scrollBehavior = "auto";
+      document.body.style.scrollBehavior = "auto";
       document.body.style.height = "";
       scrollbox.style.transform = "";
       scrollbox.style.transition = "";
@@ -76,6 +87,8 @@ export default function DampedScrollView({ children }: DampedScrollViewProps) {
     return () => {
       window.removeEventListener("scroll", syncScroll);
       window.removeEventListener("resize", syncOnResize);
+      window.removeEventListener("orientationchange", syncOnResize);
+      window.removeEventListener("load", syncOnLoad);
       resizeObserver?.disconnect();
 
       document.body.style.height = previousBodyHeight;
