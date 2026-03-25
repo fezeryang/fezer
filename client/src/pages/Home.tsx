@@ -733,13 +733,6 @@ export default function Home() {
           )}
         </section>
 
-        <div className="px-6 py-10 text-center md:px-10">
-          <p
-            className="font-chill-huofangsong text-sm tracking-[0.14em] text-black/45"
-          >
-            主页预览流结束
-          </p>
-        </div>
       </div>
 
       <div className="relative z-20 h-24 w-full bg-gradient-to-b from-transparent via-[#e9e5d9]/26 to-transparent" />
