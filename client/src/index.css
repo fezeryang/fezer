@@ -318,12 +318,20 @@
     width: 100%;
     height: 2px;
     background: var(--accent-lava);
-    transform: translateX(-101%);
-    transition: transform 0.3s ease;
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.28s var(--transition-ease), opacity 0.22s ease;
   }
   
   .nav-link:hover::after {
-    transform: translateX(0);
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  .nav-link--active::after {
+    opacity: 1;
+    transform: scaleX(1);
   }
   
   /* Glass Card Effect */

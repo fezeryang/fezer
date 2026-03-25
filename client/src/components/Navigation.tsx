@@ -4,6 +4,14 @@ import { Link } from "wouter";
 export default function Navigation() {
   const [location] = useLocation();
 
+  const isItemActive = (href: string) => {
+    if (href === "/") {
+      return location === "/";
+    }
+
+    return location === href || location.startsWith(`${href}/`);
+  };
+
   const navItems = [
     { label: "首页", href: "/" },
     { label: "作品", href: "/portfolio" },
@@ -19,7 +27,7 @@ export default function Navigation() {
           <Link key={item.href} href={item.href}>
             <a
               className={`nav-link ${
-                location === item.href ? "text-accent-lava" : ""
+                isItemActive(item.href) ? "nav-link--active text-accent-lava" : ""
               }`}
             >
               {item.label}
