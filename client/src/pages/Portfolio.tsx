@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
@@ -15,7 +16,7 @@ export default function Portfolio() {
   const works = loadWorks();
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.p5) return;
+    if (typeof window === "undefined" || !window.p5) return;
 
     const p5 = window.p5 as any;
     let pieces: any[] = [];
@@ -75,21 +76,36 @@ export default function Portfolio() {
         const labelLength = Array.from(this.label).length;
         const baseWidth = pInstance.map(labelLength, 2, 10, 112, 196, true);
         const baseHeight = pInstance.map(labelLength, 2, 10, 132, 234, true);
-        this.w = pInstance.constrain(baseWidth + pInstance.random(-10, 10), 104, 208);
-        this.h = pInstance.constrain(baseHeight + pInstance.random(-12, 12), 126, 252);
+        this.w = pInstance.constrain(
+          baseWidth + pInstance.random(-10, 10),
+          104,
+          208
+        );
+        this.h = pInstance.constrain(
+          baseHeight + pInstance.random(-12, 12),
+          126,
+          252
+        );
         this.color = pInstance.color(pInstance.random(colors));
         this.type = pInstance.floor(pInstance.random(3));
       }
 
       fitLabel(label: string, availableWidth: number, availableHeight: number) {
-        let textSize = this.p.constrain(this.p.min(this.w, this.h) * 0.1, 8, 14);
+        let textSize = this.p.constrain(
+          this.p.min(this.w, this.h) * 0.1,
+          8,
+          14
+        );
         let lines: string[] = [label];
 
         while (textSize >= 8) {
           this.p.textSize(textSize);
 
           const approxCharWidth = textSize * 0.9;
-          const charsPerLine = Math.max(2, Math.floor(availableWidth / approxCharWidth));
+          const charsPerLine = Math.max(
+            2,
+            Math.floor(availableWidth / approxCharWidth)
+          );
 
           lines = [];
           for (let i = 0; i < label.length; i += charsPerLine) {
@@ -103,7 +119,10 @@ export default function Portfolio() {
           const lineHeight = textSize * 1.15;
           const textBlockHeight = lines.length * lineHeight;
 
-          if (widestLine <= availableWidth && textBlockHeight <= availableHeight) {
+          if (
+            widestLine <= availableWidth &&
+            textBlockHeight <= availableHeight
+          ) {
             break;
           }
 
@@ -184,7 +203,11 @@ export default function Portfolio() {
 
         const availableTextWidth = this.w * 0.5;
         const availableTextHeight = this.h * 0.34;
-        const fitted = this.fitLabel(this.label, availableTextWidth, availableTextHeight);
+        const fitted = this.fitLabel(
+          this.label,
+          availableTextWidth,
+          availableTextHeight
+        );
         const lineHeight = fitted.textSize * 1.15;
         const textBlockHeight = fitted.lines.length * lineHeight;
 
@@ -259,7 +282,10 @@ export default function Portfolio() {
         for (let piece of pieces) {
           let d = p.dist(p.mouseX, p.mouseY, piece.pos.x, piece.pos.y);
           if (d < 300) {
-            let force = p5.Vector.sub(piece.pos, p.createVector(p.mouseX, p.mouseY));
+            let force = p5.Vector.sub(
+              piece.pos,
+              p.createVector(p.mouseX, p.mouseY)
+            );
             force.normalize();
             force.mult(15);
             piece.applyForce(force);
@@ -302,32 +328,34 @@ export default function Portfolio() {
             <div className="max-w-2xl mb-32">
               <p className="text-2xl leading-relaxed">
                 <strong>Fezer</strong> — AI 爱好者，研究生在读。{" "}
-                <strong>作品集</strong> 记录了我在人工智能应用与创意技术探索中的实践。
+                <strong>作品集</strong>{" "}
+                记录了我在人工智能应用与创意技术探索中的实践。
               </p>
             </div>
 
             {/* Works Grid */}
             <div className="max-w-4xl">
-              <h2 className="text-3xl font-bold mb-8 text-text-main">精选作品</h2>
-              
+              <h2 className="text-3xl font-bold mb-8 text-text-main">
+                精选作品
+              </h2>
+
               {works.length === 0 ? (
                 <div className="stat-box p-6 text-text-secondary font-mono text-sm">
                   内容待补充
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {works.map((work) => (
-                    <div
-                      key={work.slug}
-                      className="stat-box p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                    >
-                      <h3 className="text-xl font-bold mb-3 text-text-main">
-                        {work.title}
-                      </h3>
-                      <p className="text-sm text-text-secondary leading-relaxed">
-                        {work.description || "内容待补充"}
-                      </p>
-                    </div>
+                  {works.map(work => (
+                    <Link key={work.slug} href={work.link || `/${work.slug}`}>
+                      <div className="stat-box p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                        <h3 className="text-xl font-bold mb-3 text-text-main">
+                          {work.title}
+                        </h3>
+                        <p className="text-sm text-text-secondary leading-relaxed">
+                          {work.description || "内容待补充"}
+                        </p>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               )}

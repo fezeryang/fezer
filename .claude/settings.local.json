@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm run check)",
+      "Bash(pnpm run dev)",
+      "Bash(set NODE_ENV=development)",
+      "Bash(pnpm tsx watch server/_core/index.ts)",
+      "Bash(pnpm exec tsx watch server/_core/index.ts)",
+      "Bash(pnpm install)"
+    ]
+  }
+}

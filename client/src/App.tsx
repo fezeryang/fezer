@@ -1,8 +1,16 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import Xizang from "@/pages/Xizang";
 import { Route, Switch, useLocation } from "wouter";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { gsap } from "gsap";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -31,7 +39,8 @@ const GSAP_EASE = "power4.out";
 
 type RouteTransitionPhase = "idle" | "revealing";
 
-const isAdminPath = (path: string) => path === "/admin" || path.startsWith("/admin/");
+const isAdminPath = (path: string) =>
+  path === "/admin" || path.startsWith("/admin/");
 
 const getReducedMotionPreference = () => {
   if (typeof window === "undefined") {
@@ -56,7 +65,9 @@ function Router() {
   const [location] = useLocation();
   const [displayLocation, setDisplayLocation] = useState(location);
   const [phase, setPhase] = useState<RouteTransitionPhase>("idle");
-  const [reducedMotion, setReducedMotion] = useState(getReducedMotionPreference);
+  const [reducedMotion, setReducedMotion] = useState(
+    getReducedMotionPreference
+  );
   const queuedLocationRef = useRef<string | null>(null);
   const loadingBoxRef = useRef<HTMLDivElement>(null);
   const loadingAnimationRef = useRef<HTMLDivElement>(null);
@@ -86,16 +97,19 @@ function Router() {
     }
   }, []);
 
-  const clearTransition = useCallback((invalidate = false) => {
-    if (invalidate) {
-      transitionIdRef.current += 1;
-    }
+  const clearTransition = useCallback(
+    (invalidate = false) => {
+      if (invalidate) {
+        transitionIdRef.current += 1;
+      }
 
-    timelineRef.current?.kill();
-    timelineRef.current = null;
+      timelineRef.current?.kill();
+      timelineRef.current = null;
 
-    hideLoadingBox();
-  }, [hideLoadingBox]);
+      hideLoadingBox();
+    },
+    [hideLoadingBox]
+  );
 
   const runTransition = useCallback(
     (nextLocation: string) => {
@@ -216,7 +230,11 @@ function Router() {
       return;
     }
 
-    if (reducedMotion || isAdminPath(location) || isAdminPath(displayLocation)) {
+    if (
+      reducedMotion ||
+      isAdminPath(location) ||
+      isAdminPath(displayLocation)
+    ) {
       clearTransition(true);
       queuedLocationRef.current = null;
       currentTargetRef.current = location;
@@ -231,7 +249,14 @@ function Router() {
     }
 
     queuedLocationRef.current = location;
-  }, [clearTransition, displayLocation, location, phase, reducedMotion, runTransition]);
+  }, [
+    clearTransition,
+    displayLocation,
+    location,
+    phase,
+    reducedMotion,
+    runTransition,
+  ]);
 
   return (
     <div className="route-transition-shell" data-phase={phase}>
@@ -239,11 +264,12 @@ function Router() {
         <Switch location={displayLocation}>
           <Route path={"/"} component={Home} />
           <Route path={"/portfolio"} component={Portfolio} />
+          <Route path={"/xizang"} component={Xizang} />
           <Route path={"/lab"} component={Lab} />
           <Route path={"/blog"} component={Blog} />
           <Route path={"/blog/surface"} component={BlogSurface} />
           <Route path={"/blog/:slug"}>
-            {(params) => <BlogPostDetail slug={params.slug} />}
+            {params => <BlogPostDetail slug={params.slug} />}
           </Route>
           <Route path={"/about/logo/logo1"} component={AboutLogoOne} />
           <Route path={"/about/logo/logo2"} component={AboutLogoTwo} />
@@ -282,10 +308,19 @@ function Router() {
         </Switch>
       </div>
 
-      <div ref={loadingBoxRef} id="loadingbox" className="loadingbox" aria-hidden="true">
+      <div
+        ref={loadingBoxRef}
+        id="loadingbox"
+        className="loadingbox"
+        aria-hidden="true"
+      >
         <div ref={loadingAnimationRef} className="loading-animation">
           <div ref={loadingInnerRef} className="loading-inner">
-            <svg className="loading-logo" viewBox="0 0 100 100" aria-hidden="true">
+            <svg
+              className="loading-logo"
+              viewBox="0 0 100 100"
+              aria-hidden="true"
+            >
               <path d="M50 10L88 50L50 90L12 50Z" />
               <path d="M50 24L74 50L50 76L26 50Z" className="accent" />
               <path d="M22 50H78" />
