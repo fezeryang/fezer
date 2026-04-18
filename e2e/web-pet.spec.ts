@@ -1,18 +1,23 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { TEST_IDS } from "../client/src/components/web-pet/testIds";
+
+async function gotoRoute(page: Page, url: string) {
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+}
 
 test.describe("WebPet cross-route behavior", () => {
   test("pet element is present on multiple routes", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
 
-    await page.goto("/portfolio");
+    await gotoRoute(page, "/portfolio");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
 
-    await page.goto("/blog");
+    await gotoRoute(page, "/blog");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
 
-    await page.goto("/about");
+    await gotoRoute(page, "/about");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
   });
 
