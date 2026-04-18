@@ -1,13 +1,15 @@
 import { Canvas } from "@react-three/fiber";
 import { CameraController } from "./CameraController";
 import { ModelInstance, Room } from "./Room";
+import { Character, preloadCharacters } from "./Character";
 import { Html } from "@react-three/drei";
 import {
   CORRIDOR_MODULES,
   ROOMS,
   STRUCTURE_MODULES,
 } from "./assets/roomsConfig";
-import { Fragment, Suspense } from "react";
+import { CHARACTERS } from "./assets/characterConfig";
+import { Fragment, Suspense, useEffect } from "react";
 
 type SceneProps = {
   activeRoomId: string;
@@ -24,6 +26,11 @@ function LoadingFallback() {
 }
 
 export function Scene({ activeRoomId, onRoomSelect }: SceneProps) {
+  // 预加载角色模型
+  useEffect(() => {
+    preloadCharacters();
+  }, []);
+
   return (
     <Canvas
       camera={{ position: [0, 10, 14], fov: 55 }}
@@ -45,7 +52,10 @@ export function Scene({ activeRoomId, onRoomSelect }: SceneProps) {
         {Object.values(ROOMS).map(roomConfig => (
           <Fragment key={roomConfig.id}>
             <Room config={roomConfig} onClick={onRoomSelect} />
-            <Html position={[roomConfig.position[0], 3.4, roomConfig.position[2]]} center>
+            <Html
+              position={[roomConfig.position[0], 3.4, roomConfig.position[2]]}
+              center
+            >
               <button
                 type="button"
                 onClick={() => onRoomSelect(roomConfig.id)}
@@ -67,6 +77,11 @@ export function Scene({ activeRoomId, onRoomSelect }: SceneProps) {
 
         {STRUCTURE_MODULES.map(moduleConfig => (
           <ModelInstance key={moduleConfig.id} config={moduleConfig} />
+        ))}
+
+        {/* Fezer 角色群 - 分布在 Central Hub */}
+        {CHARACTERS.map(characterConfig => (
+          <Character key={characterConfig.id} config={characterConfig} />
         ))}
       </Suspense>
 
