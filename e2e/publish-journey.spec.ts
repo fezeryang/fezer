@@ -46,6 +46,6 @@ test("blocks non-admin users from admin routes", async ({ page }) => {
     });
   });
 
-  await page.goto("/admin/blog");
+  await page.goto("/admin/blog", { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("admin-guard-forbidden")).toBeVisible();
 });
