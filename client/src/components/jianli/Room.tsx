@@ -5,12 +5,21 @@ import type { ModelInstanceProps, RoomProps } from "./assets/types";
 
 // Vite base path 用于纹理资源路径修正
 const BASE_URL = import.meta.env.BASE_URL ?? "/";
+const MODEL_RESOURCE_PATH = `${BASE_URL}models/`;
+
+function configureModelLoader(loader: any) {
+  // GitHub Pages 部署在子路径时，需要显式告诉 GLTFLoader 贴图所在目录。
+  loader.setResourcePath(MODEL_RESOURCE_PATH);
+}
 
 export function ModelInstance({ config, onClick }: ModelInstanceProps) {
   const groupRef = useRef<any>(null);
-  const { scene } = useGLTF(config.model, undefined, undefined, {
-    resourcePath: `${BASE_URL}models/`,
-  });
+  const { scene } = useGLTF(
+    config.model,
+    undefined,
+    undefined,
+    configureModelLoader
+  );
 
   useEffect(() => {
     if (groupRef.current) {
@@ -37,5 +46,5 @@ export function Room({ config, onClick }: RoomProps) {
 
 // 预加载地图常用模型
 MAP_PRELOAD_MODELS.forEach(modelPath => {
-  useGLTF.preload(modelPath);
+  useGLTF.preload(modelPath, undefined, undefined, configureModelLoader);
 });

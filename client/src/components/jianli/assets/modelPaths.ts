@@ -25,6 +25,16 @@ export const MODEL_PATHS = {
   CHARACTER_F: `${BASE}models/character-f.glb`,
   CHARACTER_G: `${BASE}models/character-g.glb`,
   CHARACTER_H: `${BASE}models/character-h.glb`,
+  CHARACTER_I: `${BASE}models/character-i.glb`,
+  CHARACTER_J: `${BASE}models/character-j.glb`,
+  CHARACTER_K: `${BASE}models/character-k.glb`,
+  CHARACTER_L: `${BASE}models/character-l.glb`,
+  CHARACTER_M: `${BASE}models/character-m.glb`,
+  CHARACTER_N: `${BASE}models/character-n.glb`,
+  CHARACTER_O: `${BASE}models/character-o.glb`,
+  CHARACTER_P: `${BASE}models/character-p.glb`,
+  CHARACTER_Q: `${BASE}models/character-q.glb`,
+  CHARACTER_R: `${BASE}models/character-r.glb`,
 } as const;
 
 export const MAP_PRELOAD_MODELS: string[] = [

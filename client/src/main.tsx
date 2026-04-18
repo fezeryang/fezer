@@ -11,6 +11,21 @@ import { getLoginUrl } from "./const";
 import "./index.css";
 
 const queryClient = new QueryClient();
+const analyticsEndpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT?.trim();
+const analyticsWebsiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID?.trim();
+
+function injectAnalyticsScript() {
+  if (typeof document === "undefined") return;
+  if (!analyticsEndpoint || !analyticsWebsiteId) return;
+  if (document.querySelector('script[data-analytics="umami"]')) return;
+
+  const script = document.createElement("script");
+  script.defer = true;
+  script.dataset.analytics = "umami";
+  script.dataset.websiteId = analyticsWebsiteId;
+  script.src = `${analyticsEndpoint.replace(/\/+$/, "")}/umami`;
+  document.body.appendChild(script);
+}
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
@@ -79,6 +94,8 @@ function Root() {
     </AdminRuntimeProviders>
   );
 }
+
+injectAnalyticsScript();
 
 createRoot(document.getElementById("root")!).render(
   <Router base={routerBase || undefined}>

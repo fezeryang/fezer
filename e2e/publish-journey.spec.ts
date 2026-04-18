@@ -23,10 +23,10 @@ function asTrpcResponse(json: unknown): TrpcEnvelope[] {
 test("shows static content on public pages without API stubs", async ({
   page,
 }) => {
-  await page.goto("/blog");
+  await page.goto("/blog/surface", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Architectural Sonics")).toBeVisible();
 
-  await page.goto("/portfolio");
+  await page.goto("/portfolio", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Kinetic Typography Engine")).toBeVisible();
 });
 
@@ -46,6 +46,6 @@ test("blocks non-admin users from admin routes", async ({ page }) => {
     });
   });
 
-  await page.goto("/admin/blog");
+  await page.goto("/admin/blog", { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("admin-guard-forbidden")).toBeVisible();
 });

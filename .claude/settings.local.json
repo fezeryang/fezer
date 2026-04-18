@@ -6,7 +6,14 @@
       "Bash(set NODE_ENV=development)",
       "Bash(pnpm tsx watch server/_core/index.ts)",
       "Bash(pnpm exec tsx watch server/_core/index.ts)",
-      "Bash(pnpm install)"
+      "Bash(pnpm install)",
+      "Bash(pnpm dev *)",
+      "Bash(curl -s \"http://localhost:5173/jianli\")",
+      "Bash(pnpm --filter client dev)",
+      "Bash(npx vite *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\小阳\\.claude\\plans"
     ]
   }
 }

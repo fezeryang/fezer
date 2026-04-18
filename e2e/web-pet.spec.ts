@@ -1,23 +1,28 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { TEST_IDS } from "../client/src/components/web-pet/testIds";
+
+async function gotoRoute(page: Page, url: string) {
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+}
 
 test.describe("WebPet cross-route behavior", () => {
   test("pet element is present on multiple routes", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
 
-    await page.goto("/portfolio");
+    await gotoRoute(page, "/portfolio");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
 
-    await page.goto("/blog");
+    await gotoRoute(page, "/blog");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
 
-    await page.goto("/about");
+    await gotoRoute(page, "/about");
     await expect(page.getByTestId(TEST_IDS.WEB_PET)).toBeVisible();
   });
 
   test("pet persists position across route changes", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     await expect(pet).toBeVisible();
@@ -44,7 +49,7 @@ test.describe("WebPet cross-route behavior", () => {
     expect(newBox).not.toBeNull();
     expect(Math.abs(newBox!.x - initialBox!.x)).toBeGreaterThan(50);
 
-    await page.goto("/portfolio");
+    await gotoRoute(page, "/portfolio");
 
     const persistedBox = await pet.boundingBox();
     expect(persistedBox).not.toBeNull();
@@ -53,7 +58,7 @@ test.describe("WebPet cross-route behavior", () => {
   });
 
   test("pet is draggable within viewport boundaries", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     await expect(pet).toBeVisible();
@@ -95,7 +100,7 @@ test.describe("WebPet cross-route behavior", () => {
   });
 
   test("pet reacts to click with speech bubble", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     await expect(pet).toBeVisible();
@@ -111,7 +116,7 @@ test.describe("WebPet cross-route behavior", () => {
   });
 
   test("hide/show toggle controls pet visibility", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     const toggle = page.getByTestId(TEST_IDS.WEB_PET_TOGGLE);
@@ -127,7 +132,7 @@ test.describe("WebPet cross-route behavior", () => {
   });
 
   test("pet visibility persists after page reload", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const toggle = page.getByTestId(TEST_IDS.WEB_PET_TOGGLE);
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
@@ -151,7 +156,7 @@ test.describe("WebPet cross-route behavior", () => {
   test("pet respects reduced-motion preference", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
 
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     await expect(pet).toBeVisible();
@@ -163,7 +168,7 @@ test.describe("WebPet cross-route behavior", () => {
   });
 
   test("keyboard-only user can reposition pet with arrow keys", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     await expect(pet).toBeVisible();
@@ -183,7 +188,7 @@ test.describe("WebPet cross-route behavior", () => {
   });
 
   test("keyboard-only user can use Shift+Arrow for larger movements", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     await expect(pet).toBeVisible();
@@ -208,7 +213,7 @@ test.describe("WebPet mobile/touch behavior", () => {
   });
 
   test("pet is visible and toggle works on mobile", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     const toggle = page.getByTestId(TEST_IDS.WEB_PET_TOGGLE);
@@ -224,7 +229,7 @@ test.describe("WebPet mobile/touch behavior", () => {
   });
 
   test("pet supports touch drag on mobile", async ({ page }) => {
-    await page.goto("/");
+    await gotoRoute(page, "/");
 
     const pet = page.getByTestId(TEST_IDS.WEB_PET);
     await expect(pet).toBeVisible();
