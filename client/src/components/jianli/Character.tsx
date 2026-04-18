@@ -6,6 +6,11 @@ import { CHARACTER_MODELS } from "./assets/characterConfig"
 
 // Vite base path 用于纹理资源路径修正
 const BASE_URL = import.meta.env.BASE_URL ?? "/"
+const MODEL_RESOURCE_PATH = `${BASE_URL}models/`
+
+function configureModelLoader(loader: any) {
+  loader.setResourcePath(MODEL_RESOURCE_PATH)
+}
 
 // 角色地面Y坐标（根据模型调整）
 const GROUND_Y = 0
@@ -33,9 +38,7 @@ function subtract(a: Vec3, b: Vec3): Vec3 {
 
 export function Character({ config, onClick }: CharacterProps) {
   const groupRef = useRef<any>(null)
-  const { scene } = useGLTF(config.model, undefined, undefined, {
-    resourcePath: `${BASE_URL}models/`,
-  })
+  const { scene } = useGLTF(config.model, undefined, undefined, configureModelLoader)
 
   // 状态机：idle | walking | waiting
   const [state, setState] = useState<CharacterState>("idle")
@@ -112,5 +115,7 @@ export function Character({ config, onClick }: CharacterProps) {
 
 // 预加载所有角色模型
 export function preloadCharacters() {
-  CHARACTER_MODELS.forEach(model => useGLTF.preload(model))
+  CHARACTER_MODELS.forEach(model =>
+    useGLTF.preload(model, undefined, undefined, configureModelLoader)
+  )
 }

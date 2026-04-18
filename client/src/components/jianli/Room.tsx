@@ -1,6 +1,5 @@
 import { useGLTF } from "@react-three/drei";
 import { useEffect, useRef } from "react";
-import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MAP_PRELOAD_MODELS } from "./assets/modelPaths";
 import type { ModelInstanceProps, RoomProps } from "./assets/types";
 
@@ -8,7 +7,7 @@ import type { ModelInstanceProps, RoomProps } from "./assets/types";
 const BASE_URL = import.meta.env.BASE_URL ?? "/";
 const MODEL_RESOURCE_PATH = `${BASE_URL}models/`;
 
-function configureModelLoader(loader: GLTFLoader) {
+function configureModelLoader(loader: any) {
   // GitHub Pages 部署在子路径时，需要显式告诉 GLTFLoader 贴图所在目录。
   loader.setResourcePath(MODEL_RESOURCE_PATH);
 }
