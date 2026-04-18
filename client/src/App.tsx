@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import Jianli from "@/pages/Jianli";
 import Xizang from "@/pages/Xizang";
 import { Route, Switch, useLocation } from "wouter";
 import {
@@ -263,6 +264,7 @@ function Router() {
       <div className="route-transition-scene">
         <Switch location={displayLocation}>
           <Route path={"/"} component={Home} />
+          <Route path={"/jianli"} component={Jianli} />
           <Route path={"/portfolio"} component={Portfolio} />
           <Route path={"/xizang"} component={Xizang} />
           <Route path={"/lab"} component={Lab} />
@@ -352,11 +354,18 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          <WebPet />
+          <WebPetWrapper />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
+}
+
+// WebPet 只在非 jianli 页面显示
+function WebPetWrapper() {
+  const [location] = useLocation();
+  if (location === "/jianli") return null;
+  return <WebPet />;
 }
 
 export default App;

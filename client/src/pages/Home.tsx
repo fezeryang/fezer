@@ -27,7 +27,7 @@ function ShutterItem({
   imageUrl?: string;
   isProject?: boolean;
 }) {
-  const itemRef = useRef<HTMLAnchorElement>(null);
+  const itemRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,13 +61,13 @@ function ShutterItem({
 
   return (
     <div className="reveal opacity-0 translate-y-8 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]">
-      <Link href={href}>
-        <a
-          ref={itemRef}
-          className={`group relative flex w-full cursor-pointer items-center overflow-hidden border-b border-black/10 bg-transparent transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-[80px] hover:h-[180px] ${
-            isProject ? "border-l-4 border-l-transparent hover:border-l-accent-lava" : ""
-          }`}
-        >
+      <Link
+        href={href}
+        className={`group block w-full cursor-pointer overflow-hidden border-b border-black/10 bg-transparent transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-[80px] hover:h-[180px] ${
+          isProject ? "border-l-4 border-l-transparent hover:border-l-accent-lava" : ""
+        }`}
+      >
+        <div ref={itemRef} className="relative flex h-full w-full items-center">
           <div className="absolute inset-0 z-[1] origin-top bg-white/60 backdrop-blur-md transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-full" />
 
           <div
@@ -95,7 +95,7 @@ function ShutterItem({
               {tag}
             </span>
           </div>
-        </a>
+        </div>
       </Link>
     </div>
   );
