@@ -118,6 +118,7 @@ temp/
 
 # Ignore PNG files
 *.png
+!client/public/models/Textures/*.png
 
 # Local assets (do not commit)
 jianli/asset/
