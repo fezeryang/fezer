@@ -7,15 +7,17 @@ export default function NotFound() {
       <iframe title="404 - VOID GESTURE" srcDoc={notFoundHtml} className="block h-full w-full border-0" />
 
       <div className="pointer-events-none fixed left-4 top-4 z-[101] flex flex-wrap gap-2">
-        <Link href="/">
-          <a className="pointer-events-auto rounded-full border border-black/30 bg-white/75 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white">
-            ← Home
-          </a>
+        <Link
+          href="/"
+          className="pointer-events-auto rounded-full border border-black/30 bg-white/75 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white"
+        >
+          ← Home
         </Link>
-        <Link href="/about">
-          <a className="pointer-events-auto rounded-full border border-black/30 bg-white/75 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white">
-            About
-          </a>
+        <Link
+          href="/about"
+          className="pointer-events-auto rounded-full border border-black/30 bg-white/75 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white"
+        >
+          About
         </Link>
       </div>
     </div>

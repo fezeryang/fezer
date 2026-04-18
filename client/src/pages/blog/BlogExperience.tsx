@@ -136,7 +136,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
   const visualContainerRef = useRef<HTMLDivElement>(null);
   const maskContainerRef = useRef<HTMLDivElement>(null);
   const contentSectionRef = useRef<HTMLElement>(null);
-  const surfaceEntryRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const surfaceEntryRefs = useRef<Array<HTMLDivElement | null>>([]);
   const progressRef = useRef(0);
 
   const { posts, loadError } = useMemo(() => {
@@ -516,17 +516,21 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
                 const isVisible = entryVisible[index];
 
                 return (
-                  <Link key={post.slug} href={`/blog/${post.slug}`}>
-                    <a
+                  <Link
+                    key={post.slug}
+                    href={`/blog/${post.slug}`}
+                    className={`group block w-full rounded-[28px] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff] ${
+                      isVisible
+                        ? "translate-y-0 scale-100 opacity-100"
+                        : "translate-y-4 scale-[0.99] opacity-0"
+                    }`}
+                  >
+                    <div
                       ref={(el) => {
                         surfaceEntryRefs.current[index] = el;
                       }}
                       data-entry-index={index}
-                      className={`group relative grid w-full cursor-pointer items-center gap-4 rounded-[28px] bg-[#f9f8f6] p-4 ring-1 ring-black/[0.03] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff] sm:grid-cols-[120px_minmax(0,1fr)_auto] sm:gap-6 sm:p-6 ${
-                        isVisible
-                          ? "translate-y-0 scale-100 opacity-100"
-                          : "translate-y-4 scale-[0.99] opacity-0"
-                      }`}
+                      className="relative grid w-full items-center gap-4 rounded-[28px] bg-[#f9f8f6] p-4 ring-1 ring-black/[0.03] sm:grid-cols-[120px_minmax(0,1fr)_auto] sm:gap-6 sm:p-6"
                       style={{
                         boxShadow:
                           "12px 12px 24px #d1cdc7, -12px -12px 24px #ffffff, inset 0 0 0 1px rgba(255,255,255,0.55)",
@@ -556,7 +560,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
                       >
                         ↗
                       </span>
-                    </a>
+                    </div>
                   </Link>
                 );
               })

@@ -24,14 +24,14 @@ export default function Navigation() {
     <nav className="fixed top-0 left-0 right-0 z-50 flex justify-end items-center p-8 pointer-events-none">
       <div className="flex gap-8 pointer-events-auto">
         {navItems.map((item) => (
-          <Link key={item.href} href={item.href}>
-            <a
-              className={`nav-link ${
-                isItemActive(item.href) ? "nav-link--active text-accent-lava" : ""
-              }`}
-            >
-              {item.label}
-            </a>
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`nav-link ${
+              isItemActive(item.href) ? "nav-link--active text-accent-lava" : ""
+            }`}
+          >
+            {item.label}
           </Link>
         ))}
       </div>

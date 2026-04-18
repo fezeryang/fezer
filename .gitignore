@@ -118,3 +118,6 @@ temp/
 
 # Ignore PNG files
 *.png
+
+# Local assets (do not commit)
+jianli/asset/

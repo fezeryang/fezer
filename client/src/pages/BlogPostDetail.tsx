@@ -33,15 +33,17 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
             <h1 className="mt-4 text-3xl font-semibold text-[#2a2a2a]">未找到该文章</h1>
             <p className="mt-3 text-sm text-[#6a6560]">该链接可能已失效，或文章尚未发布。</p>
             <div className="mt-8 flex items-center gap-3">
-              <Link href="/blog/surface">
-                <a className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono tracking-[0.14em] uppercase text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]">
-                  返回展示页
-                </a>
+              <Link
+                href="/blog/surface"
+                className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono uppercase tracking-[0.14em] text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]"
+              >
+                返回展示页
               </Link>
-              <Link href="/blog">
-                <a className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono tracking-[0.14em] uppercase text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]">
-                  返回封面页
-                </a>
+              <Link
+                href="/blog"
+                className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono uppercase tracking-[0.14em] text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]"
+              >
+                返回封面页
               </Link>
             </div>
           </main>
@@ -61,15 +63,17 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
       <DampedScrollView>
         <main className="mx-auto w-full max-w-[980px] px-6 pb-24 pt-28 md:px-10">
           <div className="mb-10 flex items-center gap-3">
-            <Link href="/blog/surface">
-              <a className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono tracking-[0.14em] uppercase text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]">
-                返回展示页
-              </a>
+            <Link
+              href="/blog/surface"
+              className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono uppercase tracking-[0.14em] text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]"
+            >
+              返回展示页
             </Link>
-            <Link href="/blog">
-              <a className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono tracking-[0.14em] uppercase text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]">
-                返回封面页
-              </a>
+            <Link
+              href="/blog"
+              className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono uppercase tracking-[0.14em] text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]"
+            >
+              返回封面页
             </Link>
           </div>
 

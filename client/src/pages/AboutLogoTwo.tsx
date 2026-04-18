@@ -279,20 +279,23 @@ export default function AboutLogoTwo() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link href="/about/logo">
-              <a className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white">
-                Logo Hub
-              </a>
+            <Link
+              href="/about/logo"
+              className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white"
+            >
+              Logo Hub
             </Link>
-            <Link href="/about/logo/logo1">
-              <a className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white">
-                Go Logo 01
-              </a>
+            <Link
+              href="/about/logo/logo1"
+              className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white"
+            >
+              Go Logo 01
             </Link>
-            <Link href="/about">
-              <a className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white">
-                Back to About
-              </a>
+            <Link
+              href="/about"
+              className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white"
+            >
+              Back to About
             </Link>
           </div>
         </div>

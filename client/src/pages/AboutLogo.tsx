@@ -411,8 +411,8 @@ export default function AboutLogo() {
           <button className="logo-hub-quick-link" onClick={() => setView("initial")}>
             ← Entrance
           </button>
-          <Link href="/about">
-            <a className="logo-hub-quick-link">Back to About</a>
+          <Link href="/about" className="logo-hub-quick-link">
+            Back to About
           </Link>
         </div>
 

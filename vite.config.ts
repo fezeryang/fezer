@@ -56,7 +56,7 @@ function writeToLogFile(source: LogSource, entries: unknown[]) {
   const logPath = path.join(LOG_DIR, `${source}.log`);
 
   // Format entries with timestamps
-  const lines = entries.map((entry) => {
+  const lines = entries.map(entry => {
     const ts = new Date().toISOString();
     return `[${ts}] ${JSON.stringify(entry)}`;
   });
@@ -132,7 +132,7 @@ function vitePluginManusDebugCollector(): Plugin {
         }
 
         let body = "";
-        req.on("data", (chunk) => {
+        req.on("data", chunk => {
           body += chunk.toString();
         });
 
@@ -150,7 +150,30 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+// Wrap jsxLocPlugin to exclude R3F components (avoid data-loc attribute conflicts)
+function jsxLocPluginFiltered(): Plugin {
+  const originalPlugin = jsxLocPlugin();
+  return {
+    ...originalPlugin,
+    name: "jsx-loc-filtered",
+    transform(code, id) {
+      // Skip jianli components to avoid R3F conflicts
+      if (id.includes("/jianli/")) {
+        return null;
+      }
+      // @ts-expect-error - accessing internal transform
+      return originalPlugin.transform?.call(this, code, id);
+    },
+  };
+}
+
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPluginFiltered(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+];
 
 export default defineConfig({
   plugins,
