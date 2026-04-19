@@ -10,10 +10,14 @@
       "Bash(pnpm dev *)",
       "Bash(curl -s \"http://localhost:5173/jianli\")",
       "Bash(pnpm --filter client dev)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "mcp__hugging-face__hf_doc_search",
+      "Bash(pnpm check *)",
+      "Bash(curl -s http://localhost:5173)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\小阳\\.claude\\plans"
+      "c:\\Users\\小阳\\.claude\\plans",
+      "e:\\OpencCode\\projects\\fezer\\shared\\src"
     ]
   }
 }

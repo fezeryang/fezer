@@ -1,0 +1,48 @@
+{
+  "name": "@fezer/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./schemas": {
+      "types": "./src/schemas/index.ts",
+      "import": "./src/schemas/index.ts"
+    },
+    "./schemas/agent": {
+      "types": "./src/schemas/agent.ts",
+      "import": "./src/schemas/agent.ts"
+    },
+    "./schemas/character": {
+      "types": "./src/schemas/character.ts",
+      "import": "./src/schemas/character.ts"
+    },
+    "./schemas/ui": {
+      "types": "./src/schemas/ui.ts",
+      "import": "./src/schemas/ui.ts"
+    },
+    "./characters": {
+      "types": "./src/characters/index.ts",
+      "import": "./src/characters/index.ts"
+    },
+    "./map": {
+      "types": "./src/map/index.ts",
+      "import": "./src/map/index.ts"
+    },
+    "./map/rooms": {
+      "types": "./src/map/rooms.ts",
+      "import": "./src/map/rooms.ts"
+    },
+    "./resume": {
+      "types": "./src/resume/index.ts",
+      "import": "./src/resume/index.ts"
+    },
+    "./resume/profile": {
+      "types": "./src/resume/profile.ts",
+      "import": "./src/resume/profile.ts"
+    }
+  }
+}

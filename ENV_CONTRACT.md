@@ -25,6 +25,17 @@ These variables have defaults or are optional for certain features.
 | `NODE_ENV` | Runtime environment | `development` | Optional |
 | `BUILT_IN_FORGE_API_URL` | Built-in Forge API endpoint | Empty string | Optional |
 | `BUILT_IN_FORGE_API_KEY` | Built-in Forge API key | Empty string | Optional |
+| `DEEPSEEK_API_KEY` | DeepSeek API key | Empty string | Optional (required when `AI_PRIMARY_PROVIDER=deepseek`) |
+| `DEEPSEEK_BASE_URL` | DeepSeek base URL | `https://api.deepseek.com/v1` | Optional |
+| `AI_PRIMARY_PROVIDER` | Primary LLM provider (`deepseek` or `forge`) | `deepseek` | Optional |
+| `AI_PRIMARY_MODEL` | Primary model name | `deepseek-chat` | Optional |
+| `AI_FALLBACK_PROVIDER` | Fallback LLM provider (`deepseek` or `forge`) | `forge` | Optional |
+| `AI_FALLBACK_MODEL` | Fallback model name | `gemini-2.5-flash` | Optional |
+| `LANGSMITH_TRACING` | Enable LangSmith tracing | `false` | Optional |
+| `LANGSMITH_API_KEY` | LangSmith API key | Empty string | Optional (required when tracing enabled) |
+| `LANGSMITH_PROJECT` | LangSmith tracing project | `fezer-agent` | Optional |
+| `LANGSMITH_ENDPOINT` | LangSmith API endpoint | Empty string (LangSmith default) | Optional |
+| `LANGSMITH_WORKSPACE_ID` | LangSmith workspace ID | Empty string | Optional |
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins | Empty (dev: localhost auto-allowed) | Production |
 | `LOCAL_ADMIN_AUTH_BYPASS` | Enables local admin auth bypass by injecting a local admin user | `false` | Local development only |
 | `LOCAL_CONTENT_IN_MEMORY_FALLBACK` | Enables in-memory posts/works fallback when DB is unavailable | `false` | Local development only |
@@ -64,6 +75,21 @@ PORT=3000
 NODE_ENV=development
 LOCAL_ADMIN_AUTH_BYPASS=false
 LOCAL_CONTENT_IN_MEMORY_FALLBACK=false
+
+# LLM routing
+AI_PRIMARY_PROVIDER=deepseek
+AI_PRIMARY_MODEL=deepseek-chat
+AI_FALLBACK_PROVIDER=forge
+AI_FALLBACK_MODEL=gemini-2.5-flash
+DEEPSEEK_API_KEY=your-deepseek-api-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+
+# LangSmith observability (optional)
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_your_langsmith_api_key
+LANGSMITH_PROJECT=fezer-agent
+# LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+# LANGSMITH_WORKSPACE_ID=your_workspace_id
 ```
 
 ### Local Fallback Safety Boundary
@@ -107,6 +133,15 @@ PORT=3000
 NODE_ENV=production
 BUILT_IN_FORGE_API_URL=https://forge-backend.example.com
 BUILT_IN_FORGE_API_KEY=secret-backend-key
+AI_PRIMARY_PROVIDER=deepseek
+AI_PRIMARY_MODEL=deepseek-chat
+AI_FALLBACK_PROVIDER=forge
+AI_FALLBACK_MODEL=gemini-2.5-flash
+DEEPSEEK_API_KEY=prod-deepseek-key
+
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_prod_langsmith_key
+LANGSMITH_PROJECT=fezer-agent-prod
 ```
 
 ## Security Guidelines

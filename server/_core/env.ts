@@ -20,6 +20,17 @@ interface EnvConfig {
   enableLocalContentFallback: boolean;
   forgeApiUrl: string;
   forgeApiKey: string;
+  deepseekApiKey: string;
+  deepseekBaseUrl: string;
+  aiPrimaryProvider: "deepseek" | "forge";
+  aiPrimaryModel: string;
+  aiFallbackProvider: "deepseek" | "forge";
+  aiFallbackModel: string;
+  langsmithTracing: boolean;
+  langsmithApiKey: string;
+  langsmithProject: string;
+  langsmithEndpoint: string;
+  langsmithWorkspaceId: string;
   allowedOrigins: string[];
 }
 
@@ -97,6 +108,14 @@ function createEnv(): EnvConfig {
   const isProduction = process.env.NODE_ENV === "production";
   const localAdminAuthBypass = parseBooleanFlag(process.env.LOCAL_ADMIN_AUTH_BYPASS);
   const localContentFallback = parseBooleanFlag(process.env.LOCAL_CONTENT_IN_MEMORY_FALLBACK);
+  const aiPrimaryProvider =
+    process.env.AI_PRIMARY_PROVIDER?.trim().toLowerCase() === "forge"
+      ? "forge"
+      : "deepseek";
+  const aiFallbackProvider =
+    process.env.AI_FALLBACK_PROVIDER?.trim().toLowerCase() === "deepseek"
+      ? "deepseek"
+      : "forge";
 
   return {
     appId: process.env.VITE_APP_ID ?? "",
@@ -109,6 +128,17 @@ function createEnv(): EnvConfig {
     enableLocalContentFallback: !isProduction && localContentFallback,
     forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
     forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
+    deepseekBaseUrl: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
+    aiPrimaryProvider,
+    aiPrimaryModel: process.env.AI_PRIMARY_MODEL ?? "deepseek-chat",
+    aiFallbackProvider,
+    aiFallbackModel: process.env.AI_FALLBACK_MODEL ?? "gemini-2.5-flash",
+    langsmithTracing: parseBooleanFlag(process.env.LANGSMITH_TRACING),
+    langsmithApiKey: process.env.LANGSMITH_API_KEY ?? "",
+    langsmithProject: process.env.LANGSMITH_PROJECT ?? "fezer-agent",
+    langsmithEndpoint: process.env.LANGSMITH_ENDPOINT ?? "",
+    langsmithWorkspaceId: process.env.LANGSMITH_WORKSPACE_ID ?? "",
     allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
   };
 }
