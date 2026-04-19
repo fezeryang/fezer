@@ -1,13 +1,40 @@
+/**
+ * @fileoverview LLM 调用抽象层
+ * @description 统一的 LLM 调用接口，支持 DeepSeek 和 Forge 两种提供商，自动故障转移
+ * @author Fezer
+ * @created 2026-04-19
+ *
+ * @description
+ * 此模块提供：
+ * 1. 统一的 LLM 调用接口（invokeLLM）
+ * 2. 多提供商支持（DeepSeek、Forge）
+ * 3. 自动故障转移机制
+ * 4. LangSmith 可观测性集成
+ */
+
 import { ENV } from "./env";
 import { traceSpan } from "./observability/langsmith";
 
+// ============================================================================
+// 类型定义
+// ============================================================================
+
+/**
+ * 消息角色类型
+ */
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
+/**
+ * 文本内容
+ */
 export type TextContent = {
   type: "text";
   text: string;
 };
 
+/**
+ * 图片内容（多模态）
+ */
 export type ImageContent = {
   type: "image_url";
   image_url: {
@@ -16,16 +43,30 @@ export type ImageContent = {
   };
 };
 
+/**
+ * 文件内容（如音频、PDF 等）
+ */
 export type FileContent = {
   type: "file_url";
   file_url: {
     url: string;
-    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4" ;
+    mime_type?:
+      | "audio/mpeg"
+      | "audio/wav"
+      | "application/pdf"
+      | "audio/mp4"
+      | "video/mp4";
   };
 };
 
+/**
+ * 消息内容类型（可以是字符串或结构化内容）
+ */
 export type MessageContent = string | TextContent | ImageContent | FileContent;
 
+/**
+ * LLM 消息格式
+ */
 export type Message = {
   role: Role;
   content: MessageContent | MessageContent[];
@@ -33,6 +74,9 @@ export type Message = {
   tool_call_id?: string;
 };
 
+/**
+ * 工具定义（Function Calling）
+ */
 export type Tool = {
   type: "function";
   function: {
@@ -42,6 +86,9 @@ export type Tool = {
   };
 };
 
+/**
+ * 工具选择策略
+ */
 export type ToolChoicePrimitive = "none" | "auto" | "required";
 export type ToolChoiceByName = { name: string };
 export type ToolChoiceExplicit = {
@@ -56,20 +103,26 @@ export type ToolChoice =
   | ToolChoiceByName
   | ToolChoiceExplicit;
 
+/**
+ * LLM 调用参数
+ */
 export type InvokeParams = {
-  messages: Message[];
-  tools?: Tool[];
-  toolChoice?: ToolChoice;
-  tool_choice?: ToolChoice;
-  model?: string;
-  maxTokens?: number;
-  max_tokens?: number;
-  outputSchema?: OutputSchema;
-  output_schema?: OutputSchema;
-  responseFormat?: ResponseFormat;
-  response_format?: ResponseFormat;
+  messages: Message[]; // 消息列表
+  tools?: Tool[]; // 可用工具列表
+  toolChoice?: ToolChoice; // 工具选择策略
+  tool_choice?: ToolChoice; // 别名
+  model?: string; // 模型名称（覆盖默认）
+  maxTokens?: number; // 最大输出 token 数
+  max_tokens?: number; // 别名
+  outputSchema?: OutputSchema; // 输出 schema（结构化输出）
+  output_schema?: OutputSchema; // 别名
+  responseFormat?: ResponseFormat; // 响应格式
+  response_format?: ResponseFormat; // 别名
 };
 
+/**
+ * 工具调用结果
+ */
 export type ToolCall = {
   id: string;
   type: "function";
@@ -79,6 +132,9 @@ export type ToolCall = {
   };
 };
 
+/**
+ * LLM 响应结果
+ */
 export type InvokeResult = {
   id: string;
   created: number;
@@ -99,6 +155,9 @@ export type InvokeResult = {
   };
 };
 
+/**
+ * JSON Schema 定义
+ */
 export type JsonSchema = {
   name: string;
   schema: Record<string, unknown>;
@@ -107,6 +166,9 @@ export type JsonSchema = {
 
 export type OutputSchema = JsonSchema;
 
+/**
+ * 响应格式类型
+ */
 export type ResponseFormat =
   | { type: "text" }
   | { type: "json_object" }
@@ -282,7 +344,9 @@ function getPrimaryConfig(modelOverride?: string): ProviderRuntimeConfig {
   );
 }
 
-function getFallbackConfig(primary: ProviderRuntimeConfig): ProviderRuntimeConfig {
+function getFallbackConfig(
+  primary: ProviderRuntimeConfig
+): ProviderRuntimeConfig {
   const provider = normalizeProvider(ENV.aiFallbackProvider);
   const model = ENV.aiFallbackModel || "gemini-2.5-flash";
   const fallback = resolveProviderConfig(provider, model, "fallback");
