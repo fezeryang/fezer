@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(templateRoot, "client", "src"),
       "@shared": path.resolve(templateRoot, "shared"),
+      "@fezer/shared": path.resolve(templateRoot, "shared", "src"),
       "@assets": path.resolve(templateRoot, "attached_assets"),
     },
   },

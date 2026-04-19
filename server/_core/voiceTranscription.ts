@@ -64,6 +64,24 @@ export type TranscriptionError = {
   details?: string;
 };
 
+const TRANSCRIPTION_PROMPT_VERSION = "fezer.transcription-prompt.v2.stage1";
+
+export function buildDefaultTranscriptionPrompt(language?: string): string {
+  const languageContext = language
+    ? `用户工作语言：${getLanguageName(language)}。`
+    : "用户语言未显式提供，请根据音频自动识别。";
+
+  return [
+    `你是语音转写助手（${TRANSCRIPTION_PROMPT_VERSION}）。`,
+    "任务：将语音内容忠实转写为文本。",
+    languageContext,
+    "输出要求：",
+    "1) 仅转写听到的内容，不润色、不总结、不解释。",
+    "2) 听不清的片段保留原样并使用 [inaudible] 标记，不要猜测补全。",
+    "3) 保留说话者口语特征和关键术语，避免语义改写。",
+  ].join("\n");
+}
+
 /**
  * Transcribe audio to text using the internal Speech-to-Text service
  * 
@@ -134,12 +152,8 @@ export async function transcribeAudio(
     formData.append("model", "whisper-1");
     formData.append("response_format", "verbose_json");
     
-    // Add prompt - use custom prompt if provided, otherwise generate based on language
-    const prompt = options.prompt || (
-      options.language 
-        ? `Transcribe the user's voice to text, the user's working language is ${getLanguageName(options.language)}`
-        : "Transcribe the user's voice to text"
-    );
+    // Prefer user prompt when provided; otherwise use stable internal template.
+    const prompt = options.prompt || buildDefaultTranscriptionPrompt(options.language);
     formData.append("prompt", prompt);
 
     // Step 4: Call the transcription service

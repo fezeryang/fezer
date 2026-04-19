@@ -7,6 +7,9 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { chatHandler } from "../routes/chat";
+import { guideHandler } from "../routes/guide";
+import { characterHandler } from "../routes/character";
 import { assertEnvValid } from "./env";
 import { createCorsMiddleware } from "./security";
 
@@ -31,18 +34,22 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   assertEnvValid();
-  
+
   const app = express();
   const server = createServer(app);
-  
+
   // CORS middleware MUST run before all API routes
   app.use(createCorsMiddleware());
-  
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Agent API routes
+  app.post("/api/chat", chatHandler);
+  app.post("/api/guide", guideHandler);
+  app.post("/api/character", characterHandler);
   // tRPC API
   app.use(
     "/api/trpc",

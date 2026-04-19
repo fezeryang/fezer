@@ -61,4 +61,4 @@
 - [ ] Seed data for demo content
 
 ## Testing
-- [ ] Vitest tests for backend routes
+- [x] Vitest tests for backend routes

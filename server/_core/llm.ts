@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { traceSpan } from "./observability/langsmith";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -60,6 +61,7 @@ export type InvokeParams = {
   tools?: Tool[];
   toolChoice?: ToolChoice;
   tool_choice?: ToolChoice;
+  model?: string;
   maxTokens?: number;
   max_tokens?: number;
   outputSchema?: OutputSchema;
@@ -209,16 +211,120 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+type LLMProvider = "deepseek" | "forge";
 
-const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
+type ProviderRuntimeConfig = {
+  provider: LLMProvider;
+  model: string;
+  apiKey: string;
+  apiUrl: string;
+  source: "primary" | "fallback";
 };
+
+class LLMHttpError extends Error {
+  constructor(
+    public readonly provider: LLMProvider,
+    public readonly status: number,
+    public readonly statusText: string,
+    public readonly responseBody: string
+  ) {
+    super(
+      `[${provider}] LLM invoke failed: ${status} ${statusText} – ${responseBody}`
+    );
+    this.name = "LLMHttpError";
+  }
+}
+
+const FORGE_DEFAULT_URL = "https://forge.manus.im/v1/chat/completions";
+const DEEPSEEK_DEFAULT_BASE_URL = "https://api.deepseek.com/v1";
+
+function normalizeProvider(value: string | undefined): LLMProvider {
+  return value?.trim().toLowerCase() === "forge" ? "forge" : "deepseek";
+}
+
+function resolveProviderConfig(
+  provider: LLMProvider,
+  model: string,
+  source: "primary" | "fallback"
+): ProviderRuntimeConfig {
+  if (provider === "deepseek") {
+    const baseUrl =
+      ENV.deepseekBaseUrl?.trim().length > 0
+        ? ENV.deepseekBaseUrl
+        : DEEPSEEK_DEFAULT_BASE_URL;
+    return {
+      provider,
+      model,
+      apiKey: ENV.deepseekApiKey,
+      apiUrl: `${baseUrl.replace(/\/$/, "")}/chat/completions`,
+      source,
+    };
+  }
+
+  return {
+    provider,
+    model,
+    apiKey: ENV.forgeApiKey,
+    apiUrl:
+      ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+        ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+        : FORGE_DEFAULT_URL,
+    source,
+  };
+}
+
+function getPrimaryConfig(modelOverride?: string): ProviderRuntimeConfig {
+  const provider = normalizeProvider(ENV.aiPrimaryProvider);
+  return resolveProviderConfig(
+    provider,
+    modelOverride || ENV.aiPrimaryModel || "deepseek-chat",
+    "primary"
+  );
+}
+
+function getFallbackConfig(primary: ProviderRuntimeConfig): ProviderRuntimeConfig {
+  const provider = normalizeProvider(ENV.aiFallbackProvider);
+  const model = ENV.aiFallbackModel || "gemini-2.5-flash";
+  const fallback = resolveProviderConfig(provider, model, "fallback");
+
+  // Avoid retrying the exact same provider/model pair.
+  if (
+    fallback.provider === primary.provider &&
+    fallback.model === primary.model
+  ) {
+    return resolveProviderConfig(
+      primary.provider === "deepseek" ? "forge" : "deepseek",
+      primary.provider === "deepseek" ? "gemini-2.5-flash" : "deepseek-chat",
+      "fallback"
+    );
+  }
+
+  return fallback;
+}
+
+function assertProviderApiKey(config: ProviderRuntimeConfig): void {
+  if (config.apiKey?.trim()) return;
+  if (config.provider === "deepseek") {
+    throw new Error("DEEPSEEK_API_KEY is not configured");
+  }
+  throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
+}
+
+function shouldFallback(error: unknown): boolean {
+  if (error instanceof LLMHttpError) {
+    return error.status === 429 || error.status >= 500;
+  }
+
+  if (error instanceof TypeError) {
+    return true;
+  }
+
+  if (error instanceof Error && error.name === "AbortError") {
+    return true;
+  }
+
+  return false;
+}
 
 const normalizeResponseFormat = ({
   responseFormat,
@@ -266,21 +372,26 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
-
   const {
     messages,
     tools,
     toolChoice,
     tool_choice,
+    model,
+    maxTokens,
+    max_tokens,
     outputSchema,
     output_schema,
     responseFormat,
     response_format,
   } = params;
 
+  const primaryConfig = getPrimaryConfig(model);
+  const fallbackConfig = getFallbackConfig(primaryConfig);
+  assertProviderApiKey(primaryConfig);
+
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: primaryConfig.model,
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,9 +407,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  payload.max_tokens = maxTokens || max_tokens || 32768;
+
+  if (primaryConfig.provider === "forge") {
+    payload.thinking = {
+      budget_tokens: 128,
+    };
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -312,21 +426,80 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  const callProvider = async (
+    config: ProviderRuntimeConfig,
+    attemptedFallback: boolean
+  ): Promise<InvokeResult> => {
+    assertProviderApiKey(config);
+    const providerPayload: Record<string, unknown> = {
+      ...payload,
+      model: config.model,
+    };
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+    if (config.provider === "forge") {
+      providerPayload.thinking = {
+        budget_tokens: 128,
+      };
+    } else {
+      delete providerPayload.thinking;
+    }
+
+    return traceSpan(
+      "llm.chat.completions",
+      async () => {
+        const response = await fetch(config.apiUrl, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify(providerPayload),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new LLMHttpError(
+            config.provider,
+            response.status,
+            response.statusText,
+            errorText
+          );
+        }
+
+        return (await response.json()) as InvokeResult;
+      },
+      {
+        runType: "llm",
+        tags: [
+          `provider:${config.provider}`,
+          `model:${config.model}`,
+          `source:${config.source}`,
+        ],
+        metadata: {
+          ls_provider: config.provider,
+          ls_model_name: config.model,
+          ls_invocation_params: {
+            max_tokens: providerPayload.max_tokens,
+            tool_choice: providerPayload.tool_choice,
+            response_format: providerPayload.response_format,
+          },
+          llm_source: config.source,
+          llm_fallback_attempted: attemptedFallback,
+        },
+      }
     );
-  }
+  };
 
-  return (await response.json()) as InvokeResult;
+  return traceSpan("invokeLLM", async () => {
+    try {
+      return await callProvider(primaryConfig, false);
+    } catch (error) {
+      if (!shouldFallback(error)) {
+        throw error;
+      }
+
+      assertProviderApiKey(fallbackConfig);
+      return await callProvider(fallbackConfig, true);
+    }
+  });
 }
