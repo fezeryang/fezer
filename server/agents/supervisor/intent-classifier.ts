@@ -59,7 +59,10 @@ function dedupeAgents(agents: AgentId[]): AgentId[] {
   return Array.from(new Set(agents));
 }
 
-function normalizeConsultAgents(input: unknown, targetAgent: AgentId): AgentId[] {
+function normalizeConsultAgents(
+  input: unknown,
+  targetAgent: AgentId
+): AgentId[] {
   if (!Array.isArray(input)) {
     return [];
   }
@@ -85,7 +88,9 @@ function deriveFallbackConsultAgents(
 /**
  * 使用 LLM 进行意图分类
  */
-export async function classifyIntent(userInput: string): Promise<IntentClassification> {
+export async function classifyIntent(
+  userInput: string
+): Promise<IntentClassification> {
   // 简单关键词预处理（快速路径）
   const quickResult = quickClassify(userInput);
   if (quickResult) {
@@ -93,48 +98,73 @@ export async function classifyIntent(userInput: string): Promise<IntentClassific
   }
 
   // 使用 LLM 进行精确分类
-  const systemPrompt = `你是 Fezer 简历系统的闭集意图分类器（${INTENT_PROMPT_VERSION}）。
-你必须只在给定枚举中分类，不得输出枚举外值。只返回 JSON。
+  const systemPrompt = `# 意图分类器系统指令
 
-## Agent 专长领域
-- core: 全局介绍、导览、一般性问题
-- builder: 前端、后端、工程化、技术实现
-- ai: AI 应用、LLM、LangChain、自动化
-- writer: 写作、内容创作、技术文档
-- reader: 阅读、思考、知识管理
-- visual: 设计、UI/UX、视觉
-- wanderer: 旅行、探索、生活体验
+你是 Fezer 简历系统的意图分类器（版本: ${INTENT_PROMPT_VERSION}）。
 
-## 返回格式
+## 核心约束
+- 你必须在给定的**闭集枚举**中分类，不得输出枚举外的值
+- 只返回符合 schema 的 JSON，不添加任何额外文本
+- 当输入模糊时，选择最可能的主导意图，而非拒答
+
+## Agent 专长映射
+| Agent | 专长领域 | 关键词特征 |
+|-------|----------|-----------|
+| core | 全局介绍、导览、一般性问题 | 介绍、导览、这是什么、开始、总览 |
+| builder | 前端、后端、工程化、技术实现 | 代码、技术栈、架构、部署、工程 |
+| ai | AI 应用、LLM、LangChain、自动化 | LLM、Agent、LangChain、AI、模型 |
+| writer | 写作、内容创作、技术文档 | 写作、文档、博客、表达、内容 |
+| reader | 阅读、思考、知识管理 | 阅读、思考、知识、笔记、学习 |
+| visual | 设计、UI/UX、视觉 | 设计、UI/UX、视觉、3D、界面 |
+| wanderer | 旅行、探索、生活体验 | 旅行、探索、生活、观察、体验 |
+
+## 分类决策树
+\`\`\`
+先判断是否为导览请求？
+├─ 是 → category=guide, targetAgent=core
+└─ 否 → 检测是否跨多个技术领域？
+    ├─ 是 → category=complex, needsConsultation=true, 选择主域 + 辅域
+    └─ 否 → 匹配最相关的单一领域 agent
+\`\`\`
+
+## Confidence 标尺
+- **0.9-1.0**: 明确关键词，意图直指单领域
+- **0.7-0.89**: 基本明确，但有轻微歧义
+- **0.4-0.69**: 模糊问题或上下文不足
+- **0.0-0.39**: 极度不确定（仅限异常情况）
+
+## 输出 Schema
+\`\`\`json
 {
   "category": "guide|technical|ai|writing|reading|design|travel|general|complex",
   "targetAgent": "core|builder|ai|writer|reader|visual|wanderer",
-  "confidence": 0-1,
-  "needsConsultation": true/false,
-  "consultAgents": ["agent1", "agent2"],
-  "reasoning": "分类理由"
+  "confidence": number [0-1],
+  "needsConsultation": boolean,
+  "consultAgents": string[], // 可协作的 agent 列表，不含 targetAgent
+  "reasoning": string // 简洁说明核心依据，不要复述原问题
 }
-
-## 分类规则
-1. category 与 targetAgent 必须从给定枚举中选择。
-2. 如果问题涉及多个领域，优先设置 needsConsultation=true，并在 consultAgents 中给出 1-3 个相关 agent（不含 targetAgent）。
-3. complex 表示明显跨领域或需要多角色协作；若仅单领域，避免误判为 complex。
-4. confidence 使用 [0,1]，建议标尺：
-   - 0.9-1.0: 明确关键词或意图直指单领域
-   - 0.7-0.89: 基本明确但有轻微歧义
-   - 0.4-0.69: 模糊问题或上下文不足
-   - 0.0-0.39: 极度不确定（仅限异常情况）
-5. reasoning 简洁说明核心依据，不要复述原问题。
+\`\`\`
 
 ## Few-shot 示例
-输入: "介绍一下这个 3D 简历怎么逛"
-输出: {"category":"guide","targetAgent":"core","confidence":0.95,"needsConsultation":false,"consultAgents":[],"reasoning":"明确导览意图"}
 
-输入: "我想做一个带 Agent 的全栈 AI 应用，技术怎么选？"
-输出: {"category":"complex","targetAgent":"ai","confidence":0.82,"needsConsultation":true,"consultAgents":["builder"],"reasoning":"AI 方案与工程实现强耦合"}
+Q: "介绍一下这个 3D 简历怎么逛"
+A: {"category":"guide","targetAgent":"core","confidence":0.95,"needsConsultation":false,"consultAgents":[],"reasoning":"明确导览请求"}
 
-输入: "最近在看什么，怎么做知识管理？"
-输出: {"category":"reading","targetAgent":"reader","confidence":0.9,"needsConsultation":false,"consultAgents":[],"reasoning":"阅读与知识管理是 reader 主域"}`;
+Q: "我想做一个带 Agent 的全栈 AI 应用，技术怎么选？"
+A: {"category":"complex","targetAgent":"ai","confidence":0.82,"needsConsultation":true,"consultAgents":["builder"],"reasoning":"AI 方案与工程实现强耦合"}
+
+Q: "最近在看什么，怎么做知识管理？"
+A: {"category":"reading","targetAgent":"reader","confidence":0.9,"needsConsultation":false,"consultAgents":[],"reasoning":"阅读与知识管理是 reader 主域"}
+
+Q: "React 项目怎么组织代码结构？"
+A: {"category":"technical","targetAgent":"builder","confidence":0.92,"needsConsultation":false,"consultAgents":[],"reasoning":"明确的前端工程问题"}
+
+Q: "写技术文档有什么技巧？"
+A: {"category":"writing","targetAgent":"writer","confidence":0.88,"needsConsultation":false,"consultAgents":[],"reasoning":"技术写作是 writer 主域"}
+
+Q: "这个 UI 的配色怎么考虑的？"
+A: {"category":"design","targetAgent":"visual","confidence":0.85,"needsConsultation":false,"consultAgents":[],"reasoning":"视觉设计问题"}
+`;
 
   try {
     const result = await runWithTraceContext(
@@ -316,11 +346,14 @@ function validateAndNormalize(parsed: any): IntentClassification {
     : "core";
   const confidence = clampConfidence(parsed?.confidence);
   const needsConsultation = Boolean(parsed?.needsConsultation);
-  const consultAgents = normalizeConsultAgents(parsed?.consultAgents, targetAgent);
+  const consultAgents = normalizeConsultAgents(
+    parsed?.consultAgents,
+    targetAgent
+  );
   const normalizedConsultAgents = needsConsultation
-    ? (consultAgents.length > 0
+    ? consultAgents.length > 0
       ? consultAgents
-      : deriveFallbackConsultAgents(category, targetAgent))
+      : deriveFallbackConsultAgents(category, targetAgent)
     : [];
 
   return {
@@ -330,7 +363,8 @@ function validateAndNormalize(parsed: any): IntentClassification {
     needsConsultation: normalizedConsultAgents.length > 0 && needsConsultation,
     consultAgents: normalizedConsultAgents,
     reasoning:
-      typeof parsed?.reasoning === "string" && parsed.reasoning.trim().length > 0
+      typeof parsed?.reasoning === "string" &&
+      parsed.reasoning.trim().length > 0
         ? parsed.reasoning
         : "分类结果已规范化",
   };
@@ -339,6 +373,8 @@ function validateAndNormalize(parsed: any): IntentClassification {
 /**
  * 批量分类（用于多个输入）
  */
-export async function classifyIntents(inputs: string[]): Promise<IntentClassification[]> {
+export async function classifyIntents(
+  inputs: string[]
+): Promise<IntentClassification[]> {
   return Promise.all(inputs.map(input => classifyIntent(input)));
 }
