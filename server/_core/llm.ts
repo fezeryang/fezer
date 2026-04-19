@@ -471,7 +471,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = maxTokens || max_tokens || 32768;
+  // 根据提供商设置合适的 max_tokens 默认值
+  // DeepSeek 限制为 8192，Forge 支持更大值
+  const defaultMaxTokens = primaryConfig.provider === "deepseek" ? 4096 : 32768;
+  payload.max_tokens = maxTokens || max_tokens || defaultMaxTokens;
 
   if (primaryConfig.provider === "forge") {
     payload.thinking = {
@@ -506,6 +509,14 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       };
     } else {
       delete providerPayload.thinking;
+      // DeepSeek 目前不支持 json_schema 格式，回退到 text
+      if (config.provider === "deepseek" && providerPayload.response_format) {
+        const format = providerPayload.response_format as { type: string };
+        if (format.type === "json_schema") {
+          // 移除不支持的 json_schema 格式
+          delete providerPayload.response_format;
+        }
+      }
     }
 
     return traceSpan(
