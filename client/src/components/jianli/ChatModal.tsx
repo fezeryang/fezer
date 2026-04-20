@@ -141,8 +141,19 @@ export function ChatModal({
           style={{ backgroundColor: currentAgentColor }}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-lg">🤖</span>
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+              <img
+                src="/avatars/kitty-ghostcatpink.gif"
+                alt={currentAgentName}
+                className="w-10 h-10 rounded-full object-cover"
+                onError={e => {
+                  const img = e.currentTarget;
+                  img.style.display = "none";
+                  const emoji = img.nextElementSibling as HTMLElement;
+                  if (emoji) emoji.classList.remove("hidden");
+                }}
+              />
+              <span className="text-lg hidden">🤖</span>
             </div>
             <div>
               <h3 className="font-semibold text-lg">{currentAgentName}</h3>
