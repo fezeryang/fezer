@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { Streamdown } from "streamdown";
 import { useAgentChat } from "../../hooks/useAgentChat";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
@@ -24,13 +25,13 @@ interface ChatModalProps {
 
 // 代理显示名称
 const AGENT_NAMES: Record<FezerType, string> = {
-  core: "Core Fezer",
-  builder: "Builder Fezer",
-  ai: "AI Fezer",
-  writer: "Writer Fezer",
-  reader: "Reader Fezer",
-  visual: "Visual Fezer",
-  wanderer: "Wanderer Fezer",
+  core: "Aries · Core",
+  builder: "Gemini · Builder",
+  ai: "Aquarius · AI",
+  writer: "Libra · Writer",
+  reader: "Virgo · Reader",
+  visual: "Pisces · Visual",
+  wanderer: "Sagittarius · Wanderer",
 };
 
 // 代理颜色
@@ -141,8 +142,19 @@ export function ChatModal({
           style={{ backgroundColor: currentAgentColor }}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-lg">🤖</span>
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+              <img
+                src="/avatars/kitty-ghostcatpink.gif"
+                alt={currentAgentName}
+                className="w-10 h-10 rounded-full object-cover"
+                onError={e => {
+                  const img = e.currentTarget;
+                  img.style.display = "none";
+                  const emoji = img.nextElementSibling as HTMLElement;
+                  if (emoji) emoji.classList.remove("hidden");
+                }}
+              />
+              <span className="text-lg hidden">🤖</span>
             </div>
             <div>
               <h3 className="font-semibold text-lg">{currentAgentName}</h3>
@@ -180,7 +192,13 @@ export function ChatModal({
                     : "bg-white text-gray-800 rounded-bl-md shadow-sm"
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-sm max-w-none font-chill-huofangsong">
+                    <Streamdown>{msg.content}</Streamdown>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                )}
               </div>
             </div>
           ))}
