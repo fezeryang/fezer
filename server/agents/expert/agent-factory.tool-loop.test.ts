@@ -113,6 +113,12 @@ describe("expert agent tool loop", () => {
     expect(invokeLLMMock).toHaveBeenCalledTimes(2);
 
     const secondCall = invokeLLMMock.mock.calls[1][0];
+    const assistantWithToolCalls = secondCall.messages.find(
+      (msg: any) => msg.role === "assistant" && Array.isArray(msg.tool_calls)
+    );
+    expect(assistantWithToolCalls).toBeTruthy();
+    expect(assistantWithToolCalls.tool_calls[0].id).toBe("tool_1");
+
     const toolMessage = secondCall.messages.find(
       (msg: any) => msg.role === "tool" && msg.tool_call_id === "tool_1"
     );
@@ -320,5 +326,50 @@ describe("expert agent tool loop", () => {
       (msg: any) => msg.role === "tool" && msg.tool_call_id === "forbidden"
     );
     expect(String(forbiddenToolMessage.content)).toContain("Tool not allowed");
+  });
+
+  it("returns safe answer when tool_calls payload is malformed", async () => {
+    getLLMToolsByNamesMock.mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "get_profile",
+          description: "get profile",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+
+    invokeLLMMock.mockResolvedValueOnce({
+      id: "1",
+      created: 1,
+      model: "deepseek-chat",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: "calling tool",
+            tool_calls: [
+              {
+                id: "",
+                type: "function",
+                function: {
+                  name: "get_profile",
+                  arguments: "{}",
+                },
+              },
+            ],
+          },
+          finish_reason: "tool_calls",
+        },
+      ],
+    });
+
+    const { invokeAgent } = await import("./agent-factory");
+    const result = await invokeAgent("core", "hello");
+
+    expect(result.answer).toContain("工具调用格式异常");
+    expect(invokeLLMMock).toHaveBeenCalledTimes(1);
   });
 });

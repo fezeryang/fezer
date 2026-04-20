@@ -10,7 +10,7 @@ import type {
 } from "@fezer/shared/schemas/agent";
 
 // API 基础 URL，开发环境使用本地，生产环境使用相对路径
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export interface UseAgentChatOptions {
   onError?: (error: Error) => void;
@@ -43,7 +43,7 @@ export function useAgentChat(
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/chat`, {
+        const response = await fetch(`${API_BASE}/api/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(request),
@@ -79,7 +79,7 @@ export function useAgentChat(
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/guide`, {
+        const response = await fetch(`${API_BASE}/api/guide`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userInput }),
@@ -115,7 +115,7 @@ export function useAgentChat(
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/character`, {
+        const response = await fetch(`${API_BASE}/api/character`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ characterId, userInput }),
