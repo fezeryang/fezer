@@ -109,6 +109,93 @@ describe("invokeLLM provider routing", () => {
     );
   });
 
+  it("preserves assistant tool_calls in request payload", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      createJsonResponse({
+        id: "chatcmpl-1",
+        created: 1,
+        model: "deepseek-chat",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "ok" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    await invokeLLM({
+      messages: [
+        { role: "user", content: "hi" },
+        {
+          role: "assistant",
+          content: "calling tool",
+          tool_calls: [
+            {
+              id: "tool_1",
+              type: "function",
+              function: { name: "get_profile", arguments: "{}" },
+            },
+          ],
+        },
+        { role: "tool", tool_call_id: "tool_1", content: "{\"ok\":true}" },
+      ],
+    });
+
+    const payload = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(payload.messages[1].tool_calls).toBeTruthy();
+    expect(payload.messages[1].tool_calls[0].id).toBe("tool_1");
+  });
+
+  it("falls back on deepseek 400 tool call sequence errors", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+    process.env.AI_FALLBACK_PROVIDER = "forge";
+    process.env.AI_FALLBACK_MODEL = "gemini-2.5-flash";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.BUILT_IN_FORGE_API_KEY = "forge-key";
+    process.env.BUILT_IN_FORGE_API_URL = "https://forge.example.com";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        createTextResponse(
+          "{\"error\":{\"message\":\"Messages with role 'tool' must be a response to a preceding message with 'tool_calls'\"}}",
+          400
+        )
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          id: "chatcmpl-2",
+          created: 2,
+          model: "gemini-2.5-flash",
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "fallback-ok" },
+              finish_reason: "stop",
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    const result = await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(result.choices[0]?.message?.content).toBe("fallback-ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("does not fallback on non-retryable 4xx response", async () => {
     process.env.AI_PRIMARY_PROVIDER = "deepseek";
     process.env.AI_PRIMARY_MODEL = "deepseek-chat";

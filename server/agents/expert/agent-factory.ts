@@ -9,14 +9,12 @@ import {
   buildAgentSystemPrompt,
   CHARACTER_PROMPT_FRAMEWORK_VERSION,
 } from "@fezer/shared/characters";
-import { runWithTraceContext, traceSpan } from "../../_core/observability/langsmith";
 import {
-  BaseMessage,
-} from "@langchain/core/messages";
-import {
-  getLLMToolsByNames,
-  getToolExecutionRegistry,
-} from "../tools";
+  runWithTraceContext,
+  traceSpan,
+} from "../../_core/observability/langsmith";
+import { BaseMessage } from "@langchain/core/messages";
+import { getLLMToolsByNames, getToolExecutionRegistry } from "../tools";
 
 /**
  * Agent 调用选项
@@ -192,12 +190,30 @@ async function invokeAgentInternal(
             lastAssistantAnswer = normalizedAssistantContent;
           }
 
+          const toolCalls = assistantMessage.tool_calls || [];
+          const hasInvalidToolCall = toolCalls.some(
+            toolCall =>
+              !toolCall?.id ||
+              !toolCall?.function?.name ||
+              typeof toolCall.function.arguments !== "string"
+          );
+
+          if (hasInvalidToolCall) {
+            return {
+              answer:
+                "抱歉，本次工具调用格式异常，我先给你基于当前信息的回答。",
+              uiAction: {
+                suggestedQuestions: extractSuggestedQuestions(agentId),
+              },
+            };
+          }
+
           messages.push({
             role: "assistant",
             content: normalizedAssistantContent || "",
+            ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
           });
 
-          const toolCalls = assistantMessage.tool_calls || [];
           if (toolCalls.length === 0) {
             // 完成回答
             return {
@@ -253,7 +269,9 @@ async function invokeAgentInternal(
                   return {
                     success: false,
                     error:
-                      error instanceof Error ? error.message : "Unknown tool error",
+                      error instanceof Error
+                        ? error.message
+                        : "Unknown tool error",
                   };
                 }
               },
@@ -278,9 +296,7 @@ async function invokeAgentInternal(
           loopCount += 1;
         }
 
-        const fallbackAnswer =
-          lastAssistantAnswer ||
-          "抱歉，我暂时无法回答。";
+        const fallbackAnswer = lastAssistantAnswer || "抱歉，我暂时无法回答。";
 
         // 提取 UI 提示（简单实现）
         return {
@@ -347,8 +363,16 @@ export async function invokeAgent(
     return await invokeAgentInternal(agentId, input, options);
   } catch (error) {
     console.error(`Agent ${agentId} invoke error:`, error);
+    const errorDetails =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+    console.error(`Agent ${agentId} error details:`, errorDetails);
+    if (error instanceof Error && error.stack) {
+      console.error(`Agent ${agentId} stack trace:`, error.stack);
+    }
     return {
-      answer: `抱歉，${getAgentRoleDescription(agentId)}遇到了技术问题，请稍后再试。`,
+      answer: `抱歉，${getAgentRoleDescription(agentId)}遇到了技术问题。错误: ${errorDetails}`,
     };
   }
 }

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-04-20T12:00:00.000Z" agent="Codex" version="26.0.0" editor="draw.io">
+  <diagram id="agent-arch" name="Agent Architecture">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="2" value="Client Layer" style="swimlane;startSize=30;rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="370" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="3" value="ChatModal / useAgentChat\nclient/src/components + hooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="2">
+          <mxGeometry x="20" y="50" width="330" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="4" value="API Route Layer (Express)" style="swimlane;startSize=30;rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="40" width="420" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="5" value="/api/chat\nserver/routes/chat.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="4">
+          <mxGeometry x="20" y="50" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="6" value="/api/guide\nserver/routes/guide.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="4">
+          <mxGeometry x="150" y="50" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="7" value="/api/character\nserver/routes/character.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="4">
+          <mxGeometry x="280" y="50" width="120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="8" value="runWithTraceContext\ntraceSpan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="4">
+          <mxGeometry x="110" y="150" width="200" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="9" value="Orchestrator Graph\nserver/agents/orchestrator/graph.ts" style="swimlane;startSize=30;rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="930" y="40" width="380" height="270" as="geometry"/>
+        </mxCell>
+        <mxCell id="10" value="ingestRequest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="9">
+          <mxGeometry x="20" y="50" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="11" value="detectSpatialContext" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="9">
+          <mxGeometry x="135" y="50" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="12" value="callSupervisor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="9">
+          <mxGeometry x="270" y="50" width="90" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="13" value="resolvePreferredAgent /\nresolveAgentByCharacterId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="9">
+          <mxGeometry x="80" y="140" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="14" value="Supervisor Graph\nserver/agents/supervisor/graph.ts" style="swimlane;startSize=30;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="460" y="360" width="560" height="330" as="geometry"/>
+        </mxCell>
+        <mxCell id="15" value="classifyIntent\n(intent-classifier.ts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="14">
+          <mxGeometry x="20" y="60" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="16" value="routeDecision\nsingle / parallel" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="14">
+          <mxGeometry x="210" y="60" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="17" value="executeSingleAgent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="14">
+          <mxGeometry x="380" y="40" width="150" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="18" value="executeParallelAgents\n+ synthesizeResponses" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="14">
+          <mxGeometry x="380" y="120" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="19" value="assembleFinalOutput" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="14">
+          <mxGeometry x="380" y="220" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="20" value="Expert Layer\nserver/agents/expert/agent-factory.ts" style="swimlane;startSize=30;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="360" width="500" height="330" as="geometry"/>
+        </mxCell>
+        <mxCell id="21" value="invokeAgent / invokeMultipleAgents" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="20">
+          <mxGeometry x="20" y="60" width="220" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="22" value="AGENT_TOOL_CONFIGS\n(core/builder/ai/writer/reader/visual/wanderer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="20">
+          <mxGeometry x="260" y="50" width="220" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="23" value="Tool Loop (max 4)\nLLM -> tool_calls -> serial invoke -> LLM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="20">
+          <mxGeometry x="20" y="150" width="220" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="24" value="buildAgentSystemPrompt\nfrom @fezer/shared/characters" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="20">
+          <mxGeometry x="260" y="160" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="25" value="Tools &amp; Knowledge Layer" style="swimlane;startSize=30;rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="740" width="630" height="270" as="geometry"/>
+        </mxCell>
+        <mxCell id="26" value="tools/index.ts\ngetLLMToolsByNames\ngetToolExecutionRegistry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="25">
+          <mxGeometry x="20" y="60" width="180" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="27" value="agent.tool.ts\nask_other_agent\nask_multiple_agents" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="25">
+          <mxGeometry x="220" y="60" width="180" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="28" value="RAG retriever.ts\nsearch_knowledge / faq / details" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="25">
+          <mxGeometry x="420" y="60" width="190" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="29" value="Model Layer\nserver/_core/llm.ts" style="swimlane;startSize=30;rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="740" width="430" height="270" as="geometry"/>
+        </mxCell>
+        <mxCell id="30" value="invokeLLM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="29">
+          <mxGeometry x="20" y="60" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="31" value="Primary Provider\nDeepSeek / Forge" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="29">
+          <mxGeometry x="160" y="50" width="120" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="32" value="Fallback Provider\nauto failover" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="29">
+          <mxGeometry x="300" y="50" width="110" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="33" value="traceSpan metadata\n(provider/model/source)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="29">
+          <mxGeometry x="120" y="160" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="34" value="Spatial Mapping\nserver/agents/spatial/agent-resolution.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="80" width="220" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="35" value="Response Contract\n@fezer/shared/schemas/agent\n(text/panel/highlight/suggestions/speakingAgentId)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="370" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="100" value="HTTP JSON" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="3" target="5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="101" value="invoke" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="5" target="9"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="102" value="invoke" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="6" target="9"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="103" value="invoke" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="7" target="9"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="104" value="sequential nodes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="9" source="10" target="11"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="105" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="9" source="11" target="12"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="106" value="uses" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;dashed=1;" edge="1" parent="1" source="11" target="34"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="107" value="askSupervisor" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="12" target="14"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="108" value="classify" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="14" source="15" target="16"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="109" value="single" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="14" source="16" target="17"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="110" value="parallel" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="14" source="16" target="18"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="111" value="assemble" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="14" source="17" target="19"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="112" value="assemble" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="14" source="18" target="19"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="113" value="invokeAgent" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="17" target="21"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="114" value="invokeMultipleAgents" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="18" target="21"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="115" value="allowed tools" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;dashed=1;" edge="1" parent="20" source="22" target="23"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="116" value="registry" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="23" target="26"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="117" value="agent consult" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="23" target="27"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="118" value="knowledge" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="23" target="28"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="119" value="invokeLLM" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="23" target="30"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="120" value="primary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="29" source="30" target="31"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="121" value="fallback" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;dashed=1;" edge="1" parent="29" source="31" target="32"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="122" value="trace" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;dashed=1;" edge="1" parent="29" source="30" target="33"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="123" value="answer + uiAction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="19" target="35"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="124" value="JSON response" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="35" target="3"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -11,6 +11,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
+        ALLOWED_ORIGINS: 'https://fezeryang.github.io,https://fezeryang.github.io/fezer,http://localhost:5173',
       },
       error_file: './logs/err.log',
       out_file: './logs/out.log',

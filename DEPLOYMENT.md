@@ -222,12 +222,12 @@ AI_PRIMARY_PROVIDER=deepseek
 AI_PRIMARY_MODEL=deepseek-chat
 AI_FALLBACK_PROVIDER=forge
 AI_FALLBACK_MODEL=gemini-2.5-flash
-DEEPSEEK_API_KEY=你的DeepSeek_API_Key
+DEEPSEEK_API_KEY=<你的_DeepSeek_API_Key>
 DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 
 # ========== LangSmith 监控（可选） ==========
 LANGSMITH_TRACING=true
-LANGSMITH_API_KEY=你的LangSmith_API_Key
+LANGSMITH_API_KEY=<你的_LangSmith_API_Key>
 LANGSMITH_PROJECT=fezer-agent-prod
 
 # ========== CORS 配置 ==========

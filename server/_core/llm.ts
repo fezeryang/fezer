@@ -72,6 +72,7 @@ export type Message = {
   content: MessageContent | MessageContent[];
   name?: string;
   tool_call_id?: string;
+  tool_calls?: ToolCall[];
 };
 
 /**
@@ -201,7 +202,7 @@ const normalizeContentPart = (
 };
 
 const normalizeMessage = (message: Message) => {
-  const { role, name, tool_call_id } = message;
+  const { role, name, tool_call_id, tool_calls } = message;
 
   if (role === "tool" || role === "function") {
     const content = ensureArray(message.content)
@@ -216,22 +217,42 @@ const normalizeMessage = (message: Message) => {
     };
   }
 
+  if (role === "assistant" && tool_calls) {
+    for (const toolCall of tool_calls) {
+      if (
+        !toolCall?.id ||
+        !toolCall?.function?.name ||
+        typeof toolCall.function.arguments !== "string"
+      ) {
+        throw new Error("Invalid assistant tool_calls payload");
+      }
+    }
+  }
+
   const contentParts = ensureArray(message.content).map(normalizeContentPart);
 
   // If there's only text content, collapse to a single string for compatibility
   if (contentParts.length === 1 && contentParts[0].type === "text") {
-    return {
+    const normalized = {
       role,
       name,
       content: contentParts[0].text,
     };
+    if (role === "assistant" && tool_calls && tool_calls.length > 0) {
+      return { ...normalized, tool_calls };
+    }
+    return normalized;
   }
 
-  return {
+  const normalized = {
     role,
     name,
     content: contentParts,
   };
+  if (role === "assistant" && tool_calls && tool_calls.length > 0) {
+    return { ...normalized, tool_calls };
+  }
+  return normalized;
 };
 
 const normalizeToolChoice = (
@@ -376,6 +397,13 @@ function assertProviderApiKey(config: ProviderRuntimeConfig): void {
 
 function shouldFallback(error: unknown): boolean {
   if (error instanceof LLMHttpError) {
+    if (
+      error.provider === "deepseek" &&
+      error.status === 400 &&
+      isToolCallSequenceError(error.responseBody)
+    ) {
+      return true;
+    }
     return error.status === 429 || error.status >= 500;
   }
 
@@ -388,6 +416,16 @@ function shouldFallback(error: unknown): boolean {
   }
 
   return false;
+}
+
+function isToolCallSequenceError(responseBody: string): boolean {
+  const text = responseBody.toLowerCase();
+  return (
+    text.includes("role 'tool'") ||
+    text.includes("role \"tool\"") ||
+    text.includes("tool_calls") ||
+    text.includes("tool call")
+  );
 }
 
 const normalizeResponseFormat = ({
@@ -458,6 +496,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     model: primaryConfig.model,
     messages: messages.map(normalizeMessage),
   };
+  const hasToolCallsInRequest = messages.some(
+    msg => msg.role === "assistant" && !!msg.tool_calls && msg.tool_calls.length > 0
+  );
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
@@ -557,6 +598,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
             max_tokens: providerPayload.max_tokens,
             tool_choice: providerPayload.tool_choice,
             response_format: providerPayload.response_format,
+            has_assistant_tool_calls: hasToolCallsInRequest,
           },
           llm_source: config.source,
           llm_fallback_attempted: attemptedFallback,
@@ -574,6 +616,24 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       }
 
       assertProviderApiKey(fallbackConfig);
+      const fallbackReason =
+        error instanceof LLMHttpError
+          ? error.status === 429 || error.status >= 500
+            ? "http_retryable"
+            : error.provider === "deepseek" &&
+                error.status === 400 &&
+                isToolCallSequenceError(error.responseBody)
+              ? "deepseek_tool_sequence_400"
+              : "other_http"
+          : error instanceof TypeError
+            ? "network_type_error"
+            : error instanceof Error && error.name === "AbortError"
+              ? "abort_error"
+              : "unknown";
+
+      console.warn(
+        `[invokeLLM] fallback to ${fallbackConfig.provider}:${fallbackConfig.model}, reason=${fallbackReason}, has_tool_calls=${hasToolCallsInRequest}`
+      );
       return await callProvider(fallbackConfig, true);
     }
   });
