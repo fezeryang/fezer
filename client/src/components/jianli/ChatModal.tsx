@@ -120,13 +120,11 @@ export function ChatModal({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 初始消息：每次打开聊天窗口时重置并发送
+  // 打开聊天窗口时重置消息
   useEffect(() => {
-    if (isOpen && initialMessage) {
+    if (isOpen) {
       setMessages([]);
       setCurrentResponse(null);
-      // 延迟发送以确保状态已重置
-      setTimeout(() => handleSend(initialMessage), 0);
     }
   }, [isOpen]);
 
@@ -325,8 +323,8 @@ export function ChatModal({
           }}
         >
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <p>开始与 {currentAgentName} 对话...</p>
+            <div className="flex items-center justify-center h-full text-gray-600">
+              <p>输入消息开始与 {currentAgentName} 对话...</p>
             </div>
           )}
           {messages.map(msg => (
