@@ -45,6 +45,24 @@ const AGENT_COLORS: Record<FezerType, string> = {
   wanderer: "#059669",
 };
 
+// 代理头像文件名（对应 /avatars/ 目录下的文件）
+const AGENT_AVATARS: Record<FezerType, string> = {
+  core: "kitty-ghostcatpink.gif",
+  builder: "kitty-bongopixel .gif",
+  ai: "kitty-cosmew.gif",
+  writer: "kitty-athenaeum .gif",
+  reader: "kitty-hillhouse .gif",
+  visual: "kitty-witchcat.gif",
+  wanderer: "kitty-shadowken.gif",
+};
+
+// 获取头像 URL（自动适配 GitHub Pages 路径）
+const getAvatarUrl = (agentId: FezerType | undefined): string => {
+  if (!agentId)
+    return `${import.meta.env.BASE_URL}avatars/kitty-ghostcatpink.gif`;
+  return `${import.meta.env.BASE_URL}avatars/${AGENT_AVATARS[agentId]}`;
+};
+
 export function ChatModal({
   isOpen,
   characterId,
@@ -144,7 +162,7 @@ export function ChatModal({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
               <img
-                src="/avatars/kitty-ghostcatpink.gif"
+                src={getAvatarUrl(currentAgentId)}
                 alt={currentAgentName}
                 className="w-10 h-10 rounded-full object-cover"
                 onError={e => {
