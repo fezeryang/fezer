@@ -48,10 +48,10 @@ const AGENT_COLORS: Record<FezerType, string> = {
 // 代理头像文件名（对应 /avatars/ 目录下的文件）
 const AGENT_AVATARS: Record<FezerType, string> = {
   core: "kitty-ghostcatpink.gif",
-  builder: "kitty-bongopixel .gif",
+  builder: "kitty-bongopixel.gif",
   ai: "kitty-cosmew.gif",
-  writer: "kitty-athenaeum .gif",
-  reader: "kitty-hillhouse .gif",
+  writer: "kitty-athenaeum.gif",
+  reader: "kitty-hillhouse.gif",
   visual: "kitty-witchcat.gif",
   wanderer: "kitty-shadowken.gif",
 };
