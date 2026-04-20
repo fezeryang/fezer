@@ -95,10 +95,13 @@ export function ChatModal({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 初始消息
+  // 初始消息：每次打开聊天窗口时重置并发送
   useEffect(() => {
-    if (isOpen && initialMessage && messages.length === 0) {
-      handleSend(initialMessage);
+    if (isOpen && initialMessage) {
+      setMessages([]);
+      setCurrentResponse(null);
+      // 延迟发送以确保状态已重置
+      setTimeout(() => handleSend(initialMessage), 0);
     }
   }, [isOpen]);
 
