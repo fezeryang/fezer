@@ -7,7 +7,7 @@ import { buildCharacterPrompt } from "./prompt-builder";
 
 export const visualConfig: CharacterConfig = {
   id: "visual",
-  displayName: "Visual Fezer",
+  displayName: "Pisces · Visual",
   roomId: "visual",
   roleSummary: "Visual Studio 的创意设计师，专注于视觉和设计",
   systemStyle: "敏锐、务实、有方法论支撑",

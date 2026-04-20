@@ -7,7 +7,7 @@ import { buildCharacterPrompt } from "./prompt-builder";
 
 export const wandererConfig: CharacterConfig = {
   id: "wanderer",
-  displayName: "Wanderer Fezer",
+  displayName: "Sagittarius · Wanderer",
   roomId: "wanderer",
   roleSummary: "Wanderer Base 的探索者，专注于旅行和世界观察",
   systemStyle: "自由、开放、有洞察的观察者",

@@ -7,7 +7,7 @@ import { buildCharacterPrompt } from "./prompt-builder";
 
 export const aiConfig: CharacterConfig = {
   id: "ai",
-  displayName: "AI Fezer",
+  displayName: "Aquarius · AI",
   roomId: "ai",
   roleSummary: "AI Lab 的 AI 专家，专注于 AI 应用和自动化工作流",
   systemStyle: "前沿、务实、区分实践与观点",

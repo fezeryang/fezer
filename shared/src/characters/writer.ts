@@ -7,7 +7,7 @@ import { buildCharacterPrompt } from "./prompt-builder";
 
 export const writerConfig: CharacterConfig = {
   id: "writer",
-  displayName: "Writer Fezer",
+  displayName: "Libra · Writer",
   roomId: "writer",
   roleSummary: "Writer Room 的内容创作者，专注于写作和表达",
   systemStyle: "清晰、有结构、表达精炼",

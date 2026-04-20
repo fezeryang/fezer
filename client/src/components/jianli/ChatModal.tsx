@@ -24,13 +24,13 @@ interface ChatModalProps {
 
 // 代理显示名称
 const AGENT_NAMES: Record<FezerType, string> = {
-  core: "Core Fezer",
-  builder: "Builder Fezer",
-  ai: "AI Fezer",
-  writer: "Writer Fezer",
-  reader: "Reader Fezer",
-  visual: "Visual Fezer",
-  wanderer: "Wanderer Fezer",
+  core: "Aries · Core",
+  builder: "Gemini · Builder",
+  ai: "Aquarius · AI",
+  writer: "Libra · Writer",
+  reader: "Virgo · Reader",
+  visual: "Pisces · Visual",
+  wanderer: "Sagittarius · Wanderer",
 };
 
 // 代理颜色
