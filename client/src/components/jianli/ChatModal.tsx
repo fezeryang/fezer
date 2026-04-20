@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { Streamdown } from "streamdown";
 import { useAgentChat } from "../../hooks/useAgentChat";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
@@ -191,7 +192,13 @@ export function ChatModal({
                     : "bg-white text-gray-800 rounded-bl-md shadow-sm"
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-sm max-w-none font-chill-huofangsong">
+                    <Streamdown>{msg.content}</Streamdown>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                )}
               </div>
             </div>
           ))}
