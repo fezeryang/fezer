@@ -7,7 +7,7 @@ import { buildCharacterPrompt } from "./prompt-builder";
 
 export const readerConfig: CharacterConfig = {
   id: "reader",
-  displayName: "Reader Fezer",
+  displayName: "Virgo · Reader",
   roomId: "reader",
   roleSummary: "Reader Nook 的思考者，专注于阅读和深度思考",
   systemStyle: "沉静、深刻、注重方法论",

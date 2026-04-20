@@ -1,8 +1,9 @@
 /**
  * ChatModal - Agent 对话弹窗组件
+ * 支持拖拽、侧边栏固定模式、房间背景
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Streamdown } from "streamdown";
 import { useAgentChat } from "../../hooks/useAgentChat";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
@@ -56,12 +57,29 @@ const AGENT_AVATARS: Record<FezerType, string> = {
   wanderer: "kitty-shadowken.gif",
 };
 
+// 房间背景图片配置
+const ROOM_BACKGROUNDS: Record<string, string> = {
+  default: "https://dl.glitter-graphics.com/pub/649/649804eyuhgxpqvf.gif",
+  lobby: "https://dl.glitter-graphics.com/pub/604/604130ffildt9rvn.png",
+  workspace: "https://dl.glitter-graphics.com/pub/609/609620om6997ybtu.jpg",
+  lounge: "https://dl.glitter-graphics.com/pub/2751/2751979qgmjbriplq.jpg",
+  studio: "http://n1.backgroundsarchive.net/pub/2/2043ua6uzh3vmw.jpg",
+  library: "http://n1.backgroundsarchive.net/pub/2/2083v5cfwcwz67.jpg",
+};
+
 // 获取头像 URL（自动适配 GitHub Pages 路径）
 const getAvatarUrl = (agentId: FezerType | undefined): string => {
   if (!agentId)
     return `${import.meta.env.BASE_URL}avatars/kitty-ghostcatpink.gif`;
   return `${import.meta.env.BASE_URL}avatars/${AGENT_AVATARS[agentId]}`;
 };
+
+// 获取房间背景
+const getRoomBackground = (roomId: string | undefined) => {
+  return ROOM_BACKGROUNDS[roomId || ""] || ROOM_BACKGROUNDS.default;
+};
+
+type ChatMode = "floating" | "sidebar";
 
 export function ChatModal({
   isOpen,
@@ -75,6 +93,13 @@ export function ChatModal({
   const [currentResponse, setCurrentResponse] = useState<AgentResponse | null>(
     null
   );
+  const [chatMode, setChatMode] = useState<ChatMode>("floating");
+
+  // 拖拽状态
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const modalRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { sendMessage, isLoading } = useAgentChat({
@@ -104,6 +129,60 @@ export function ChatModal({
       setTimeout(() => handleSend(initialMessage), 0);
     }
   }, [isOpen]);
+
+  // 拖拽开始
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      if (chatMode === "sidebar") return;
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      });
+    },
+    [chatMode, position]
+  );
+
+  // 拖拽移动
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+
+      // 限制在视口内
+      const maxX = window.innerWidth - 100;
+      const maxY = window.innerHeight - 100;
+      const clampedX = Math.max(-maxX, Math.min(maxX, newX));
+      const clampedY = Math.max(-maxY, Math.min(maxY, newY));
+
+      setPosition({ x: clampedX, y: clampedY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, dragStart]);
+
+  // 切换侧边栏模式
+  const toggleSidebarMode = useCallback(() => {
+    if (chatMode === "sidebar") {
+      setChatMode("floating");
+      setPosition({ x: 0, y: 0 });
+    } else {
+      setChatMode("sidebar");
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [chatMode]);
 
   const handleSend = async (content?: string) => {
     const text = content || inputValue;
@@ -135,7 +214,6 @@ export function ChatModal({
   };
 
   const handleSuggestedAgent = (agentId: FezerType) => {
-    // 切换到推荐的代理 - 创建一个新的响应对象
     setCurrentResponse({
       text: `你正在与 ${AGENT_NAMES[agentId]} 对话。请问有什么我可以帮助你的？`,
       panel: "character",
@@ -154,16 +232,49 @@ export function ChatModal({
     ? AGENT_NAMES[currentAgentId]
     : "Fezer";
 
+  const roomBackground = getRoomBackground(roomId);
+
+  // 侧边栏模式样式
+  const isSidebar = chatMode === "sidebar";
+  const modalStyle = isSidebar
+    ? {
+        position: "fixed" as const,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: "400px",
+        maxWidth: "90vw",
+      }
+    : {
+        position: "fixed" as const,
+        left: "50%",
+        top: "50%",
+        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+      };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div className="z-50" style={modalStyle}>
+      <div
+        ref={modalRef}
+        className="bg-white shadow-2xl overflow-hidden flex flex-col"
+        style={{
+          height: isSidebar ? "100vh" : "auto",
+          maxHeight: isSidebar ? "100vh" : "85vh",
+          borderRadius: isSidebar ? "0" : "1rem",
+        }}
+      >
         {/* 头部 */}
         <div
-          className="flex items-center justify-between px-6 py-4 text-white"
-          style={{ backgroundColor: currentAgentColor }}
+          className="flex items-center justify-between px-4 py-3 text-white shrink-0"
+          style={{
+            backgroundColor: currentAgentColor,
+            cursor: isSidebar ? "default" : "grab",
+            userSelect: isDragging ? "none" : "auto",
+          }}
+          onMouseDown={handleDragStart}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
               <img
                 src={getAvatarUrl(currentAgentId)}
                 alt={currentAgentName}
@@ -177,27 +288,44 @@ export function ChatModal({
               />
               <span className="text-lg hidden">🤖</span>
             </div>
-            <div>
-              <h3 className="font-semibold text-lg">{currentAgentName}</h3>
-              <p className="text-xs opacity-80">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-lg truncate">
+                {currentAgentName}
+              </h3>
+              <p className="text-xs opacity-80 truncate">
                 {currentResponse?.panel === "guide" && "导览员"}
                 {currentResponse?.panel === "character" && "角色对话"}
                 {currentResponse?.panel === "resume" && "简历信息"}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition"
-          >
-            <span className="text-lg">✕</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* 侧边栏切换按钮 */}
+            <button
+              onClick={toggleSidebarMode}
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition"
+              title={isSidebar ? "切换为浮动模式" : "切换为侧边栏模式"}
+            >
+              <span className="text-sm">{isSidebar ? "⬅" : "▶"}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition"
+            >
+              <span className="text-lg">✕</span>
+            </button>
+          </div>
         </div>
 
         {/* 消息列表 */}
-        <div className="h-80 overflow-y-auto p-4 space-y-3 bg-gray-50">
+        <div
+          className="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${roomBackground})`,
+          }}
+        >
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full text-gray-400">
+            <div className="flex items-center justify-center h-full text-gray-500">
               <p>开始与 {currentAgentName} 对话...</p>
             </div>
           )}
@@ -207,7 +335,7 @@ export function ChatModal({
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                className={`max-w-[85%] px-4 py-2 rounded-2xl ${
                   msg.role === "user"
                     ? "bg-blue-500 text-white rounded-br-md"
                     : "bg-white text-gray-800 rounded-bl-md shadow-sm"
@@ -249,7 +377,7 @@ export function ChatModal({
         {/* 建议问题 */}
         {currentResponse?.suggestedQuestions &&
           currentResponse.suggestedQuestions.length > 0 && (
-            <div className="px-4 py-3 border-t bg-white">
+            <div className="px-4 py-3 border-t bg-white shrink-0">
               <p className="text-xs text-gray-500 mb-2">你可以问:</p>
               <div className="flex flex-wrap gap-2">
                 {currentResponse.suggestedQuestions.map((question, i) => (
@@ -268,7 +396,7 @@ export function ChatModal({
         {/* 推荐角色 */}
         {currentResponse?.suggestedNextCharacterIds &&
           currentResponse.suggestedNextCharacterIds.length > 0 && (
-            <div className="px-4 py-3 border-t bg-white">
+            <div className="px-4 py-3 border-t bg-white shrink-0">
               <p className="text-xs text-gray-500 mb-2">
                 你也可以和这些角色聊聊:
               </p>
@@ -291,13 +419,13 @@ export function ChatModal({
           )}
 
         {/* 输入框 */}
-        <div className="p-4 border-t bg-white">
+        <div className="p-4 border-t bg-white shrink-0">
           <div className="flex gap-2">
             <input
               type="text"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
-              onKeyPress={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
               placeholder="输入问题... (Shift+Enter 换行)"
               className="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
@@ -305,7 +433,7 @@ export function ChatModal({
             <button
               onClick={() => handleSend()}
               disabled={isLoading || !inputValue.trim()}
-              className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition shrink-0"
             >
               发送
             </button>

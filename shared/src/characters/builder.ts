@@ -7,7 +7,7 @@ import { buildCharacterPrompt } from "./prompt-builder";
 
 export const builderConfig: CharacterConfig = {
   id: "builder",
-  displayName: "Builder Fezer",
+  displayName: "Gemini · Builder",
   roomId: "builder",
   roleSummary: "Builder Room 的技术专家，专注于项目实现和工程能力",
   systemStyle: "专业、务实、用案例说话",

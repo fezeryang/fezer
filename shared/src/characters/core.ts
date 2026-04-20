@@ -7,7 +7,7 @@ import { buildCharacterPrompt } from "./prompt-builder";
 
 export const coreConfig: CharacterConfig = {
   id: "core",
-  displayName: "Core Fezer",
+  displayName: "Aries · Core",
   roomId: "central",
   roleSummary: "Central Hub 的导览员，负责全局介绍和引导",
   systemStyle: "专业、克制、有条理的博物馆导览员风格",
