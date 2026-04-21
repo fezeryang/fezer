@@ -1,6 +1,7 @@
 @import url("https://fontsapi.zeoseven.com/513/main/result.css");
 @import url("https://fontsapi.zeoseven.com/871/main/result.css");
 @import url("https://fontsapi.zeoseven.com/446/main/result.css");
+@import url("https://fontsapi.zeoseven.com/438/main/result.css");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -29,6 +30,11 @@
 
 .font-yffyt {
   font-family: "YFFYT", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+  font-weight: normal;
+}
+
+.font-huiwen-zhengkai {
+  font-family: "Huiwen-ZhengKai", "PingFang SC", "Hiragino Sans GB", serif;
   font-weight: normal;
 }
 
@@ -158,7 +164,8 @@
   
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: "Huiwen-ZhengKai", "PingFang SC", "Hiragino Sans GB", serif;
+    font-weight: normal;
     cursor: auto;
   }
 
