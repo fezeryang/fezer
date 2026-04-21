@@ -173,18 +173,18 @@ export default function About() {
 
       <DampedScrollView>
         {/* Content Wrapper */}
-        <div className="relative z-10 grid grid-cols-3 gap-10 min-h-screen p-16">
-          {/* Left Navigation */}
-          <div className="flex flex-col justify-between border-l border-text-main border-opacity-10 pl-8">
+        <div className="relative z-10 grid grid-cols-12 gap-6 min-h-screen p-12">
+          {/* Left Navigation - narrow */}
+          <div className="col-span-1 flex flex-col justify-between border-l border-text-main border-opacity-10 pl-4">
             <div className="writing-mode-vertical text-xs font-bold tracking-widest text-text-main opacity-60 space-y-8">
-              <span>归档索引 — 2024</span>
-              <span>个人叙事</span>
-              <span>技术探索</span>
+              <span>归档 — 2024</span>
+              <span>叙事</span>
+              <span>探索</span>
             </div>
           </div>
 
-          {/* Main Content */}
-          <main className="col-span-1 pt-32">
+          {/* Main Content - wider */}
+          <main className="col-span-9 pt-24 px-8">
             <header className="mb-32">
               <div className="relative mb-8 inline-flex flex-col">
                 <div
@@ -413,29 +413,31 @@ export default function About() {
             </section>
           </main>
 
-          {/* Right Info Panel */}
-          <aside className="flex flex-col justify-end border-l border-text-main border-opacity-10 pl-8">
-            <div className="glass-card p-8">
-              <div className="space-y-4 text-xs font-mono text-text-main opacity-70 mb-6">
-                <div className="flex justify-between pb-2 border-b border-text-main border-opacity-10">
+          {/* Right Info Panel - narrow */}
+          <aside className="col-span-2 flex flex-col justify-end border-l border-text-main border-opacity-10 pl-3">
+            <div className="glass-card p-4">
+              <div className="space-y-2 text-[10px] font-mono text-text-main opacity-70 mb-3">
+                <div className="flex justify-between pb-1 border-b border-text-main border-opacity-10">
                   <span>姓名</span>
-                  <span>{profile?.name ?? "待补充"}</span>
+                  <span className="truncate ml-1">{profile?.name ?? "—"}</span>
                 </div>
-                <div className="flex justify-between pb-2 border-b border-text-main border-opacity-10">
+                <div className="flex justify-between pb-1 border-b border-text-main border-opacity-10">
                   <span>地区</span>
-                  <span>{profile?.locale ?? "待补充"}</span>
+                  <span className="truncate ml-1">
+                    {profile?.locale ?? "—"}
+                  </span>
                 </div>
-                <div className="flex justify-between pb-2 border-b border-text-main border-opacity-10">
+                <div className="flex justify-between pb-1 border-b border-text-main border-opacity-10">
                   <span>技能</span>
-                  <span>{profile?.skills.length ?? 0} 项</span>
+                  <span>{profile?.skills.length ?? 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>项目</span>
-                  <span>{profile?.projects.length ?? 0} 个</span>
+                  <span>{profile?.projects.length ?? 0}</span>
                 </div>
               </div>
-              <p className="text-sm leading-relaxed text-text-main opacity-60">
-                个人简介与项目信息。缺失的内容将显示「待补充」标记。
+              <p className="text-[10px] leading-tight text-text-main opacity-50">
+                数字桌面 · 思考碎片 · 实验场
               </p>
             </div>
           </aside>
