@@ -12,6 +12,7 @@ import { guideHandler } from "../routes/guide";
 import { characterHandler } from "../routes/character";
 import { assertEnvValid } from "./env";
 import { createCorsMiddleware } from "./security";
+import { initContentHotReload } from "../content/hot-reload";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -34,6 +35,17 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   assertEnvValid();
+
+  // Initialize content hot reload (only in development)
+  if (process.env.NODE_ENV === "development") {
+    initContentHotReload({
+      enabled: true,
+      debounceMs: 1000,
+      onReload: timestamp => {
+        console.log(`[Server] Content reloaded at ${timestamp.toISOString()}`);
+      },
+    });
+  }
 
   const app = express();
   const server = createServer(app);
