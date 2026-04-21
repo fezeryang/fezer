@@ -5,19 +5,9 @@
 
 import { z } from "zod";
 import type { Tool as LLMTool } from "../../_core/llm";
-import {
-  getProfileTool,
-  getContactInfoTool,
-} from "./profile.tool";
-import {
-  getProjectsTool,
-  getProjectByIndexTool,
-} from "./projects.tool";
-import {
-  getSkillsTool,
-  hasSkillTool,
-  getInterestsTool,
-} from "./skills.tool";
+import { getProfileTool, getContactInfoTool } from "./profile.tool";
+import { getProjectsTool, getProjectByIndexTool } from "./projects.tool";
+import { getSkillsTool, hasSkillTool, getInterestsTool } from "./skills.tool";
 import {
   askOtherAgentTool,
   askMultipleAgentsTool,
@@ -29,6 +19,12 @@ import {
   getProjectDetailsTool,
   getFAQTool,
 } from "../rag/retriever";
+import {
+  searchContentTool,
+  getBlogPostsTool,
+  getWorksDetailTool,
+  getProfileFullTool,
+} from "../rag/content-index";
 
 type ToolInput = Record<string, unknown>;
 
@@ -52,6 +48,10 @@ const allTools: ExecutableTool[] = [
   knowledgeSearchTool,
   getProjectDetailsTool,
   getFAQTool,
+  searchContentTool,
+  getBlogPostsTool,
+  getWorksDetailTool,
+  getProfileFullTool,
 ].map(t => ({
   name: t.name,
   description: t.description,
@@ -118,6 +118,10 @@ export {
   knowledgeSearchTool,
   getProjectDetailsTool,
   getFAQTool,
+  searchContentTool,
+  getBlogPostsTool,
+  getWorksDetailTool,
+  getProfileFullTool,
 };
 
 /**

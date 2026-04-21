@@ -165,7 +165,7 @@ export default function About() {
   }, [isBubbleOpen]);
 
   return (
-    <div className="w-full min-h-screen bg-sand-base overflow-x-hidden">
+    <div className="w-full min-h-screen bg-sand-base overflow-x-hidden font-huiwen-zhengkai">
       <div id="p5-container" className="fixed inset-0 w-full h-screen" />
       <Navigation />
       <GrainOverlay />
