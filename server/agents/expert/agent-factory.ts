@@ -136,7 +136,7 @@ const AGENT_TOOL_CONFIGS: Record<
   },
 };
 
-const MAX_TOOL_CALL_LOOPS = 4;
+const MAX_TOOL_CALL_LOOPS = 10;
 
 /**
  * 创建专家 Agent 的系统提示
