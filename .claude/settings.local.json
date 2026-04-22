@@ -37,7 +37,12 @@
       "Bash(curl -s \"https://api.fezern8n.com/api/guide\" -H \"Content-Type: application/json\" -d '{\"userInput\":\"React是什么\"}')",
       "Bash(curl -s \"https://api.fezern8n.com/api/guide\" -H \"Content-Type: application/json\" -d '{\"userInput\":\"Tell me about yourself\"}')",
       "Bash(npx --version)",
-      "Bash(uvx --version)"
+      "Bash(uvx --version)",
+      "Bash(gh repo *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git merge *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\小阳\\.claude\\plans",
