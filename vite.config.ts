@@ -5,6 +5,24 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { execSync } from "node:child_process";
+
+// Get earliest commit timestamp as milliseconds for uptime display
+function getEarliestCommitTimestamp(): number {
+  try {
+    const result = execSync(
+      "git log --reverse --format=%ct -- .",
+      { encoding: "utf-8", maxBuffer: 64 * 1024, timeout: 5000 }
+    );
+    const firstLine = result.split("\n")[0].trim();
+    if (firstLine) {
+      return parseInt(firstLine, 10) * 1000;
+    }
+  } catch {
+    /* git unavailable, fall through */
+  }
+  return Date.now();
+}
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -182,6 +200,9 @@ export default defineConfig({
   // - Repo-page (username.github.io/repo): VITE_BASE_PATH="/repo/"
   // Set via workflow env or local .env for preview. Must include trailing slash.
   base: process.env.VITE_BASE_PATH || "/",
+  define: {
+    __VITE_SITE_CREATED_AT__: JSON.stringify(getEarliestCommitTimestamp()),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

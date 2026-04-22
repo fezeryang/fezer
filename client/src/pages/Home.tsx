@@ -282,12 +282,13 @@ function TimePrismSection() {
     };
   }, []);
 
+  const siteCreatedAt: number =
+    (import.meta as unknown as { env?: Record<string, unknown> }).env?.VITE_SITE_CREATED_AT ??
+    Date.now();
+
   const creationDate = useMemo(() => {
-    const base = new Date();
-    base.setDate(base.getDate() - 1);
-    base.setHours(12, 0, 0, 0);
-    return base.getTime();
-  }, []);
+    return siteCreatedAt;
+  }, [siteCreatedAt]);
 
   const diff = Math.max(0, clockNow.getTime() - creationDate);
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
