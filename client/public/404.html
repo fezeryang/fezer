@@ -5,22 +5,29 @@
   <title>Redirecting...</title>
   <script type="text/javascript">
     // Single Page Apps for GitHub Pages
-    // https://github.com/rafgraph/spa-github-pages
-    // Redirects 404 requests back to index.html, preserving the original path.
+    // GitHub Pages returns this 404.html for any unmatched route.
+    // We redirect back to index.html with the original path in a query param.
+    // Then index.html uses history.pushState to restore the route — no loop.
     (function() {
       var l = window.location;
-      // pathname like /fezer/about, remove leading slash, keep the rest: about
-      var routePath = l.pathname.replace(/^\//, '').replace(/^fezer\//, '');
-      var query = l.search;
-      var hash = l.hash;
-      var fullPath = routePath + query + hash;
+      var pathname = l.pathname;   // e.g., /fezer/about
+      var search = l.search;       // e.g., ?foo=bar
+      var hash = l.hash;           // e.g., #section
 
-      // Redirect to /fezer/?redirect=about  (or /?redirect=about for user pages)
-      var base = l.pathname.split('/')[1] || ''; // 'fezer' or ''
-      var basePath = base ? '/' + base + '/' : '/';
-      var redirectUrl = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + basePath + '?redirect=' + encodeURIComponent(fullPath);
+      // Extract route after the repo name:
+      // pathname.split('/') = ['', 'fezer', 'about'] → parts[2] = 'about'
+      var parts = pathname.split('/');
+      var route = (parts[2] || '') + search + hash;
 
-      window.location.replace(redirectUrl);
+      // Build base path: /fezer or /
+      var basePath = '/' + (parts[1] || '');
+
+      // Redirect to /fezer/?redirect=about  (or /?redirect= for user pages)
+      var redirectUrl = l.protocol + '//' + l.hostname +
+        (l.port ? ':' + l.port : '') +
+        basePath + '/?redirect=' + encodeURIComponent(route);
+
+      window.location.href = redirectUrl;
     })();
   </script>
 </head>

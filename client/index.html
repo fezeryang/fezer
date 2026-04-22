@@ -13,20 +13,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <!-- Single Page Apps for GitHub Pages -->
     <script type="text/javascript">
-      // Single Page Apps for GitHub Pages
-      // https://github.com/rafgraph/spa-github-pages
-      // Restores the original route from the ?redirect= query param set by 404.html.
-      (function(l) {
-        var params = new URLSearchParams(l.search);
+      // Restores the original route from ?redirect= without triggering another server request.
+      (function() {
+        var params = new URLSearchParams(window.location.search);
         var redirect = params.get('redirect');
         if (redirect) {
-          // Reconstruct full path including base path (e.g., /fezer/about)
-          // pathname is like /fezer/ or /, parts[1] is the repo name or empty
-          var parts = l.pathname.split('/');
-          var basePath = parts[1] ? '/' + parts[1] : '';
-          window.location.replace(basePath + '/' + redirect);
+          var parts = window.location.pathname.split('/');
+          var basePath = '/' + (parts[1] || '');
+          history.pushState(null, '', basePath + '/' + redirect);
         }
-      })(window.location);
+      })();
     </script>
   </head>
 
