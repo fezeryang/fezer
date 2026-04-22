@@ -15,14 +15,14 @@
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
       // https://github.com/rafgraph/spa-github-pages
-      // This script takes the current url and converts the path and query string into
-      // just a query string, and then redirects back to the homepage with that query string.
+      // Restores the original route from the ?redirect= query param set by 404.html.
       (function(l) {
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) {
-            return s.replace(/~and~/g, '&');
-          }).join('?');
-          window.location.replace(l.pathname[0] + decoded + l.hash);
+        var params = new URLSearchParams(l.search);
+        var redirect = params.get('redirect');
+        if (redirect) {
+          window.location.replace(
+            l.pathname[0] + '/' + redirect
+          );
         }
       })(window.location);
     </script>
