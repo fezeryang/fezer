@@ -283,8 +283,7 @@ function TimePrismSection() {
   }, []);
 
   const siteCreatedAt: number =
-    (import.meta as unknown as { env?: Record<string, unknown> }).env?.VITE_SITE_CREATED_AT ??
-    Date.now();
+    (typeof __VITE_SITE_CREATED_AT__ !== "undefined" ? __VITE_SITE_CREATED_AT__ : Date.now());
 
   const creationDate = useMemo(() => {
     return siteCreatedAt;
