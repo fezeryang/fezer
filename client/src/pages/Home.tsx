@@ -12,6 +12,8 @@ declare global {
   }
 }
 
+declare const __VITE_SITE_CREATED_AT__: number;
+
 function ShutterItem({
   index,
   title,
