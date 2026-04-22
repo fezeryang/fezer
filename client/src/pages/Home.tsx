@@ -284,8 +284,7 @@ function TimePrismSection() {
     };
   }, []);
 
-  const siteCreatedAt: number =
-    (typeof __VITE_SITE_CREATED_AT__ !== "undefined" ? __VITE_SITE_CREATED_AT__ : Date.now());
+  const siteCreatedAt = 1773633098000; // 2026-03-16 11:51:38 +0800
 
   const creationDate = useMemo(() => {
     return siteCreatedAt;
