@@ -20,9 +20,11 @@
         var params = new URLSearchParams(l.search);
         var redirect = params.get('redirect');
         if (redirect) {
-          window.location.replace(
-            l.pathname[0] + '/' + redirect
-          );
+          // Reconstruct full path including base path (e.g., /fezer/about)
+          // pathname is like /fezer/ or /, parts[1] is the repo name or empty
+          var parts = l.pathname.split('/');
+          var basePath = parts[1] ? '/' + parts[1] : '';
+          window.location.replace(basePath + '/' + redirect);
         }
       })(window.location);
     </script>

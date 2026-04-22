@@ -9,23 +9,18 @@
     // Redirects 404 requests back to index.html, preserving the original path.
     (function() {
       var l = window.location;
-      var pathname = l.pathname;
-      var search = l.search;
+      // pathname like /fezer/about, remove leading slash, keep the rest: about
+      var routePath = l.pathname.replace(/^\//, '').replace(/^fezer\//, '');
+      var query = l.search;
       var hash = l.hash;
+      var fullPath = routePath + query + hash;
 
-      // Build redirect URL: index.html? redirect={original full path}
-      var redirectPath = pathname + search + hash;
-      var redirectUrl = '/?' + encodeURIComponent(redirectPath).replace(/%2F/g, '/').replace(/%3A/g, ':').replace(/%20/g, ' ').replace(/%23/g, '#').replace(/%26/g, '&').replace(/%3D/g, '=').replace(/%3F/g, '?');
+      // Redirect to /fezer/?redirect=about  (or /?redirect=about for user pages)
+      var base = l.pathname.split('/')[1] || ''; // 'fezer' or ''
+      var basePath = base ? '/' + base + '/' : '/';
+      var redirectUrl = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + basePath + '?redirect=' + encodeURIComponent(fullPath);
 
-      // More robust: just pass the raw path as a single encoded param
-      redirectUrl = '/?' + encodeURIComponent(pathname.slice(1) + search + hash);
-
-      window.location.replace(
-        l.protocol + '//' + l.hostname +
-        (l.port ? ':' + l.port : '') +
-        '/' +
-        '?redirect=' + encodeURIComponent(pathname.slice(1) + search + hash)
-      );
+      window.location.replace(redirectUrl);
     })();
   </script>
 </head>
