@@ -35,7 +35,9 @@
       "Bash(curl -v \"https://api.fezern8n.com/api/guide\" -H \"Content-Type: application/json\" -d '{\"userInput\":\"你好\"}')",
       "Bash(curl -s \"https://api.fezern8n.com/api/guide\" -H \"Content-Type: application/json\" -d '{\"userInput\":\"你的技能是什么\"}')",
       "Bash(curl -s \"https://api.fezern8n.com/api/guide\" -H \"Content-Type: application/json\" -d '{\"userInput\":\"React是什么\"}')",
-      "Bash(curl -s \"https://api.fezern8n.com/api/guide\" -H \"Content-Type: application/json\" -d '{\"userInput\":\"Tell me about yourself\"}')"
+      "Bash(curl -s \"https://api.fezern8n.com/api/guide\" -H \"Content-Type: application/json\" -d '{\"userInput\":\"Tell me about yourself\"}')",
+      "Bash(npx --version)",
+      "Bash(uvx --version)"
     ],
     "additionalDirectories": [
       "c:\\Users\\小阳\\.claude\\plans",
