@@ -88,7 +88,7 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
           </header>
 
           <article
-            className="prose prose-zinc mt-10 max-w-none rounded-[28px] bg-[#f9f8f6] px-7 py-8 ring-1 ring-black/[0.03] shadow-[12px_12px_24px_#d1cdc7,-12px_-12px_24px_#ffffff] prose-headings:text-[#2a2a2a] prose-headings:font-semibold prose-p:text-[#5f5a55] prose-p:leading-8 prose-li:text-[#5f5a55] prose-strong:text-[#2a2a2a] prose-a:text-[#2a2a2a] prose-a:underline prose-a:underline-offset-4 prose-a:decoration-[#bcb6ae] hover:prose-a:decoration-[#2a2a2a] md:px-10 md:py-10"
+            className="prose prose-zinc mt-10 max-w-none rounded-[28px] bg-[#f9f8f6] px-7 py-10 ring-1 ring-black/[0.03] shadow-[12px_12px_24px_#d1cdc7,-12px_-12px_24px_#ffffff] prose-headings:text-[#2a2a2a] prose-headings:font-semibold prose-headings:leading-snug prose-p:text-[#5f5a55] prose-p:leading-9 prose-p:my-6 prose-li:my-2 prose-li:leading-9 prose-li:text-[#5f5a55] prose-strong:text-[#2a2a2a] prose-a:text-[#2a2a2a] prose-a:underline prose-a:underline-offset-4 prose-a:decoration-[#bcb6ae] hover:prose-a:decoration-[#2a2a2a] md:px-10 md:py-12"
             dangerouslySetInnerHTML={{ __html: rendered }}
           />
         </main>
