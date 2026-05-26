@@ -667,3 +667,7 @@
     display: none;
   }
 }
+
+.font-songti {
+  font-family: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
+}

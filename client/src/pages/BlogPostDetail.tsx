@@ -59,36 +59,43 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
   const rendered = sanitizeHtml(marked.parse(post.body) as string);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#f2f0ed] text-[#3e3c3a]">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#f4f2ee] text-[#1c1b1a]">
       <DampedScrollView>
-        <main className="mx-auto w-full max-w-[980px] px-6 pb-24 pt-28 md:px-10">
-          <div className="mb-10 flex items-center gap-3">
+        <main className="mx-auto w-full max-w-3xl px-6 pb-32 pt-32 md:px-8">
+          <div className="mb-16 flex items-center justify-center gap-6 border-b border-[#e1dfda] pb-8">
             <Link
               href="/blog/surface"
-              className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono uppercase tracking-[0.14em] text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]"
+              className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#8e8a85] transition-colors hover:text-[#1c1b1a]"
             >
-              返回展示页
+              ← 返回展示页
             </Link>
+            <span className="text-[#d1cdc7]">|</span>
             <Link
               href="/blog"
-              className="rounded-full border border-[#d1cdc7] bg-[#f9f8f6] px-4 py-2 text-xs font-mono uppercase tracking-[0.14em] text-[#3e3c3a] transition-colors hover:bg-[#ece8e2]"
+              className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#8e8a85] transition-colors hover:text-[#1c1b1a]"
             >
-              返回封面页
+              返回封面页 →
             </Link>
           </div>
 
-          <header className="rounded-[28px] bg-[#f9f8f6] px-7 py-8 ring-1 ring-black/[0.03] shadow-[12px_12px_24px_#d1cdc7,-12px_-12px_24px_#ffffff] md:px-10 md:py-10">
-            <p className="text-xs font-mono tracking-[0.2em] text-[#8e8a85] uppercase">
-              {formatDate(post.date)} / {post.category || "Blog"}
+          <header className="mb-16 text-center">
+            <p className="mb-8 text-[11px] font-mono uppercase tracking-[0.25em] text-[#a19d96]">
+              {formatDate(post.date)} <span className="mx-3 font-serif text-base italic opacity-50">~</span> {post.category || "Journal"}
             </p>
-            <h1 className="mt-4 text-3xl font-semibold leading-tight text-[#2a2a2a] md:text-5xl">{post.title}</h1>
-            <p className="mt-4 max-w-3xl text-base leading-relaxed text-[#6a6560]">
-              {post.excerpt || "暂无预览内容"}
-            </p>
+            <h1 className="font-songti text-4xl font-normal leading-[1.35] tracking-wide text-[#1c1b1a] md:text-5xl lg:text-[46px]">
+              {post.title}
+            </h1>
+            {post.excerpt && (
+              <p className="mx-auto mt-8 max-w-2xl font-songti text-lg italic leading-[2] text-[#75706b]">
+                {post.excerpt}
+              </p>
+            )}
           </header>
 
+          <div className="mx-auto mb-16 h-px w-12 bg-[#1c1b1a]/30" />
+
           <article
-            className="prose prose-zinc mt-10 max-w-none rounded-[28px] bg-[#f9f8f6] px-7 py-10 ring-1 ring-black/[0.03] shadow-[12px_12px_24px_#d1cdc7,-12px_-12px_24px_#ffffff] prose-headings:text-[#2a2a2a] prose-headings:font-semibold prose-headings:leading-snug prose-p:text-[#5f5a55] prose-p:leading-9 prose-p:my-6 prose-li:my-2 prose-li:leading-9 prose-li:text-[#5f5a55] prose-strong:text-[#2a2a2a] prose-a:text-[#2a2a2a] prose-a:underline prose-a:underline-offset-4 prose-a:decoration-[#bcb6ae] hover:prose-a:decoration-[#2a2a2a] md:px-10 md:py-12"
+            className="prose prose-zinc mx-auto max-w-none text-justify font-songti text-[#2d2a26] prose-headings:mt-14 prose-headings:mb-6 prose-headings:font-songti prose-headings:font-normal prose-headings:text-[#1c1b1a] prose-h2:border-b prose-h2:border-[#e1dfda] prose-h2:pb-4 prose-h2:text-[30px] prose-h2:tracking-wide prose-h3:text-2xl prose-h3:tracking-wide prose-p:mb-8 prose-p:text-[18px] prose-p:leading-[2.2] prose-p:tracking-[0.04em] prose-li:text-[18px] prose-li:leading-[2.2] prose-li:tracking-[0.04em] prose-strong:font-bold prose-strong:text-[#1c1b1a] prose-a:text-[#1c1b1a] prose-a:underline prose-a:decoration-[#d1cdc7] prose-a:underline-offset-8 prose-a:transition-all hover:prose-a:bg-[#1c1b1a]/5 hover:prose-a:decoration-[#1c1b1a] prose-blockquote:border-l-[3px] prose-blockquote:border-[#1c1b1a] prose-blockquote:bg-gradient-to-r prose-blockquote:from-[#eceae4]/60 prose-blockquote:to-transparent prose-blockquote:py-3 prose-blockquote:pl-6 prose-blockquote:pr-4 prose-blockquote:italic prose-blockquote:text-[#4a4743] prose-img:my-10 prose-img:rounded-md prose-img:shadow-sm"
             dangerouslySetInnerHTML={{ __html: rendered }}
           />
         </main>
