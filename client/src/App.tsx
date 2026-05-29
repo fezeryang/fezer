@@ -1,8 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import Jianli from "@/pages/Jianli";
-import Xizang from "@/pages/Xizang";
 import { Route, Switch, useLocation } from "wouter";
 import {
   lazy,
@@ -16,18 +14,20 @@ import { gsap } from "gsap";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import Portfolio from "./pages/Portfolio";
-import Lab from "./pages/Lab";
-import Blog from "./pages/Blog";
-import BlogSurface from "./pages/BlogSurface";
-import BlogPostDetail from "./pages/BlogPostDetail";
-import About from "./pages/About";
-import AboutLogo from "./pages/AboutLogo";
-import AboutLogoOne from "./pages/AboutLogoOne";
-import AboutLogoTwo from "./pages/AboutLogoTwo";
-import WebPet from "./components/WebPet";
 import RouteLoadingScreen from "./components/RouteLoadingScreen";
 
+const WebPet = lazy(() => import("./components/WebPet"));
+const Jianli = lazy(() => import("./pages/Jianli"));
+const Xizang = lazy(() => import("./pages/Xizang"));
+const Portfolio = lazy(() => import("./pages/Portfolio"));
+const Lab = lazy(() => import("./pages/Lab"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogSurface = lazy(() => import("./pages/BlogSurface"));
+const BlogPostDetail = lazy(() => import("./pages/BlogPostDetail"));
+const About = lazy(() => import("./pages/About"));
+const AboutLogo = lazy(() => import("./pages/AboutLogo"));
+const AboutLogoOne = lazy(() => import("./pages/AboutLogoOne"));
+const AboutLogoTwo = lazy(() => import("./pages/AboutLogoTwo"));
 const AdminRouteGuard = lazy(() => import("./components/AdminRouteGuard"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const BlogAdmin = lazy(() => import("./pages/admin/BlogAdmin"));
@@ -59,6 +59,15 @@ function AdminRouteLoading() {
         subtitle="Authenticating and preparing dashboard modules."
       />
     </div>
+  );
+}
+
+function RoutePageLoading() {
+  return (
+    <RouteLoadingScreen
+      title="Loading page..."
+      subtitle="Fetching the next scene and assets."
+    />
   );
 }
 
@@ -262,52 +271,54 @@ function Router() {
   return (
     <div className="route-transition-shell" data-phase={phase}>
       <div className="route-transition-scene">
-        <Switch location={displayLocation}>
-          <Route path={"/"} component={Home} />
-          <Route path={"/jianli"} component={Jianli} />
-          <Route path={"/portfolio"} component={Portfolio} />
-          <Route path={"/xizang"} component={Xizang} />
-          <Route path={"/lab"} component={Lab} />
-          <Route path={"/blog"} component={Blog} />
-          <Route path={"/blog/surface"} component={BlogSurface} />
-          <Route path={"/blog/:slug"}>
-            {params => <BlogPostDetail slug={params.slug} />}
-          </Route>
-          <Route path={"/about/logo/logo1"} component={AboutLogoOne} />
-          <Route path={"/about/logo/logo2"} component={AboutLogoTwo} />
-          <Route path={"/about/logo"} component={AboutLogo} />
-          <Route path={"/about"} component={About} />
-          <Route path={"/admin/blog"}>
-            <Suspense fallback={<AdminRouteLoading />}>
-              <AdminRouteGuard>
-                <BlogAdmin />
-              </AdminRouteGuard>
-            </Suspense>
-          </Route>
-          <Route path={"/admin/works"}>
-            <Suspense fallback={<AdminRouteLoading />}>
-              <AdminRouteGuard>
-                <WorksAdmin />
-              </AdminRouteGuard>
-            </Suspense>
-          </Route>
-          <Route path={"/admin"}>
-            <Suspense fallback={<AdminRouteLoading />}>
-              <AdminRouteGuard>
-                <AdminDashboard />
-              </AdminRouteGuard>
-            </Suspense>
-          </Route>
-          <Route path={"/admin/:rest*"}>
-            <Suspense fallback={<AdminRouteLoading />}>
-              <AdminRouteGuard>
-                <AdminDashboard />
-              </AdminRouteGuard>
-            </Suspense>
-          </Route>
-          <Route path={"/404"} component={NotFound} />
-          <Route component={NotFound} />
-        </Switch>
+        <Suspense fallback={<RoutePageLoading />}>
+          <Switch location={displayLocation}>
+            <Route path={"/"} component={Home} />
+            <Route path={"/jianli"} component={Jianli} />
+            <Route path={"/portfolio"} component={Portfolio} />
+            <Route path={"/xizang"} component={Xizang} />
+            <Route path={"/lab"} component={Lab} />
+            <Route path={"/blog"} component={Blog} />
+            <Route path={"/blog/surface"} component={BlogSurface} />
+            <Route path={"/blog/:slug"}>
+              {params => <BlogPostDetail slug={params.slug} />}
+            </Route>
+            <Route path={"/about/logo/logo1"} component={AboutLogoOne} />
+            <Route path={"/about/logo/logo2"} component={AboutLogoTwo} />
+            <Route path={"/about/logo"} component={AboutLogo} />
+            <Route path={"/about"} component={About} />
+            <Route path={"/admin/blog"}>
+              <Suspense fallback={<AdminRouteLoading />}>
+                <AdminRouteGuard>
+                  <BlogAdmin />
+                </AdminRouteGuard>
+              </Suspense>
+            </Route>
+            <Route path={"/admin/works"}>
+              <Suspense fallback={<AdminRouteLoading />}>
+                <AdminRouteGuard>
+                  <WorksAdmin />
+                </AdminRouteGuard>
+              </Suspense>
+            </Route>
+            <Route path={"/admin"}>
+              <Suspense fallback={<AdminRouteLoading />}>
+                <AdminRouteGuard>
+                  <AdminDashboard />
+                </AdminRouteGuard>
+              </Suspense>
+            </Route>
+            <Route path={"/admin/:rest*"}>
+              <Suspense fallback={<AdminRouteLoading />}>
+                <AdminRouteGuard>
+                  <AdminDashboard />
+                </AdminRouteGuard>
+              </Suspense>
+            </Route>
+            <Route path={"/404"} component={NotFound} />
+            <Route component={NotFound} />
+          </Switch>
+        </Suspense>
       </div>
 
       <div
@@ -365,7 +376,11 @@ function App() {
 function WebPetWrapper() {
   const [location] = useLocation();
   if (location === "/jianli") return null;
-  return <WebPet />;
+  return (
+    <Suspense fallback={null}>
+      <WebPet />
+    </Suspense>
+  );
 }
 
 export default App;

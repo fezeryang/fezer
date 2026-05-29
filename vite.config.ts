@@ -216,6 +216,52 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // The remaining large chunks are lazy-loaded route/runtime assets rather than
+    // part of the initial page payload, so use a threshold that matches that model.
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return;
+          }
+
+          if (id.includes("/three/")) {
+            return "three-core";
+          }
+
+          if (id.includes("@react-three/fiber")) {
+            return "three-fiber";
+          }
+
+          if (id.includes("@react-three/drei")) {
+            return "three-drei";
+          }
+
+          if (id.includes("/react-dom/") || id.includes("/react/")) {
+            return "react-vendor";
+          }
+
+          if (
+            id.includes("/marked/") ||
+            id.includes("/sanitize-html/") ||
+            id.includes("/gsap/")
+          ) {
+            return "content-vendor";
+          }
+
+          if (
+            id.includes("/@radix-ui/") ||
+            id.includes("/class-variance-authority/") ||
+            id.includes("/clsx/") ||
+            id.includes("/tailwind-merge/") ||
+            id.includes("/lucide-react/")
+          ) {
+            return "ui-vendor";
+          }
+        },
+      },
+    },
   },
   server: {
     host: true,

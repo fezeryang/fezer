@@ -1,8 +1,13 @@
-import { useMemo, useState } from "react"
-import { Scene } from "@/components/jianli/Scene"
+import { lazy, Suspense, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Link } from "wouter"
 import { ROOM_IDS, ROOMS } from "@/components/jianli/assets/roomsConfig"
+
+const Scene = lazy(() =>
+  import("@/components/jianli/Scene").then((module) => ({
+    default: module.Scene,
+  }))
+)
 
 export default function Jianli() {
   const [showResumeModal, setShowResumeModal] = useState(false)
@@ -14,7 +19,15 @@ export default function Jianli() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-200">
       {/* 3D 场景 */}
-      <Scene activeRoomId={activeRoomId} onRoomSelect={setActiveRoomId} />
+      <Suspense
+        fallback={
+          <div className="flex h-full w-full items-center justify-center bg-slate-200 text-sm text-slate-600">
+            正在加载 3D 场景...
+          </div>
+        }
+      >
+        <Scene activeRoomId={activeRoomId} onRoomSelect={setActiveRoomId} />
+      </Suspense>
 
       {/* UI 层 */}
       <div className="pointer-events-none absolute inset-0 flex flex-col">

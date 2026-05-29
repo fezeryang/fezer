@@ -122,3 +122,11 @@ temp/
 
 # Local assets (do not commit)
 jianli/asset/
+
+# AI assistant configs (local only)
+.agent/
+.agents/
+.claude/
+.codex/
+.cursor/
+.trellis/
