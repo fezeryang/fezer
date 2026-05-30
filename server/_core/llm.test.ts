@@ -129,6 +129,95 @@ describe("invokeLLM provider routing", () => {
     expect(payload.thinking).toBeUndefined();
   });
 
+  it("omits OpenAI tool definitions for DeepSeek-compatible providers", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.DEEPSEEK_API_KEY = "nvidia-key";
+    process.env.DEEPSEEK_BASE_URL = "https://integrate.api.nvidia.com/v1";
+    process.env.DEEPSEEK_CHAT_TEMPLATE_THINKING = "false";
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      createJsonResponse({
+        id: "chatcmpl-nvidia",
+        created: 1,
+        model: "deepseek-ai/deepseek-v4-flash",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "ok" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "get_profile",
+            description: "Get profile",
+            parameters: { type: "object", properties: {} },
+          },
+        },
+      ],
+      tool_choice: "auto",
+    });
+
+    const payload = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(payload.tools).toBeUndefined();
+    expect(payload.tool_choice).toBeUndefined();
+    expect(payload.chat_template_kwargs).toEqual({ thinking: false });
+  });
+
+  it("preserves OpenAI tool definitions for Forge providers", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "forge";
+    process.env.AI_PRIMARY_MODEL = "gemini-2.5-flash";
+    process.env.BUILT_IN_FORGE_API_KEY = "forge-key";
+    process.env.BUILT_IN_FORGE_API_URL = "https://forge.example.com";
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      createJsonResponse({
+        id: "chatcmpl-forge",
+        created: 1,
+        model: "gemini-2.5-flash",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "ok" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "get_profile",
+            description: "Get profile",
+            parameters: { type: "object", properties: {} },
+          },
+        },
+      ],
+      tool_choice: "auto",
+    });
+
+    const payload = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(payload.tools).toHaveLength(1);
+    expect(payload.tool_choice).toBe("auto");
+    expect(payload.thinking).toEqual({ budget_tokens: 128 });
+  });
+
   it("attaches a configurable request timeout signal", async () => {
     process.env.AI_PRIMARY_PROVIDER = "deepseek";
     process.env.AI_PRIMARY_MODEL = "deepseek-chat";
@@ -244,11 +333,11 @@ describe("invokeLLM provider routing", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("respects an explicit same-provider fallback when only DeepSeek is configured", async () => {
+  it("falls back to a different same-provider model when only DeepSeek is configured", async () => {
     process.env.AI_PRIMARY_PROVIDER = "deepseek";
     process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";
     process.env.AI_FALLBACK_PROVIDER = "deepseek";
-    process.env.AI_FALLBACK_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.AI_FALLBACK_MODEL = "deepseek-chat";
     process.env.DEEPSEEK_API_KEY = "deepseek-key";
     process.env.DEEPSEEK_BASE_URL = "https://integrate.api.nvidia.com/v1";
     delete process.env.BUILT_IN_FORGE_API_KEY;
@@ -264,7 +353,7 @@ describe("invokeLLM provider routing", () => {
         createJsonResponse({
           id: "chatcmpl-2",
           created: 2,
-          model: "deepseek-ai/deepseek-v4-flash",
+          model: "deepseek-chat",
           choices: [
             {
               index: 0,
@@ -288,7 +377,7 @@ describe("invokeLLM provider routing", () => {
     );
   });
 
-  it("defaults fallback to the primary provider and model when fallback env is omitted", async () => {
+  it("does not retry the default duplicate fallback when fallback env is omitted", async () => {
     process.env.AI_PRIMARY_PROVIDER = "deepseek";
     process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";
     process.env.DEEPSEEK_API_KEY = "deepseek-key";
@@ -301,33 +390,46 @@ describe("invokeLLM provider routing", () => {
       "The operation was aborted due to timeout",
       "TimeoutError"
     );
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(timeoutError)
-      .mockResolvedValueOnce(
-        createJsonResponse({
-          id: "chatcmpl-2",
-          created: 2,
-          model: "deepseek-ai/deepseek-v4-flash",
-          choices: [
-            {
-              index: 0,
-              message: { role: "assistant", content: "default-retry-ok" },
-              finish_reason: "stop",
-            },
-          ],
-        })
-      );
+    const fetchMock = vi.fn().mockRejectedValueOnce(timeoutError);
     vi.stubGlobal("fetch", fetchMock);
 
     const { invokeLLM } = await import("./llm");
-    const result = await invokeLLM({
-      messages: [{ role: "user", content: "hello" }],
-    });
 
-    expect(result.choices[0]?.message?.content).toBe("default-retry-ok");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1][0]).toBe(
+    await expect(
+      invokeLLM({
+        messages: [{ role: "user", content: "hello" }],
+      })
+    ).rejects.toBe(timeoutError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry an explicit duplicate same-provider fallback", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.AI_FALLBACK_PROVIDER = "deepseek";
+    process.env.AI_FALLBACK_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.DEEPSEEK_BASE_URL = "https://integrate.api.nvidia.com/v1";
+    delete process.env.BUILT_IN_FORGE_API_KEY;
+
+    const timeoutError = new DOMException(
+      "The operation was aborted due to timeout",
+      "TimeoutError"
+    );
+    const fetchMock = vi.fn().mockRejectedValueOnce(timeoutError);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+
+    await expect(
+      invokeLLM({
+        messages: [{ role: "user", content: "hello" }],
+      })
+    ).rejects.toBe(timeoutError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(
       "https://integrate.api.nvidia.com/v1/chat/completions"
     );
   });

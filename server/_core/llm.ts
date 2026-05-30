@@ -382,6 +382,17 @@ function getFallbackConfig(): ProviderRuntimeConfig {
   return resolveProviderConfig(provider, model, "fallback");
 }
 
+function isDuplicateProviderConfig(
+  primaryConfig: ProviderRuntimeConfig,
+  fallbackConfig: ProviderRuntimeConfig
+): boolean {
+  return (
+    primaryConfig.provider === fallbackConfig.provider &&
+    primaryConfig.model === fallbackConfig.model &&
+    primaryConfig.apiUrl === fallbackConfig.apiUrl
+  );
+}
+
 function assertProviderApiKey(config: ProviderRuntimeConfig): void {
   if (config.apiKey?.trim()) return;
   if (config.provider === "deepseek") {
@@ -565,6 +576,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       };
     } else {
       delete providerPayload.thinking;
+      delete providerPayload.tools;
+      delete providerPayload.tool_choice;
       if (typeof ENV.deepseekChatTemplateThinking === "boolean") {
         providerPayload.chat_template_kwargs = {
           thinking: ENV.deepseekChatTemplateThinking,
@@ -636,6 +649,13 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       return await callProvider(primaryConfig, false);
     } catch (error) {
       if (!shouldFallback(error)) {
+        throw error;
+      }
+
+      if (isDuplicateProviderConfig(primaryConfig, fallbackConfig)) {
+        console.warn(
+          `[invokeLLM] skipped duplicate fallback for ${fallbackConfig.provider}:${fallbackConfig.model}, primary=${primaryConfig.provider}:${primaryConfig.model}, elapsed_ms=${Date.now() - primaryStartedAt}, has_tool_calls=${hasToolCallsInRequest}`
+        );
         throw error;
       }
 
