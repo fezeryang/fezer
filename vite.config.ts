@@ -10,10 +10,11 @@ import { execSync } from "node:child_process";
 // Get earliest commit timestamp as milliseconds for uptime display
 function getEarliestCommitTimestamp(): number {
   try {
-    const result = execSync(
-      "git log --reverse --format=%ct -- .",
-      { encoding: "utf-8", maxBuffer: 64 * 1024, timeout: 5000 }
-    );
+    const result = execSync("git log --reverse --format=%ct -- .", {
+      encoding: "utf-8",
+      maxBuffer: 64 * 1024,
+      timeout: 5000,
+    });
     const firstLine = result.split("\n")[0].trim();
     if (firstLine) {
       return parseInt(firstLine, 10) * 1000;
@@ -207,6 +208,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
+      "@fezer/shared": path.resolve(import.meta.dirname, "shared", "src"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },

@@ -13,7 +13,7 @@ export interface FrontendAgentRequest {
   userInput: string;
   /** 当前所在房间 ID */
   roomId?: string;
-  /** 点击的角色 ID */
+  /** 点击的角色 ID；推荐角色切换时也可传 FezerType agent id */
   characterId?: string;
   /** 交互类型 */
   interactionType?: "click" | "hover" | "chat" | "guide";

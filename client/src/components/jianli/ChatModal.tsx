@@ -8,6 +8,7 @@ import { Streamdown } from "streamdown";
 import { useAgentChat } from "../../hooks/useAgentChat";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
+import { resolveFezerTypeFromSpatialContext } from "@fezer/shared/characters";
 
 interface ChatMessage {
   id: string;
@@ -45,6 +46,15 @@ const AGENT_COLORS: Record<FezerType, string> = {
   visual: "#db2777",
   wanderer: "#059669",
 };
+
+const resolveAgentFromContext = (
+  currentCharacterId: string | undefined,
+  currentRoomId: string | undefined
+): FezerType | undefined =>
+  resolveFezerTypeFromSpatialContext({
+    characterId: currentCharacterId,
+    roomId: currentRoomId,
+  });
 
 // 代理头像文件名（对应 /avatars/ 目录下的文件）
 const AGENT_AVATARS: Record<FezerType, string> = {
@@ -93,6 +103,9 @@ export function ChatModal({
   const [currentResponse, setCurrentResponse] = useState<AgentResponse | null>(
     null
   );
+  const [selectedAgentId, setSelectedAgentId] = useState<FezerType | undefined>(
+    undefined
+  );
   const [chatMode, setChatMode] = useState<ChatMode>("floating");
 
   // 拖拽状态
@@ -125,8 +138,9 @@ export function ChatModal({
     if (isOpen) {
       setMessages([]);
       setCurrentResponse(null);
+      setSelectedAgentId(undefined);
     }
-  }, [isOpen]);
+  }, [characterId, isOpen, roomId]);
 
   // 拖拽开始
   const handleDragStart = useCallback(
@@ -196,11 +210,13 @@ export function ChatModal({
     setInputValue("");
 
     try {
+      const activeAgentId =
+        selectedAgentId || resolveAgentFromContext(characterId, roomId);
       await sendMessage({
         userInput: text,
-        characterId,
+        characterId: selectedAgentId || characterId,
         roomId,
-        interactionType: characterId ? "click" : "chat",
+        interactionType: activeAgentId ? "click" : "chat",
       });
     } catch (error) {
       console.error("Chat error:", error);
@@ -212,6 +228,7 @@ export function ChatModal({
   };
 
   const handleSuggestedAgent = (agentId: FezerType) => {
+    setSelectedAgentId(agentId);
     setCurrentResponse({
       text: `你正在与 ${AGENT_NAMES[agentId]} 对话。请问有什么我可以帮助你的？`,
       panel: "character",
@@ -222,7 +239,10 @@ export function ChatModal({
 
   if (!isOpen) return null;
 
-  const currentAgentId = currentResponse?.speakingAgentId;
+  const currentAgentId =
+    currentResponse?.speakingAgentId ||
+    selectedAgentId ||
+    resolveAgentFromContext(characterId, roomId);
   const currentAgentColor = currentAgentId
     ? AGENT_COLORS[currentAgentId]
     : "#f97316";

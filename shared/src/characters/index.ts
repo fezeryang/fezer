@@ -31,6 +31,14 @@ export {
   type ResponseDepth,
   type ConsultableAgent,
 } from "./prompt-builder";
+export {
+  FEZER_AGENT_IDS,
+  ROOM_AGENT_IDS,
+  isFezerType,
+  resolveFezerTypeByCharacterId,
+  resolveFezerTypeByRoomId,
+  resolveFezerTypeFromSpatialContext,
+} from "./agent-resolution";
 
 /**
  * 所有角色配置映射

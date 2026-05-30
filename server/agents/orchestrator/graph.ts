@@ -17,11 +17,11 @@ import type { BaseMessage } from "@langchain/core/messages";
 import { HumanMessage } from "@langchain/core/messages";
 import { askSupervisor } from "../supervisor/graph";
 import type { AgentId } from "../tools/agent.tool";
-import { runWithTraceContext, traceSpan } from "../../_core/observability/langsmith";
 import {
-  resolveAgentByCharacterId,
-  resolvePreferredAgent,
-} from "../spatial/agent-resolution";
+  runWithTraceContext,
+  traceSpan,
+} from "../../_core/observability/langsmith";
+import { resolvePreferredAgent } from "../spatial/agent-resolution";
 
 /**
  * 创建编排器图
@@ -39,12 +39,12 @@ export function createOrchestratorGraph() {
   const StateAnnotation = Annotation.Root({
     // 消息历史（LangChain 格式）
     messages: Annotation<BaseMessage[]>({
-      reducer: (x, y) => x.concat(y),  // 追加新消息
+      reducer: (x, y) => x.concat(y), // 追加新消息
       default: () => [],
     }),
     // 用户原始输入
     userInput: Annotation<string>({
-      reducer: (_, current) => current,  // 覆盖旧值
+      reducer: (_, current) => current, // 覆盖旧值
       default: () => "",
     }),
     // 当前所在房间 ID
@@ -90,7 +90,7 @@ export function createOrchestratorGraph() {
       suggestedNextCharacterIds?: AgentId[];
       suggestedQuestions?: string[];
     }>({
-      reducer: (prev, current) => ({ ...prev, ...current }),  // 合并对象
+      reducer: (prev, current) => ({ ...prev, ...current }), // 合并对象
       default: () => ({}),
     }),
   });
@@ -123,14 +123,20 @@ export function createOrchestratorGraph() {
     state: typeof StateAnnotation.State
   ): Promise<Partial<typeof StateAnnotation.State>> {
     return traceSpan("orchestrator.detectSpatialContext", async () => {
-      const { roomId, characterId, interactionType, visitedRooms, discoveredCharacters } = state;
+      const {
+        roomId,
+        characterId,
+        interactionType,
+        visitedRooms,
+        discoveredCharacters,
+      } = state;
 
       // 根据空间上下文解析首选 Agent
       const primaryAgent = resolvePreferredAgent({
-        characterId,    // 如果点击了角色，优先使用该角色对应的 Agent
-        roomId,         // 根据房间决定 Agent
-        interactionType,  // 根据交互类型决定 Agent
-        fallback: "core",  // 默认使用 core Agent
+        characterId, // 如果点击了角色，优先使用该角色对应的 Agent
+        roomId, // 根据房间决定 Agent
+        interactionType, // 根据交互类型决定 Agent
+        fallback: "core", // 默认使用 core Agent
       });
 
       return {
@@ -155,12 +161,18 @@ export function createOrchestratorGraph() {
     state: typeof StateAnnotation.State
   ): Promise<Partial<typeof StateAnnotation.State>> {
     return traceSpan("orchestrator.callSupervisor", async () => {
-      const { userInput, roomId, characterId, messages, currentPrimaryAgent } = state;
+      const {
+        userInput,
+        roomId,
+        characterId,
+        interactionType,
+        messages,
+        currentPrimaryAgent,
+      } = state;
 
-      // 如果直接点击了角色，优先使用该角色对应的 Agent
-      const preferredAgent = characterId
-        ? resolveAgentByCharacterId(characterId)
-        : currentPrimaryAgent;
+      // 空间上下文已经在上一节点解析，这里保留原始 characterId，
+      // 并显式传递 preferredAgent，避免 supervisor 被泛化文本重新路由。
+      const preferredAgent = currentPrimaryAgent;
 
       // 调用 Supervisor 进行智能路由和 Agent 调用
       const result = await runWithTraceContext(
@@ -172,7 +184,9 @@ export function createOrchestratorGraph() {
         async () =>
           askSupervisor(userInput, {
             roomId,
-            characterId: preferredAgent,
+            characterId,
+            interactionType,
+            preferredAgent,
             messages,
           })
       );
@@ -196,13 +210,13 @@ export function createOrchestratorGraph() {
   // 构建状态图
   // 定义节点和边的连接关系
   const graph = new StateGraph(StateAnnotation)
-    .addNode("ingestRequest", ingestRequest)        // 标准化请求
-    .addNode("detectSpatialContext", detectSpatialContext)  // 检测空间上下文
-    .addNode("callSupervisor", callSupervisor)      // 调用 Supervisor
-    .addEdge(START, "ingestRequest")               // 起始 → 标准化请求
-    .addEdge("ingestRequest", "detectSpatialContext")  // 标准化请求 → 检测上下文
-    .addEdge("detectSpatialContext", "callSupervisor")  // 检测上下文 → 调用 Supervisor
-    .addEdge("callSupervisor", END);               // 调用 Supervisor → 结束
+    .addNode("ingestRequest", ingestRequest) // 标准化请求
+    .addNode("detectSpatialContext", detectSpatialContext) // 检测空间上下文
+    .addNode("callSupervisor", callSupervisor) // 调用 Supervisor
+    .addEdge(START, "ingestRequest") // 起始 → 标准化请求
+    .addEdge("ingestRequest", "detectSpatialContext") // 标准化请求 → 检测上下文
+    .addEdge("detectSpatialContext", "callSupervisor") // 检测上下文 → 调用 Supervisor
+    .addEdge("callSupervisor", END); // 调用 Supervisor → 结束
 
   // 编译并返回图
   return graph.compile();

@@ -8,7 +8,11 @@ import type { BaseMessage } from "@langchain/core/messages";
 import { classifyIntent, INTENT_PROMPT_VERSION } from "./intent-classifier";
 import { invokeAgent, invokeMultipleAgents } from "../expert/agent-factory";
 import type { AgentId } from "../tools/agent.tool";
-import { runWithTraceContext, traceSpan } from "../../_core/observability/langsmith";
+import {
+  runWithTraceContext,
+  traceSpan,
+} from "../../_core/observability/langsmith";
+import { resolvePreferredAgent } from "../spatial/agent-resolution";
 
 /**
  * Supervisor 状态定义
@@ -32,6 +36,16 @@ export const SupervisorState = Annotation.Root({
     default: () => undefined,
   }),
   characterId: Annotation<string | undefined>({
+    reducer: (_, current) => current,
+    default: () => undefined,
+  }),
+  interactionType: Annotation<"click" | "hover" | "chat" | "guide" | undefined>(
+    {
+      reducer: (_, current) => current,
+      default: () => undefined,
+    }
+  ),
+  preferredAgent: Annotation<AgentId | undefined>({
     reducer: (_, current) => current,
     default: () => undefined,
   }),
@@ -67,7 +81,7 @@ export const SupervisorState = Annotation.Root({
   // 结果 - 使用 Partial<Record> 避免类型问题
   agentResponses: Annotation<Partial<Record<AgentId, string>>>({
     reducer: (x, y) => ({ ...x, ...y }),
-    default: () => ({} as Partial<Record<AgentId, string>>),
+    default: () => ({}) as Partial<Record<AgentId, string>>,
   }),
   finalAnswer: Annotation<string>({
     reducer: (_, current) => current,
@@ -86,30 +100,73 @@ export const SupervisorState = Annotation.Root({
   }),
 });
 
+function resolveContextualTargetAgent(
+  state: typeof SupervisorState.State
+): AgentId | undefined {
+  if (state.preferredAgent) {
+    return state.preferredAgent;
+  }
+
+  if (state.characterId) {
+    return resolvePreferredAgent({
+      characterId: state.characterId,
+      roomId: state.roomId,
+      interactionType: "click",
+      fallback: "core",
+    });
+  }
+
+  if (state.roomId) {
+    return resolvePreferredAgent({
+      roomId: state.roomId,
+      interactionType: state.interactionType,
+      fallback: "core",
+    });
+  }
+
+  return undefined;
+}
+
 /**
  * 节点：意图分类
  */
 async function classifyIntentNode(
   state: typeof SupervisorState.State
 ): Promise<Partial<typeof SupervisorState.State>> {
-  return traceSpan("supervisor.classifyIntent", async () => {
-    const { userInput } = state;
-    const classification = await classifyIntent(userInput);
+  return traceSpan(
+    "supervisor.classifyIntent",
+    async () => {
+      const { userInput } = state;
+      const contextualAgent = resolveContextualTargetAgent(state);
 
-    return {
-      intentCategory: classification.category,
-      targetAgent: classification.targetAgent,
-      needsConsultation: classification.needsConsultation,
-      consultAgents: classification.consultAgents || [],
-      currentAgent: classification.targetAgent,
-    };
-  }, {
-    metadata: {
-      prompt_key: "supervisor/intent-classifier",
-      prompt_version: INTENT_PROMPT_VERSION,
-      prompt_tag: "stage1",
+      if (contextualAgent) {
+        return {
+          intentCategory: "spatial-context",
+          targetAgent: contextualAgent,
+          needsConsultation: false,
+          consultAgents: [],
+          currentAgent: contextualAgent,
+        };
+      }
+
+      const classification = await classifyIntent(userInput);
+
+      return {
+        intentCategory: classification.category,
+        targetAgent: classification.targetAgent,
+        needsConsultation: classification.needsConsultation,
+        consultAgents: classification.consultAgents || [],
+        currentAgent: classification.targetAgent,
+      };
     },
-  });
+    {
+      metadata: {
+        prompt_key: "supervisor/intent-classifier",
+        prompt_version: INTENT_PROMPT_VERSION,
+        prompt_tag: "stage1",
+      },
+    }
+  );
 }
 
 /**
@@ -167,7 +224,10 @@ async function executeParallelAgents(
     });
 
     // 综合回答
-    const synthesizedAnswer = await synthesizeResponses(responseArray, userInput);
+    const synthesizedAnswer = await synthesizeResponses(
+      responseArray,
+      userInput
+    );
 
     return {
       agentResponses: responseObj,
@@ -236,7 +296,9 @@ async function assembleFinalOutput(
 /**
  * 条件边：路由决策
  */
-function routeDecision(state: typeof SupervisorState.State): "single" | "parallel" | "assemble" {
+function routeDecision(
+  state: typeof SupervisorState.State
+): "single" | "parallel" | "assemble" {
   if (state.completed) {
     return "assemble";
   }
@@ -283,6 +345,8 @@ export async function askSupervisor(
   context?: {
     roomId?: string;
     characterId?: string;
+    interactionType?: "click" | "hover" | "chat" | "guide";
+    preferredAgent?: AgentId;
     messages?: BaseMessage[];
   }
 ): Promise<{
@@ -294,6 +358,8 @@ export async function askSupervisor(
     userInput,
     roomId: context?.roomId,
     characterId: context?.characterId,
+    interactionType: context?.interactionType,
+    preferredAgent: context?.preferredAgent,
     messages: context?.messages || [],
   });
 

@@ -14,6 +14,10 @@ export {
   buildCharacterPrompt,
   getCharacterConfig,
   getCharacterPrompt,
+  isFezerType,
+  resolveFezerTypeByCharacterId,
+  resolveFezerTypeByRoomId,
+  resolveFezerTypeFromSpatialContext,
 } from "./characters";
 
 // 导出角色单独配置
