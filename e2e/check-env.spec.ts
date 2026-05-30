@@ -1,39 +1,38 @@
 import { test, expect } from "@playwright/test";
+import {
+  CHAT_REQUEST_BODY,
+  EXPECTED_E2E_CHAT_TEXT,
+  LOCAL_API_BASE_URL,
+  LOCAL_FRONTEND_BASE_URL,
+} from "./support/constants";
 
-test.use({ baseURL: "http://localhost:5173" });
-
-test("检查环境变量", async ({ page }) => {
+test("检查本地 e2e API 配置", async ({ page }) => {
   await page.goto("/jianli");
-  await page.waitForTimeout(2000);
 
-  const envInfo = await page.evaluate(() => {
-    return {
-      VITE_API_URL:
-        (window as any).import_meta?.env?.VITE_API_URL || "undefined",
-      location: window.location.href,
-    };
-  });
+  const apiResult = await page.evaluate(
+    async ({ apiBaseURL, body }) => {
+      const response = await fetch(`${apiBaseURL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await response.json()) as { text?: string };
+      return {
+        location: window.location.href,
+        success: response.ok,
+        status: response.status,
+        hasText: Boolean(data.text),
+        text: data.text,
+      };
+    },
+    { apiBaseURL: LOCAL_API_BASE_URL, body: CHAT_REQUEST_BODY }
+  );
 
-  console.log("环境变量信息:", envInfo);
+  console.log("本地 e2e API 配置:", apiResult);
 
-  if (envInfo.VITE_API_URL === "undefined") {
-    console.log("尝试另一种方式检查...");
-
-    const alternative = await page.evaluate(async () => {
-      try {
-        const response = await fetch("/@vite/client");
-        const text = await response.text();
-        return {
-          hasViteClient: text.includes("vite"),
-          clientLength: text.length,
-        };
-      } catch {
-        return { error: "Cannot fetch @vite/client" };
-      }
-    });
-
-    console.log("替代检查:", alternative);
-  }
-
-  expect(envInfo.VITE_API_URL).toBe("http://localhost:3000");
+  expect(LOCAL_API_BASE_URL).toBe("http://127.0.0.1:4300");
+  expect(apiResult.location).toContain(new URL(LOCAL_FRONTEND_BASE_URL).host);
+  expect(apiResult.success).toBe(true);
+  expect(apiResult.hasText).toBe(true);
+  expect(apiResult.text).toBe(EXPECTED_E2E_CHAT_TEXT);
 });

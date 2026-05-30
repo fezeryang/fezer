@@ -1,11 +1,11 @@
 /**
  * Environment configuration contract for kinetic-portfolio.
- * 
+ *
  * CRITICAL: This module is safe to import in test environments.
  * - `ENV` object always exports with safe defaults (empty strings)
  * - `assertEnvValid()` is ONLY called by startServer() - not on import
  * - Tests can import server modules without setting production secrets
- * 
+ *
  * See ENV_CONTRACT.md for complete variable definitions and setup.
  */
 
@@ -22,10 +22,13 @@ interface EnvConfig {
   forgeApiKey: string;
   deepseekApiKey: string;
   deepseekBaseUrl: string;
+  deepseekChatTemplateThinking: boolean | undefined;
   aiPrimaryProvider: "deepseek" | "forge";
   aiPrimaryModel: string;
   aiFallbackProvider: "deepseek" | "forge";
   aiFallbackModel: string;
+  aiMaxTokens: number | undefined;
+  aiRequestTimeoutMs: number | undefined;
   langsmithTracing: boolean;
   langsmithApiKey: string;
   langsmithProject: string;
@@ -44,22 +47,25 @@ function validateEnv(): ValidationResult {
   const missing: string[] = [];
   const errors: string[] = [];
   const isProduction = process.env.NODE_ENV === "production";
-  const localAdminAuthBypass = !isProduction && parseBooleanFlag(process.env.LOCAL_ADMIN_AUTH_BYPASS);
+  const localAdminAuthBypass =
+    !isProduction && parseBooleanFlag(process.env.LOCAL_ADMIN_AUTH_BYPASS);
   const localContentFallback =
-    !isProduction && parseBooleanFlag(process.env.LOCAL_CONTENT_IN_MEMORY_FALLBACK);
-  
+    !isProduction &&
+    parseBooleanFlag(process.env.LOCAL_CONTENT_IN_MEMORY_FALLBACK);
+
   const criticalVars = [
-    { name: 'DATABASE_URL', value: process.env.DATABASE_URL },
-    { name: 'JWT_SECRET', value: process.env.JWT_SECRET },
-    { name: 'OAUTH_SERVER_URL', value: process.env.OAUTH_SERVER_URL },
-    { name: 'OWNER_OPEN_ID', value: process.env.OWNER_OPEN_ID },
+    { name: "DATABASE_URL", value: process.env.DATABASE_URL },
+    { name: "JWT_SECRET", value: process.env.JWT_SECRET },
+    { name: "OAUTH_SERVER_URL", value: process.env.OAUTH_SERVER_URL },
+    { name: "OWNER_OPEN_ID", value: process.env.OWNER_OPEN_ID },
   ].filter(variable => {
     if (variable.name === "DATABASE_URL" && localContentFallback) {
       return false;
     }
 
     if (
-      (variable.name === "OAUTH_SERVER_URL" || variable.name === "OWNER_OPEN_ID") &&
+      (variable.name === "OAUTH_SERVER_URL" ||
+        variable.name === "OWNER_OPEN_ID") &&
       localAdminAuthBypass
     ) {
       return false;
@@ -67,17 +73,17 @@ function validateEnv(): ValidationResult {
 
     return true;
   });
-  
+
   for (const { name, value } of criticalVars) {
-    if (!value || value.trim() === '') {
+    if (!value || value.trim() === "") {
       missing.push(name);
     }
   }
-  
+
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
-    errors.push('JWT_SECRET should be at least 32 characters for security');
+    errors.push("JWT_SECRET should be at least 32 characters for security");
   }
-  
+
   return {
     valid: missing.length === 0 && errors.length === 0,
     missing,
@@ -86,11 +92,11 @@ function validateEnv(): ValidationResult {
 }
 
 function parseAllowedOrigins(value: string | undefined): string[] {
-  if (!value || value.trim() === '') {
+  if (!value || value.trim() === "") {
     return [];
   }
   return value
-    .split(',')
+    .split(",")
     .map(origin => origin.trim())
     .filter(origin => origin.length > 0);
 }
@@ -101,21 +107,57 @@ function parseBooleanFlag(value: string | undefined): boolean {
   }
 
   const normalized = value.trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  return (
+    normalized === "1" ||
+    normalized === "true" ||
+    normalized === "yes" ||
+    normalized === "on"
+  );
+}
+
+function parseOptionalBooleanFlag(
+  value: string | undefined
+): boolean | undefined {
+  if (!value || value.trim() === "") {
+    return undefined;
+  }
+
+  return parseBooleanFlag(value);
+}
+
+function parseOptionalPositiveInteger(
+  value: string | undefined
+): number | undefined {
+  if (!value || value.trim() === "") {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function createEnv(): EnvConfig {
   const isProduction = process.env.NODE_ENV === "production";
-  const localAdminAuthBypass = parseBooleanFlag(process.env.LOCAL_ADMIN_AUTH_BYPASS);
-  const localContentFallback = parseBooleanFlag(process.env.LOCAL_CONTENT_IN_MEMORY_FALLBACK);
+  const localAdminAuthBypass = parseBooleanFlag(
+    process.env.LOCAL_ADMIN_AUTH_BYPASS
+  );
+  const localContentFallback = parseBooleanFlag(
+    process.env.LOCAL_CONTENT_IN_MEMORY_FALLBACK
+  );
   const aiPrimaryProvider =
     process.env.AI_PRIMARY_PROVIDER?.trim().toLowerCase() === "forge"
       ? "forge"
       : "deepseek";
+  const aiPrimaryModel = process.env.AI_PRIMARY_MODEL ?? "deepseek-chat";
+  const fallbackProviderEnv =
+    process.env.AI_FALLBACK_PROVIDER?.trim().toLowerCase();
   const aiFallbackProvider =
-    process.env.AI_FALLBACK_PROVIDER?.trim().toLowerCase() === "deepseek"
+    fallbackProviderEnv === "deepseek"
       ? "deepseek"
-      : "forge";
+      : fallbackProviderEnv === "forge"
+        ? "forge"
+        : aiPrimaryProvider;
+  const aiFallbackModel = process.env.AI_FALLBACK_MODEL ?? aiPrimaryModel;
 
   return {
     appId: process.env.VITE_APP_ID ?? "",
@@ -129,11 +171,19 @@ function createEnv(): EnvConfig {
     forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
     forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
     deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
-    deepseekBaseUrl: process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
+    deepseekBaseUrl:
+      process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com/v1",
+    deepseekChatTemplateThinking: parseOptionalBooleanFlag(
+      process.env.DEEPSEEK_CHAT_TEMPLATE_THINKING
+    ),
     aiPrimaryProvider,
-    aiPrimaryModel: process.env.AI_PRIMARY_MODEL ?? "deepseek-chat",
+    aiPrimaryModel,
     aiFallbackProvider,
-    aiFallbackModel: process.env.AI_FALLBACK_MODEL ?? "gemini-2.5-flash",
+    aiFallbackModel,
+    aiMaxTokens: parseOptionalPositiveInteger(process.env.AI_MAX_TOKENS),
+    aiRequestTimeoutMs: parseOptionalPositiveInteger(
+      process.env.AI_REQUEST_TIMEOUT_MS
+    ),
     langsmithTracing: parseBooleanFlag(process.env.LANGSMITH_TRACING),
     langsmithApiKey: process.env.LANGSMITH_API_KEY ?? "",
     langsmithProject: process.env.LANGSMITH_PROJECT ?? "fezer-agent",
@@ -145,54 +195,56 @@ function createEnv(): EnvConfig {
 
 /**
  * Validates that all critical environment variables are present and valid.
- * 
+ *
  * IMPORTANT: This function is ONLY called by startServer() in index.ts.
  * It is NOT called on module import, allowing tests to safely import server modules.
- * 
+ *
  * @throws Exits process with code 1 if validation fails
  */
 export function assertEnvValid(): void {
   const validation = validateEnv();
-  
+
   if (!validation.valid) {
     const errorMessage = [
-      '',
-      '═══════════════════════════════════════════════════════════',
-      '  [FATAL] Environment Configuration Error',
-      '═══════════════════════════════════════════════════════════',
-      '',
+      "",
+      "═══════════════════════════════════════════════════════════",
+      "  [FATAL] Environment Configuration Error",
+      "═══════════════════════════════════════════════════════════",
+      "",
     ];
-    
+
     if (validation.missing.length > 0) {
-      errorMessage.push('  Missing required environment variables:');
+      errorMessage.push("  Missing required environment variables:");
       validation.missing.forEach(name => {
         errorMessage.push(`    ✗ ${name}`);
       });
-      errorMessage.push('');
+      errorMessage.push("");
     }
-    
+
     if (validation.errors.length > 0) {
-      errorMessage.push('  Validation errors:');
+      errorMessage.push("  Validation errors:");
       validation.errors.forEach(error => {
         errorMessage.push(`    ✗ ${error}`);
       });
-      errorMessage.push('');
+      errorMessage.push("");
     }
-    
-    errorMessage.push('  Server cannot start without proper configuration.');
-    errorMessage.push('  Please see ENV_CONTRACT.md for setup instructions.');
-    errorMessage.push('');
-    errorMessage.push('═══════════════════════════════════════════════════════════');
-    errorMessage.push('');
-    
-    console.error(errorMessage.join('\n'));
+
+    errorMessage.push("  Server cannot start without proper configuration.");
+    errorMessage.push("  Please see ENV_CONTRACT.md for setup instructions.");
+    errorMessage.push("");
+    errorMessage.push(
+      "═══════════════════════════════════════════════════════════"
+    );
+    errorMessage.push("");
+
+    console.error(errorMessage.join("\n"));
     process.exit(1);
   }
 }
 
 /**
  * Global environment configuration object.
- * 
+ *
  * Always exports with safe defaults (empty strings) to allow test imports.
  * Critical values are validated by assertEnvValid() at server startup.
  */

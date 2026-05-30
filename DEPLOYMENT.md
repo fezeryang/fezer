@@ -34,12 +34,12 @@
 
 你需要一台阿里云 ECS 服务器，推荐配置：
 
-| 配置项 | 最低要求 | 推荐配置 |
-|--------|----------|----------|
-| CPU | 1核 | 2核 |
-| 内存 | 1GB | 2GB |
-| 系统 | Ubuntu 20.04+ | Ubuntu 22.04 |
-| 带宽 | 1Mbps | 3Mbps |
+| 配置项 | 最低要求      | 推荐配置     |
+| ------ | ------------- | ------------ |
+| CPU    | 1核           | 2核          |
+| 内存   | 1GB           | 2GB          |
+| 系统   | Ubuntu 20.04+ | Ubuntu 22.04 |
+| 带宽   | 1Mbps         | 3Mbps        |
 
 ### 2. MySQL 数据库
 
@@ -150,6 +150,7 @@ EXIT;
 ```
 
 **记下这些信息，后面配置环境变量要用：**
+
 - 数据库地址：`localhost`（或 RDS 内网地址）
 - 数据库名：`kinetic_portfolio`
 - 用户名：`fezer_user`
@@ -219,11 +220,14 @@ OWNER_OPEN_ID=你的OpenID
 
 # ========== AI 配置 ==========
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-chat
-AI_FALLBACK_PROVIDER=forge
-AI_FALLBACK_MODEL=gemini-2.5-flash
-DEEPSEEK_API_KEY=<你的_DeepSeek_API_Key>
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_FALLBACK_PROVIDER=deepseek
+AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
+DEEPSEEK_API_KEY=<你的_NVIDIA_API_Key>
+DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
+DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_MAX_TOKENS=2048
+AI_REQUEST_TIMEOUT_MS=60000
 
 # ========== LangSmith 监控（可选） ==========
 LANGSMITH_TRACING=true
@@ -277,6 +281,7 @@ sudo ufw status
 ```
 
 **同时需要在阿里云控制台配置安全组：**
+
 1. 登录阿里云控制台
 2. 找到你的 ECS 实例
 3. 点击「安全组」→「配置规则」
@@ -369,6 +374,7 @@ sudo kill -9 进程ID
 ### 2. 数据库连接失败
 
 检查 `.env` 中的 `DATABASE_URL` 是否正确：
+
 ```bash
 # 测试数据库连接
 sudo mysql -u fezer_user -p kinetic_portfolio

@@ -320,6 +320,7 @@ class LLMHttpError extends Error {
 
 const FORGE_DEFAULT_URL = "https://forge.manus.im/v1/chat/completions";
 const DEEPSEEK_DEFAULT_BASE_URL = "https://api.deepseek.com/v1";
+const DEFAULT_LLM_REQUEST_TIMEOUT_MS = 60_000;
 
 function normalizeProvider(value: string | undefined): LLMProvider {
   return value?.trim().toLowerCase() === "forge" ? "forge" : "deepseek";
@@ -365,26 +366,10 @@ function getPrimaryConfig(modelOverride?: string): ProviderRuntimeConfig {
   );
 }
 
-function getFallbackConfig(
-  primary: ProviderRuntimeConfig
-): ProviderRuntimeConfig {
+function getFallbackConfig(): ProviderRuntimeConfig {
   const provider = normalizeProvider(ENV.aiFallbackProvider);
   const model = ENV.aiFallbackModel || "gemini-2.5-flash";
-  const fallback = resolveProviderConfig(provider, model, "fallback");
-
-  // Avoid retrying the exact same provider/model pair.
-  if (
-    fallback.provider === primary.provider &&
-    fallback.model === primary.model
-  ) {
-    return resolveProviderConfig(
-      primary.provider === "deepseek" ? "forge" : "deepseek",
-      primary.provider === "deepseek" ? "gemini-2.5-flash" : "deepseek-chat",
-      "fallback"
-    );
-  }
-
-  return fallback;
+  return resolveProviderConfig(provider, model, "fallback");
 }
 
 function assertProviderApiKey(config: ProviderRuntimeConfig): void {
@@ -411,18 +396,27 @@ function shouldFallback(error: unknown): boolean {
     return true;
   }
 
-  if (error instanceof Error && error.name === "AbortError") {
+  if (isTimeoutLikeError(error)) {
     return true;
   }
 
   return false;
 }
 
+function isTimeoutLikeError(error: unknown): boolean {
+  if (!error || typeof error !== "object" || !("name" in error)) {
+    return false;
+  }
+
+  const name = String((error as { name?: unknown }).name);
+  return name === "AbortError" || name === "TimeoutError";
+}
+
 function isToolCallSequenceError(responseBody: string): boolean {
   const text = responseBody.toLowerCase();
   return (
     text.includes("role 'tool'") ||
-    text.includes("role \"tool\"") ||
+    text.includes('role "tool"') ||
     text.includes("tool_calls") ||
     text.includes("tool call")
   );
@@ -489,7 +483,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const primaryConfig = getPrimaryConfig(model);
-  const fallbackConfig = getFallbackConfig(primaryConfig);
+  const fallbackConfig = getFallbackConfig();
   assertProviderApiKey(primaryConfig);
 
   const payload: Record<string, unknown> = {
@@ -497,7 +491,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: messages.map(normalizeMessage),
   };
   const hasToolCallsInRequest = messages.some(
-    msg => msg.role === "assistant" && !!msg.tool_calls && msg.tool_calls.length > 0
+    msg =>
+      msg.role === "assistant" && !!msg.tool_calls && msg.tool_calls.length > 0
   );
 
   if (tools && tools.length > 0) {
@@ -515,7 +510,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   // 根据提供商设置合适的 max_tokens 默认值
   // DeepSeek 限制为 8192，Forge 支持更大值
   const defaultMaxTokens = primaryConfig.provider === "deepseek" ? 4096 : 32768;
-  payload.max_tokens = maxTokens || max_tokens || defaultMaxTokens;
+  payload.max_tokens =
+    maxTokens || max_tokens || ENV.aiMaxTokens || defaultMaxTokens;
 
   if (primaryConfig.provider === "forge") {
     payload.thinking = {
@@ -550,6 +546,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       };
     } else {
       delete providerPayload.thinking;
+      if (typeof ENV.deepseekChatTemplateThinking === "boolean") {
+        providerPayload.chat_template_kwargs = {
+          thinking: ENV.deepseekChatTemplateThinking,
+        };
+      }
       // DeepSeek 目前不支持 json_schema 格式，回退到 text
       if (config.provider === "deepseek" && providerPayload.response_format) {
         const format = providerPayload.response_format as { type: string };
@@ -570,6 +571,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
             authorization: `Bearer ${config.apiKey}`,
           },
           body: JSON.stringify(providerPayload),
+          signal: AbortSignal.timeout(
+            ENV.aiRequestTimeoutMs || DEFAULT_LLM_REQUEST_TIMEOUT_MS
+          ),
         });
 
         if (!response.ok) {
@@ -627,8 +631,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
               : "other_http"
           : error instanceof TypeError
             ? "network_type_error"
-            : error instanceof Error && error.name === "AbortError"
-              ? "abort_error"
+            : isTimeoutLikeError(error)
+              ? "timeout_error"
               : "unknown";
 
       console.warn(

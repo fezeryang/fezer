@@ -2,22 +2,18 @@ import { test, expect } from "@playwright/test";
 
 test.describe("本地网页交互测试", () => {
   test.use({
-    baseURL: "http://localhost:5173",
     timeout: 180000,
   });
 
   test("点击角色打开聊天", async ({ page }) => {
     console.log("=== 导航到 /jianli 页面 ===");
     await page.goto("/jianli", { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(3000);
-
-    // 截图初始状态
-    await page.screenshot({ path: "jianli-initial.png" });
 
     console.log("=== 检查页面元素 ===");
 
     // 检查是否有 canvas 元素（3D 场景）
     const canvas = page.locator("canvas");
+    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
     const canvasCount = await canvas.count();
     console.log(`Canvas 元素数量: ${canvasCount}`);
 
@@ -31,14 +27,11 @@ test.describe("本地网页交互测试", () => {
 
         // 点击画布中心
         await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-        await page.waitForTimeout(2000);
 
         // 检查是否有聊天弹窗出现
         const modal = page.locator("text=/开始与|对话|Chat/").first();
         const modalVisible = await modal.isVisible().catch(() => false);
         console.log(`聊天弹窗可见: ${modalVisible}`);
-
-        await page.screenshot({ path: "jianli-after-click.png" });
       }
     }
 
@@ -54,7 +47,9 @@ test.describe("本地网页交互测试", () => {
     }
 
     // 检查房间按钮
-    const roomButtons = page.locator("button:has-text('Room'), button:has-text('Hub')");
+    const roomButtons = page.locator(
+      "button:has-text('Room'), button:has-text('Hub')"
+    );
     const roomCount = await roomButtons.count();
     console.log(`\n房间按钮数量: ${roomCount}`);
 
@@ -62,8 +57,6 @@ test.describe("本地网页交互测试", () => {
       console.log("✓ 找到房间按钮");
       // 点击第一个房间按钮
       await roomButtons.first().click();
-      await page.waitForTimeout(2000);
-      await page.screenshot({ path: "jianli-after-room-click.png" });
     }
 
     console.log("\n=== 测试完成 ===");

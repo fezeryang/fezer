@@ -14,7 +14,11 @@ import {
   traceSpan,
 } from "../../_core/observability/langsmith";
 import { BaseMessage } from "@langchain/core/messages";
-import { getLLMToolsByNames, getToolExecutionRegistry } from "../tools";
+import {
+  getLLMToolsByNames,
+  getToolExecutionRegistry,
+  type ExecutableTool,
+} from "../tools";
 
 /**
  * Agent 调用选项
@@ -136,7 +140,309 @@ const AGENT_TOOL_CONFIGS: Record<
   },
 };
 
-const MAX_TOOL_CALL_LOOPS = 10;
+const MAX_DYNAMIC_TOOL_COUNT = 4;
+const MAX_TOOL_CALL_LOOPS = 3;
+const TOOL_CONTEXT_CHAR_LIMIT = 6000;
+const TOOL_RESULT_CHAR_LIMIT = 1200;
+
+type DirectToolRequest = {
+  name: string;
+  input: Record<string, unknown>;
+};
+
+type AgentToolPlan = {
+  directToolRequests: DirectToolRequest[];
+  dynamicToolNames: string[];
+};
+
+const AGENT_COMMUNICATION_TOOLS = new Set([
+  "ask_other_agent",
+  "ask_multiple_agents",
+]);
+
+const containsAny = (text: string, keywords: string[]) =>
+  keywords.some(keyword => text.includes(keyword));
+
+function stableStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function truncateText(value: string, limit: number): string {
+  if (value.length <= limit) {
+    return value;
+  }
+  return `${value.slice(0, limit)}...`;
+}
+
+function dedupeDirectToolRequests(
+  requests: DirectToolRequest[]
+): DirectToolRequest[] {
+  const seen = new Set<string>();
+  const deduped: DirectToolRequest[] = [];
+
+  for (const request of requests) {
+    const key = `${request.name}:${stableStringify(request.input)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(request);
+  }
+
+  return deduped;
+}
+
+function dedupeToolNames(names: string[]): string[] {
+  return Array.from(new Set(names));
+}
+
+function inferProjectCategory(
+  text: string
+): "frontend" | "backend" | "ai" | "fullstack" | "all" {
+  if (containsAny(text, ["前端", "react", "ui", "frontend"])) return "frontend";
+  if (containsAny(text, ["后端", "api", "server", "backend"])) return "backend";
+  if (containsAny(text, ["ai", "llm", "agent", "langchain", "人工智能"]))
+    return "ai";
+  if (containsAny(text, ["全栈", "fullstack", "full stack"]))
+    return "fullstack";
+  return "all";
+}
+
+function buildDirectToolRequests(
+  agentId: AgentId,
+  input: string
+): DirectToolRequest[] {
+  const text = input.toLowerCase();
+  const requests: DirectToolRequest[] = [];
+  const add = (name: string, toolInput: Record<string, unknown> = {}) => {
+    requests.push({ name, input: toolInput });
+  };
+
+  const wantsProfile = containsAny(text, [
+    "你是谁",
+    "是谁",
+    "介绍",
+    "简历",
+    "经历",
+    "背景",
+    "核心能力",
+    "关于你",
+    "about",
+    "resume",
+    "profile",
+  ]);
+  const wantsSkills = containsAny(text, [
+    "技能",
+    "技术",
+    "技术栈",
+    "会什么",
+    "能力",
+    "前端",
+    "后端",
+    "ai",
+    "llm",
+    "agent",
+    "langchain",
+    "开发",
+  ]);
+  const wantsProjects = containsAny(text, [
+    "项目",
+    "作品",
+    "案例",
+    "portfolio",
+    "work",
+    "做过",
+  ]);
+  const wantsBlog = containsAny(text, [
+    "博客",
+    "文章",
+    "写作",
+    "内容",
+    "最近写",
+    "blog",
+    "post",
+  ]);
+  const wantsGuide = containsAny(text, [
+    "怎么逛",
+    "如何开始",
+    "导览",
+    "这里",
+    "这个网站",
+    "3d",
+    "空间",
+    "房间",
+  ]);
+  const wantsContact = containsAny(text, ["联系", "邮箱", "email", "contact"]);
+
+  if (wantsProfile || (agentId === "core" && wantsGuide)) {
+    add("get_profile", { includeDetails: false });
+    add("get_skills", { category: "all" });
+    add("get_projects", { category: "all", limit: 3 });
+  }
+
+  if (wantsSkills) {
+    const category = inferProjectCategory(text);
+    add("get_skills", { category: "all" });
+    add("get_projects", { category, limit: 4 });
+    add("search_content", { query: input, topK: 3, category: "profile" });
+  }
+
+  if (wantsProjects) {
+    const category = inferProjectCategory(text);
+    add("get_projects", { category, limit: 5 });
+    add("get_project_details", {});
+    add("get_works_detail", { limit: 5 });
+    add("search_content", { query: input, topK: 3, category: "work" });
+  }
+
+  if (wantsBlog) {
+    add("get_blog_posts", { limit: 5 });
+    add("search_content", { query: input, topK: 3, category: "blog" });
+  }
+
+  if (wantsGuide) {
+    add("get_faq", { category: "guide" });
+    add("search_knowledge", { query: input, topK: 3, category: "website" });
+  }
+
+  if (wantsContact) {
+    add("get_contact_info", {});
+  }
+
+  return dedupeDirectToolRequests(requests);
+}
+
+function wantsDynamicTools(input: string): boolean {
+  const text = input.toLowerCase();
+  return containsAny(text, [
+    "多视角",
+    "咨询",
+    "其他角色",
+    "问问",
+    "协作",
+    "跨领域",
+    "综合",
+    "复杂",
+    "方案",
+    "比较",
+    "多个",
+    "一起",
+    "工具",
+  ]);
+}
+
+function buildDynamicToolNames(agentId: AgentId, input: string): string[] {
+  if (!wantsDynamicTools(input)) {
+    return [];
+  }
+
+  const text = input.toLowerCase();
+  const candidateNames: string[] = ["get_profile"];
+  const wantsCollaboration = containsAny(text, [
+    "多视角",
+    "咨询",
+    "其他角色",
+    "问问",
+    "协作",
+    "跨领域",
+    "综合",
+    "多个",
+    "一起",
+  ]);
+
+  if (wantsCollaboration) {
+    candidateNames.push("ask_multiple_agents", "ask_other_agent");
+  }
+
+  if (
+    containsAny(text, ["技术", "开发", "ai", "llm", "agent", "项目", "作品"])
+  ) {
+    candidateNames.push("get_skills", "get_projects", "search_content");
+  } else {
+    candidateNames.push("search_content");
+  }
+
+  if (containsAny(text, ["博客", "文章", "写作"])) {
+    candidateNames.push("get_blog_posts");
+  }
+
+  if (containsAny(text, ["作品", "案例", "项目"])) {
+    candidateNames.push("get_works_detail");
+  }
+
+  const allowed = AGENT_TOOL_CONFIGS[agentId].tools;
+  return dedupeToolNames(candidateNames)
+    .filter(name => allowed.includes(name))
+    .slice(0, MAX_DYNAMIC_TOOL_COUNT);
+}
+
+function buildAgentToolPlan(agentId: AgentId, input: string): AgentToolPlan {
+  return {
+    directToolRequests: buildDirectToolRequests(agentId, input),
+    dynamicToolNames: buildDynamicToolNames(agentId, input),
+  };
+}
+
+async function buildDirectToolContext(
+  registry: Map<string, ExecutableTool>,
+  requests: DirectToolRequest[]
+): Promise<string | undefined> {
+  const blocks: string[] = [];
+
+  for (const request of requests) {
+    if (AGENT_COMMUNICATION_TOOLS.has(request.name)) {
+      continue;
+    }
+
+    const executableTool = registry.get(request.name);
+    if (!executableTool) {
+      continue;
+    }
+
+    const content = await traceSpan(
+      `tool.prefetch.${request.name}`,
+      async () => {
+        try {
+          const data = await executableTool.invoke(request.input);
+          return stableStringify({ success: true, data });
+        } catch (error) {
+          return stableStringify({
+            success: false,
+            error:
+              error instanceof Error ? error.message : "Unknown tool error",
+          });
+        }
+      },
+      {
+        runType: "tool",
+        metadata: {
+          toolName: request.name,
+          toolArgs: request.input,
+          source: "server_prefetch",
+        },
+        tags: [`tool:${request.name}`, "tool:server_prefetch"],
+      }
+    );
+
+    blocks.push(
+      `[${request.name}] ${truncateText(content, TOOL_RESULT_CHAR_LIMIT)}`
+    );
+  }
+
+  if (blocks.length === 0) {
+    return undefined;
+  }
+
+  return truncateText(
+    [
+      "服务器已预先检索到的站内资料如下。回答时优先依据这些资料；资料不足时明确说明不确定，不得编造。",
+      ...blocks,
+    ].join("\n\n"),
+    TOOL_CONTEXT_CHAR_LIMIT
+  );
+}
 
 /**
  * 创建专家 Agent 的系统提示
@@ -189,13 +495,23 @@ async function invokeAgentInternal(
       traceSpan("expert.invokeAgent", async () => {
         const systemPrompt = createAgentSystemPrompt(agentId);
         const contextMessages = options?.context?.messages || [];
-        const allowedToolNames = AGENT_TOOL_CONFIGS[agentId].tools;
-        const llmTools = getLLMToolsByNames(allowedToolNames);
         const executableToolRegistry = getToolExecutionRegistry();
+        const toolPlan = buildAgentToolPlan(agentId, input);
+        const directToolContext = await buildDirectToolContext(
+          executableToolRegistry,
+          toolPlan.directToolRequests
+        );
+        const llmTools =
+          toolPlan.dynamicToolNames.length > 0
+            ? getLLMToolsByNames(toolPlan.dynamicToolNames)
+            : [];
 
         // 构建消息历史
         const messages: Message[] = [
           { role: "system", content: systemPrompt },
+          ...(directToolContext
+            ? [{ role: "system" as const, content: directToolContext }]
+            : []),
           ...contextMessages.slice(-5).map(toLLMMessage),
           { role: "user", content: input },
         ];
@@ -262,7 +578,7 @@ async function invokeAgentInternal(
           for (const toolCall of toolCalls) {
             const toolName = toolCall.function.name;
             const executableTool = executableToolRegistry.get(toolName);
-            const isAllowed = allowedToolNames.includes(toolName);
+            const isAllowed = toolPlan.dynamicToolNames.includes(toolName);
 
             if (!executableTool || !isAllowed) {
               const deniedContent = JSON.stringify({

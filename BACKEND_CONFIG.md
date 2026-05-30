@@ -7,34 +7,34 @@
 
 ## 服务器信息
 
-| 项目 | 值 |
-|------|-----|
-| 服务器类型 | Azure VM |
-| IP 地址 | `4.188.113.194` |
-| 操作系统 | Ubuntu 22.04 LTS |
-| 规格 | 2核 4GB |
-| 用户名 | `openclawed` |
+| 项目       | 值               |
+| ---------- | ---------------- |
+| 服务器类型 | Azure VM         |
+| IP 地址    | `4.188.113.194`  |
+| 操作系统   | Ubuntu 22.04 LTS |
+| 规格       | 2核 4GB          |
+| 用户名     | `openclawed`     |
 
 ---
 
 ## 服务端口
 
-| 服务 | 端口 | 说明 |
-|------|------|------|
+| 服务        | 端口 | 说明          |
+| ----------- | ---- | ------------- |
 | Node.js API | 3000 | 后端 API 服务 |
-| Nginx | 80 | HTTP 反向代理 |
-| MySQL | 3306 | 数据库 |
-| PM2 | - | 进程管理 |
+| Nginx       | 80   | HTTP 反向代理 |
+| MySQL       | 3306 | 数据库        |
+| PM2         | -    | 进程管理      |
 
 ---
 
 ## 数据库配置
 
-| 项目 | 值 |
-|------|-----|
-| 数据库名 | `kinetic_portfolio` |
-| 用户名 | `fezer_user` |
-| 密码 | *(已配置，未记录在此)* |
+| 项目       | 值                                                         |
+| ---------- | ---------------------------------------------------------- |
+| 数据库名   | `kinetic_portfolio`                                        |
+| 用户名     | `fezer_user`                                               |
+| 密码       | _(已配置，未记录在此)_                                     |
 | 连接字符串 | `mysql://fezer_user:密码@localhost:3306/kinetic_portfolio` |
 
 ---
@@ -58,11 +58,14 @@ OWNER_OPEN_ID=*(你的OpenID)*
 
 # ========== AI 配置 ==========
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-chat
-AI_FALLBACK_PROVIDER=forge
-AI_FALLBACK_MODEL=gemini-2.5-flash
-DEEPSEEK_API_KEY=*(你的DeepSeek API Key)*
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_FALLBACK_PROVIDER=deepseek
+AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
+DEEPSEEK_API_KEY=*(你的NVIDIA API Key)*
+DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
+DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_MAX_TOKENS=2048
+AI_REQUEST_TIMEOUT_MS=60000
 
 # ========== LangSmith 监控 ==========
 LANGSMITH_TRACING=true
@@ -77,12 +80,12 @@ ALLOWED_ORIGINS=https://fezeryang.github.io
 
 ## API 端点
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/chat` | POST | 通用对话 |
-| `/api/guide` | POST | 导览介绍 |
+| 端点             | 方法 | 说明     |
+| ---------------- | ---- | -------- |
+| `/api/chat`      | POST | 通用对话 |
+| `/api/guide`     | POST | 导览介绍 |
 | `/api/character` | POST | 角色交互 |
-| `/health` | GET | 健康检查 |
+| `/health`        | GET  | 健康检查 |
 
 ---
 
@@ -174,6 +177,7 @@ nohup cloudflared tunnel --url http://localhost:3000 > ~/cloudflared.log 2>&1 &
 ### 获取 URL
 
 从日志中查看生成的 HTTPS URL，格式：
+
 ```
 https://xxx-xxx-xxx.trycloudflare.com
 ```
@@ -203,6 +207,7 @@ VITE_API_URL=https://api.yourdomain.com
 ```
 
 或使用 Cloudflare Tunnel：
+
 ```bash
 VITE_API_URL=https://xxx-xxx-xxx.trycloudflare.com
 ```
@@ -214,6 +219,7 @@ VITE_API_URL=https://xxx-xxx-xxx.trycloudflare.com
 ### API 返回 404
 
 检查 Nginx 配置和服务状态：
+
 ```bash
 sudo nginx -t
 sudo systemctl status nginx
@@ -222,6 +228,7 @@ sudo systemctl status nginx
 ### API 返回 500
 
 检查 PM2 日志：
+
 ```bash
 pm2 logs fezer-api
 ```
@@ -229,6 +236,7 @@ pm2 logs fezer-api
 ### 数据库连接失败
 
 检查 MySQL 状态和连接：
+
 ```bash
 sudo systemctl status mysql
 mysql -u fezer_user -p kinetic_portfolio
@@ -242,13 +250,13 @@ mysql -u fezer_user -p kinetic_portfolio
 
 ## 重要文件位置
 
-| 文件 | 路径 |
-|------|------|
-| 项目目录 | `/var/www/fezer` |
+| 文件       | 路径                                   |
+| ---------- | -------------------------------------- |
+| 项目目录   | `/var/www/fezer`                       |
 | Nginx 配置 | `/etc/nginx/sites-available/fezer-api` |
-| PM2 配置 | `~/.pm2/` |
-| 环境变量 | `/var/www/fezer/.env` |
-| 日志目录 | `/var/www/fezer/.manus-logs/` |
+| PM2 配置   | `~/.pm2/`                              |
+| 环境变量   | `/var/www/fezer/.env`                  |
+| 日志目录   | `/var/www/fezer/.manus-logs/`          |
 
 ---
 
@@ -261,6 +269,6 @@ mysql -u fezer_user -p kinetic_portfolio
 
 ## 更新日志
 
-| 日期 | 更新内容 |
-|------|----------|
+| 日期       | 更新内容         |
+| ---------- | ---------------- |
 | 2026-04-19 | 初始配置文档创建 |
