@@ -4,7 +4,7 @@ test("Frontend API connection test", async ({ page, context }) => {
   // Enable request interception
   const apiRequests: string[] = [];
 
-  context.route("**/*", async (route) => {
+  context.route("**/*", async route => {
     const url = route.request().url();
     if (url.includes("/api/")) {
       apiRequests.push(url);
@@ -13,19 +13,8 @@ test("Frontend API connection test", async ({ page, context }) => {
     route.continue();
   });
 
-  // Navigate to the jianli route
-  console.log("Navigating to https://fezeryang.github.io/fezer/jianli");
-  await page.goto("https://fezeryang.github.io/fezer/jianli", {
-    waitUntil: "networkidle",
-    timeout: 30000,
-  });
-
-  // Take a screenshot
-  await page.screenshot({ path: "jianli-page.png" });
-  console.log("Screenshot saved to jianli-page.png");
-
-  // Wait for page to load
-  await page.waitForTimeout(3000);
+  console.log("Navigating to local /jianli");
+  await page.goto("/jianli", { waitUntil: "domcontentloaded" });
 
   // Check for chat-related elements
   const chatModal = page.locator("text=/聊天|Chat|发送|Send|message/i").first();
@@ -44,14 +33,13 @@ test("Frontend API connection test", async ({ page, context }) => {
     await page.waitForTimeout(1000);
 
     // Look for send button
-    const sendButton = page.locator("button:has-text('发送'), button:has-text('Send')").first();
+    const sendButton = page
+      .locator("button:has-text('发送'), button:has-text('Send')")
+      .first();
     if (await sendButton.isVisible().catch(() => false)) {
       await sendButton.click();
       await page.waitForTimeout(5000);
     }
-
-    // Take another screenshot after interaction
-    await page.screenshot({ path: "jianli-after-input.png" });
   }
 
   // Log all API requests

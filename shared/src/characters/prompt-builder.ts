@@ -52,7 +52,7 @@ const SPACE_LAYOUT = [
 ];
 
 export const CHARACTER_PROMPT_FRAMEWORK_VERSION =
-  "fezer.character-prompt.v2.stage1";
+  "fezer.character-prompt.v2.stage2";
 
 const DEFAULT_OUTPUT_CONTRACT = [
   "默认按三段结构输出：1) 直接回答 2) 依据或方法 3) 可继续追问。",
@@ -74,6 +74,34 @@ function getRoleNoClaimRules(id: FezerType): string[] {
     wanderer: ["禁止虚构具体城市路线、时间节点、照片证据或事件细节。"],
   };
   return [...common, ...roleSpecific[id]];
+}
+
+function getIdentityAnchorRules(config: CharacterConfig): string[] {
+  const otherRoleNames = Object.entries(ROOM_LABELS)
+    .filter(([id]) => id !== config.id)
+    .map(([id, room]) => `${room} (${id})`);
+  const otherDisplayNames = Object.entries(ROOM_LABELS)
+    .filter(([id]) => id !== config.id)
+    .map(([id]) => {
+      const labels: Record<FezerType, string> = {
+        core: "Aries · Core",
+        builder: "Gemini · Builder",
+        ai: "Aquarius · AI",
+        writer: "Libra · Writer",
+        reader: "Virgo · Reader",
+        visual: "Pisces · Visual",
+        wanderer: "Sagittarius · Wanderer",
+      };
+      return labels[id as FezerType];
+    });
+
+  return [
+    `你只能以 ${config.displayName} 的身份回答；当前身份固定为 ${ROOM_LABELS[config.id]} (${config.id})。`,
+    `不得自称 ${otherDisplayNames.join("、")}，也不要暗示你正在扮演这些角色。`,
+    `你的职责边界不包括：${otherRoleNames.join("、")}。`,
+    "不要接管其他房间角色的专长；超出范围时说明边界，并建议用户切换到对应角色。",
+    `即使用户问“你是谁”“介绍一下你自己”这类泛化问题，也必须从 ${config.displayName} 的定位回答。`,
+  ];
 }
 
 function renderList(items: string[]): string {
@@ -138,20 +166,14 @@ function getModeSpecificRules(mode: PromptInteractionMode): string[] {
 
 function getDepthRules(depth: ResponseDepth): string[] {
   if (depth === "brief") {
-    return [
-      "使用更短回答，优先 1-3 句直接结论，必要时再补一条下一步建议。",
-    ];
+    return ["使用更短回答，优先 1-3 句直接结论，必要时再补一条下一步建议。"];
   }
 
   if (depth === "deep") {
-    return [
-      "在保证结论优先的前提下，补充关键权衡、失败模式或替代路径。",
-    ];
+    return ["在保证结论优先的前提下，补充关键权衡、失败模式或替代路径。"];
   }
 
-  return [
-    "保持标准深度：结论清晰、方法可执行、背景适量。",
-  ];
+  return ["保持标准深度：结论清晰、方法可执行、背景适量。"];
 }
 
 function getContextRules(
@@ -225,6 +247,7 @@ export function buildCharacterPrompt(
       ...config.mission,
       ...getModeSpecificRules(mode),
     ]),
+    renderSection("Identity Anchor", getIdentityAnchorRules(config)),
     renderSection("Context", getContextRules(config, mode)),
     renderSection("Behavior", [
       ...DEFAULT_BEHAVIOR_RULES,

@@ -69,6 +69,250 @@ describe("invokeLLM provider routing", () => {
     expect(payload.thinking).toBeUndefined();
   });
 
+  it("supports NVIDIA-hosted DeepSeek chat template options", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.DEEPSEEK_API_KEY = "nvidia-key";
+    process.env.DEEPSEEK_BASE_URL = "https://integrate.api.nvidia.com/v1";
+    process.env.DEEPSEEK_CHAT_TEMPLATE_THINKING = "false";
+    process.env.AI_MAX_TOKENS = "2048";
+    process.env.BUILT_IN_FORGE_API_KEY = "forge-key";
+
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      createJsonResponse({
+        id: "chatcmpl-nvidia",
+        created: 1,
+        model: "deepseek-ai/deepseek-v4-flash",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "ok" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://integrate.api.nvidia.com/v1/chat/completions"
+    );
+    const payload = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(payload.model).toBe("deepseek-ai/deepseek-v4-flash");
+    expect(payload.max_tokens).toBe(2048);
+    expect(payload.chat_template_kwargs).toEqual({ thinking: false });
+    expect(payload.thinking).toBeUndefined();
+  });
+
+  it("attaches a configurable request timeout signal", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.AI_REQUEST_TIMEOUT_MS = "12345";
+
+    const timeoutSignal = new AbortController().signal;
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(timeoutSignal);
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      createJsonResponse({
+        id: "chatcmpl-1",
+        created: 1,
+        model: "deepseek-chat",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "ok" },
+            finish_reason: "stop",
+          },
+        ],
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(timeoutSpy).toHaveBeenCalledWith(12345);
+    expect(fetchMock.mock.calls[0][1]?.signal).toBe(timeoutSignal);
+  });
+
+  it("falls back when the primary request times out", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+    process.env.AI_FALLBACK_PROVIDER = "forge";
+    process.env.AI_FALLBACK_MODEL = "gemini-2.5-flash";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.BUILT_IN_FORGE_API_KEY = "forge-key";
+    process.env.BUILT_IN_FORGE_API_URL = "https://forge.example.com";
+
+    const timeoutError = new Error("request timed out");
+    timeoutError.name = "AbortError";
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(timeoutError)
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          id: "chatcmpl-2",
+          created: 2,
+          model: "gemini-2.5-flash",
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "fallback-ok" },
+              finish_reason: "stop",
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    const result = await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(result.choices[0]?.message?.content).toBe("fallback-ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back on undici TimeoutError from AbortSignal.timeout", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+    process.env.AI_FALLBACK_PROVIDER = "forge";
+    process.env.AI_FALLBACK_MODEL = "gemini-2.5-flash";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.BUILT_IN_FORGE_API_KEY = "forge-key";
+    process.env.BUILT_IN_FORGE_API_URL = "https://forge.example.com";
+
+    const timeoutError = new DOMException(
+      "The operation was aborted due to timeout",
+      "TimeoutError"
+    );
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(timeoutError)
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          id: "chatcmpl-2",
+          created: 2,
+          model: "gemini-2.5-flash",
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "fallback-ok" },
+              finish_reason: "stop",
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    const result = await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(result.choices[0]?.message?.content).toBe("fallback-ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("respects an explicit same-provider fallback when only DeepSeek is configured", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.AI_FALLBACK_PROVIDER = "deepseek";
+    process.env.AI_FALLBACK_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.DEEPSEEK_BASE_URL = "https://integrate.api.nvidia.com/v1";
+    delete process.env.BUILT_IN_FORGE_API_KEY;
+
+    const timeoutError = new DOMException(
+      "The operation was aborted due to timeout",
+      "TimeoutError"
+    );
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(timeoutError)
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          id: "chatcmpl-2",
+          created: 2,
+          model: "deepseek-ai/deepseek-v4-flash",
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "deepseek-retry-ok" },
+              finish_reason: "stop",
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    const result = await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(result.choices[0]?.message?.content).toBe("deepseek-retry-ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "https://integrate.api.nvidia.com/v1/chat/completions"
+    );
+  });
+
+  it("defaults fallback to the primary provider and model when fallback env is omitted", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.DEEPSEEK_BASE_URL = "https://integrate.api.nvidia.com/v1";
+    delete process.env.AI_FALLBACK_PROVIDER;
+    delete process.env.AI_FALLBACK_MODEL;
+    delete process.env.BUILT_IN_FORGE_API_KEY;
+
+    const timeoutError = new DOMException(
+      "The operation was aborted due to timeout",
+      "TimeoutError"
+    );
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(timeoutError)
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          id: "chatcmpl-2",
+          created: 2,
+          model: "deepseek-ai/deepseek-v4-flash",
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "default-retry-ok" },
+              finish_reason: "stop",
+            },
+          ],
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    const result = await invokeLLM({
+      messages: [{ role: "user", content: "hello" }],
+    });
+
+    expect(result.choices[0]?.message?.content).toBe("default-retry-ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "https://integrate.api.nvidia.com/v1/chat/completions"
+    );
+  });
+
   it("falls back to forge on retryable primary failure", async () => {
     process.env.AI_PRIMARY_PROVIDER = "deepseek";
     process.env.AI_PRIMARY_MODEL = "deepseek-chat";
@@ -145,7 +389,7 @@ describe("invokeLLM provider routing", () => {
             },
           ],
         },
-        { role: "tool", tool_call_id: "tool_1", content: "{\"ok\":true}" },
+        { role: "tool", tool_call_id: "tool_1", content: '{"ok":true}' },
       ],
     });
 
@@ -167,7 +411,7 @@ describe("invokeLLM provider routing", () => {
       .fn()
       .mockResolvedValueOnce(
         createTextResponse(
-          "{\"error\":{\"message\":\"Messages with role 'tool' must be a response to a preceding message with 'tool_calls'\"}}",
+          '{"error":{"message":"Messages with role \'tool\' must be a response to a preceding message with \'tool_calls\'"}}',
           400
         )
       )

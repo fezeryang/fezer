@@ -29,12 +29,14 @@ const knowledgeIndex: KnowledgeItem[] = [
     title: item.title,
     text: item.text,
     source: item.source,
+    category: "website",
   })),
   ...PROJECT_DETAILS.map(item => ({
     id: item.id,
     title: item.name,
     text: `${item.description}\n技术栈: ${item.techStack.join(", ")}\n亮点: ${item.highlights.join("; ")}`,
     source: "project",
+    category: "project",
   })),
   ...FAQ.map(item => ({
     id: item.id,
@@ -67,7 +69,10 @@ export const knowledgeSearchTool = tool(
       // 关键词匹配
       if (item.keywords) {
         for (const keyword of item.keywords) {
-          if (queryLower.includes(keyword.toLowerCase()) || keyword.toLowerCase().includes(queryLower)) {
+          if (
+            queryLower.includes(keyword.toLowerCase()) ||
+            keyword.toLowerCase().includes(queryLower)
+          ) {
             score += 5;
           }
         }
@@ -123,7 +128,9 @@ export const knowledgeSearchTool = tool(
       category: z
         .enum(["website", "project", "faq"])
         .optional()
-        .describe("按类别过滤：website（网站内容）、project（项目详情）、faq（常见问题）"),
+        .describe(
+          "按类别过滤：website（网站内容）、project（项目详情）、faq（常见问题）"
+        ),
     }),
   }
 );
@@ -149,7 +156,10 @@ export const getProjectDetailsTool = tool(
       }
       return {
         error: `Project ${projectId} not found`,
-        availableProjects: PROJECT_DETAILS.map(p => ({ id: p.id, name: p.name })),
+        availableProjects: PROJECT_DETAILS.map(p => ({
+          id: p.id,
+          name: p.name,
+        })),
       };
     }
 
@@ -198,7 +208,8 @@ export const getFAQTool = tool(
   },
   {
     name: "get_faq",
-    description: "获取常见问题解答。可以按类别过滤：general、guide、technical、contact",
+    description:
+      "获取常见问题解答。可以按类别过滤：general、guide、technical、contact",
     schema: z.object({
       category: z
         .enum(["general", "guide", "technical", "contact"])

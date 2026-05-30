@@ -8,50 +8,53 @@ This document defines the required environment variables for the kinetic-portfol
 
 These variables **MUST** be set for the server to start. Missing any of these will cause immediate startup failure with an explicit error message.
 
-| Variable | Description | Example | Required In |
-|----------|-------------|---------|-------------|
-| `DATABASE_URL` | MySQL connection string | `mysql://user:pass@host:3306/db` | All environments |
-| `JWT_SECRET` | Secret for JWT token signing | Random 32+ character string | All environments |
-| `OAUTH_SERVER_URL` | OAuth provider base URL | `https://oauth.example.com` | All environments |
-| `OWNER_OPEN_ID` | OpenID of the owner/admin user | `user_abc123` | All environments |
+| Variable           | Description                    | Example                          | Required In      |
+| ------------------ | ------------------------------ | -------------------------------- | ---------------- |
+| `DATABASE_URL`     | MySQL connection string        | `mysql://user:pass@host:3306/db` | All environments |
+| `JWT_SECRET`       | Secret for JWT token signing   | Random 32+ character string      | All environments |
+| `OAUTH_SERVER_URL` | OAuth provider base URL        | `https://oauth.example.com`      | All environments |
+| `OWNER_OPEN_ID`    | OpenID of the owner/admin user | `user_abc123`                    | All environments |
 
 ### Optional Server-Only Variables
 
 These variables have defaults or are optional for certain features.
 
-| Variable | Description | Default | Required In |
-|----------|-------------|---------|-------------|
-| `PORT` | Server listen port | `3000` | Optional |
-| `NODE_ENV` | Runtime environment | `development` | Optional |
-| `BUILT_IN_FORGE_API_URL` | Built-in Forge API endpoint | Empty string | Optional |
-| `BUILT_IN_FORGE_API_KEY` | Built-in Forge API key | Empty string | Optional |
-| `DEEPSEEK_API_KEY` | DeepSeek API key | Empty string | Optional (required when `AI_PRIMARY_PROVIDER=deepseek`) |
-| `DEEPSEEK_BASE_URL` | DeepSeek base URL | `https://api.deepseek.com/v1` | Optional |
-| `AI_PRIMARY_PROVIDER` | Primary LLM provider (`deepseek` or `forge`) | `deepseek` | Optional |
-| `AI_PRIMARY_MODEL` | Primary model name | `deepseek-chat` | Optional |
-| `AI_FALLBACK_PROVIDER` | Fallback LLM provider (`deepseek` or `forge`) | `forge` | Optional |
-| `AI_FALLBACK_MODEL` | Fallback model name | `gemini-2.5-flash` | Optional |
-| `LANGSMITH_TRACING` | Enable LangSmith tracing | `false` | Optional |
-| `LANGSMITH_API_KEY` | LangSmith API key | Empty string | Optional (required when tracing enabled) |
-| `LANGSMITH_PROJECT` | LangSmith tracing project | `fezer-agent` | Optional |
-| `LANGSMITH_ENDPOINT` | LangSmith API endpoint | Empty string (LangSmith default) | Optional |
-| `LANGSMITH_WORKSPACE_ID` | LangSmith workspace ID | Empty string | Optional |
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins | Empty (dev: localhost auto-allowed) | Production |
-| `LOCAL_ADMIN_AUTH_BYPASS` | Enables local admin auth bypass by injecting a local admin user | `false` | Local development only |
-| `LOCAL_CONTENT_IN_MEMORY_FALLBACK` | Enables in-memory posts/works fallback when DB is unavailable | `false` | Local development only |
+| Variable                           | Description                                                               | Default                             | Required In                                             |
+| ---------------------------------- | ------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------- |
+| `PORT`                             | Server listen port                                                        | `3000`                              | Optional                                                |
+| `NODE_ENV`                         | Runtime environment                                                       | `development`                       | Optional                                                |
+| `BUILT_IN_FORGE_API_URL`           | Built-in Forge API endpoint                                               | Empty string                        | Optional                                                |
+| `BUILT_IN_FORGE_API_KEY`           | Built-in Forge API key                                                    | Empty string                        | Optional                                                |
+| `DEEPSEEK_API_KEY`                 | DeepSeek-compatible API key                                               | Empty string                        | Optional (required when `AI_PRIMARY_PROVIDER=deepseek`) |
+| `DEEPSEEK_BASE_URL`                | DeepSeek-compatible base URL                                              | `https://api.deepseek.com/v1`       | Optional                                                |
+| `DEEPSEEK_CHAT_TEMPLATE_THINKING`  | Sends `chat_template_kwargs.thinking` for NVIDIA-hosted DeepSeek when set | Unset                               | Optional                                                |
+| `AI_PRIMARY_PROVIDER`              | Primary LLM provider (`deepseek` or `forge`)                              | `deepseek`                          | Optional                                                |
+| `AI_PRIMARY_MODEL`                 | Primary model name                                                        | `deepseek-chat`                     | Optional                                                |
+| `AI_FALLBACK_PROVIDER`             | Fallback LLM provider (`deepseek` or `forge`)                             | Primary provider                    | Optional                                                |
+| `AI_FALLBACK_MODEL`                | Fallback model name                                                       | Primary model                       | Optional                                                |
+| `AI_MAX_TOKENS`                    | Default LLM response token cap when a call does not override it           | Provider default                    | Optional                                                |
+| `AI_REQUEST_TIMEOUT_MS`            | Per-provider LLM request timeout before retry/fallback                    | `60000`                             | Optional                                                |
+| `LANGSMITH_TRACING`                | Enable LangSmith tracing                                                  | `false`                             | Optional                                                |
+| `LANGSMITH_API_KEY`                | LangSmith API key                                                         | Empty string                        | Optional (required when tracing enabled)                |
+| `LANGSMITH_PROJECT`                | LangSmith tracing project                                                 | `fezer-agent`                       | Optional                                                |
+| `LANGSMITH_ENDPOINT`               | LangSmith API endpoint                                                    | Empty string (LangSmith default)    | Optional                                                |
+| `LANGSMITH_WORKSPACE_ID`           | LangSmith workspace ID                                                    | Empty string                        | Optional                                                |
+| `ALLOWED_ORIGINS`                  | Comma-separated list of allowed CORS origins                              | Empty (dev: localhost auto-allowed) | Production                                              |
+| `LOCAL_ADMIN_AUTH_BYPASS`          | Enables local admin auth bypass by injecting a local admin user           | `false`                             | Local development only                                  |
+| `LOCAL_CONTENT_IN_MEMORY_FALLBACK` | Enables in-memory posts/works fallback when DB is unavailable             | `false`                             | Local development only                                  |
 
 ### Frontend-Safe Variables (EXPOSED TO CLIENT)
 
 These variables are prefixed with `VITE_` and are embedded into the client bundle at build time. **NEVER** put secrets here.
 
-| Variable | Description | Example | Required In |
-|----------|-------------|---------|-------------|
-| `VITE_APP_ID` | OAuth application ID | `app_xyz789` | All environments |
-| `VITE_OAUTH_PORTAL_URL` | OAuth portal URL for login | `https://oauth.example.com` | Frontend |
-| `VITE_FRONTEND_FORGE_API_KEY` | Public Forge API key for maps | `pk_live_...` | Optional (Map feature) |
-| `VITE_FRONTEND_FORGE_API_URL` | Forge API URL for frontend | `https://forge.example.com` | Optional (Map feature) |
-| `VITE_ANALYTICS_ENDPOINT` | Analytics endpoint | `https://analytics.example.com` | Optional |
-| `VITE_ANALYTICS_WEBSITE_ID` | Analytics website ID | `site_123` | Optional |
+| Variable                      | Description                   | Example                         | Required In            |
+| ----------------------------- | ----------------------------- | ------------------------------- | ---------------------- |
+| `VITE_APP_ID`                 | OAuth application ID          | `app_xyz789`                    | All environments       |
+| `VITE_OAUTH_PORTAL_URL`       | OAuth portal URL for login    | `https://oauth.example.com`     | Frontend               |
+| `VITE_FRONTEND_FORGE_API_KEY` | Public Forge API key for maps | `pk_live_...`                   | Optional (Map feature) |
+| `VITE_FRONTEND_FORGE_API_URL` | Forge API URL for frontend    | `https://forge.example.com`     | Optional (Map feature) |
+| `VITE_ANALYTICS_ENDPOINT`     | Analytics endpoint            | `https://analytics.example.com` | Optional               |
+| `VITE_ANALYTICS_WEBSITE_ID`   | Analytics website ID          | `site_123`                      | Optional               |
 
 ## Environment Setup
 
@@ -78,11 +81,14 @@ LOCAL_CONTENT_IN_MEMORY_FALLBACK=false
 
 # LLM routing
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-chat
-AI_FALLBACK_PROVIDER=forge
-AI_FALLBACK_MODEL=gemini-2.5-flash
-DEEPSEEK_API_KEY=your-deepseek-api-key
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_FALLBACK_PROVIDER=deepseek
+AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
+DEEPSEEK_API_KEY=your-nvidia-api-key
+DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
+DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_MAX_TOKENS=2048
+AI_REQUEST_TIMEOUT_MS=60000
 
 # LangSmith observability (optional)
 LANGSMITH_TRACING=true
@@ -114,9 +120,9 @@ VITE_ANALYTICS_WEBSITE_ID=prod-site-id
 
 **WARNING**: GitHub Pages is static hosting. Server-only variables (`DATABASE_URL`, `JWT_SECRET`, etc.) are **NOT** used here.
 
-### Aliyun Backend (API Server)
+### Azure Backend (API Server)
 
-Set these as environment variables on your Aliyun server (via PM2 ecosystem file, shell profile, or systemd service):
+Set these as environment variables on the Azure server (via `/var/www/fezer/.env`, PM2 ecosystem file, shell profile, or systemd service):
 
 ```bash
 # Critical secrets
@@ -134,10 +140,14 @@ NODE_ENV=production
 BUILT_IN_FORGE_API_URL=https://forge-backend.example.com
 BUILT_IN_FORGE_API_KEY=secret-backend-key
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-chat
-AI_FALLBACK_PROVIDER=forge
-AI_FALLBACK_MODEL=gemini-2.5-flash
-DEEPSEEK_API_KEY=prod-deepseek-key
+AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_FALLBACK_PROVIDER=deepseek
+AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
+DEEPSEEK_API_KEY=prod-nvidia-key
+DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
+DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_MAX_TOKENS=2048
+AI_REQUEST_TIMEOUT_MS=60000
 
 LANGSMITH_TRACING=true
 LANGSMITH_API_KEY=lsv2_prod_langsmith_key
@@ -169,12 +179,14 @@ LANGSMITH_PROJECT=fezer-agent-prod
 The application uses a **two-phase approach** to balance safety and testability:
 
 **Phase 1: Module Import (Always Safe)**
+
 - `server/_core/env.ts` can be imported without any environment variables
 - `ENV` object exports with safe defaults (empty strings for missing vars)
 - Tests can import server modules without production secrets
 - NO process.exit() on import - allows test runner to load modules
 
 **Phase 2: Server Startup (Strict Validation)**
+
 - `assertEnvValid()` is called ONLY by `startServer()` in `server/_core/index.ts`
 - Validates all critical variables are present and correctly formatted
 - Exits process immediately if validation fails (fail-fast for production)
@@ -182,14 +194,14 @@ The application uses a **two-phase approach** to balance safety and testability:
 
 ### Validation Rules
 
-| Condition | Behavior | When It Happens |
-|-----------|----------|-----------------|
-| Missing critical variable (DATABASE_URL, JWT_SECRET, etc.) | Server exits immediately with error | During `bun run dev` or `bun run start` |
-| Invalid format (e.g., JWT_SECRET < 32 chars) | Server exits with validation error | During `bun run dev` or `bun run start` |
-| Optional variable missing | Server starts; feature may fail at usage time | During `bun run dev` or `bun run start` |
-| Missing `DATABASE_URL` with `LOCAL_CONTENT_IN_MEMORY_FALLBACK=true` and non-production | Server starts; posts/works use in-memory fallback if DB calls fail | During `bun run dev` or `bun run start` |
-| Missing `OAUTH_SERVER_URL` / `OWNER_OPEN_ID` with `LOCAL_ADMIN_AUTH_BYPASS=true` and non-production | Server starts; local admin auth bypass can be used | During `bun run dev` or `bun run start` |
-| Test runtime (`bun run test`) | No validation; tests can import freely | During `bun run test` |
+| Condition                                                                                           | Behavior                                                           | When It Happens                         |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------- |
+| Missing critical variable (DATABASE_URL, JWT_SECRET, etc.)                                          | Server exits immediately with error                                | During `bun run dev` or `bun run start` |
+| Invalid format (e.g., JWT_SECRET < 32 chars)                                                        | Server exits with validation error                                 | During `bun run dev` or `bun run start` |
+| Optional variable missing                                                                           | Server starts; feature may fail at usage time                      | During `bun run dev` or `bun run start` |
+| Missing `DATABASE_URL` with `LOCAL_CONTENT_IN_MEMORY_FALLBACK=true` and non-production              | Server starts; posts/works use in-memory fallback if DB calls fail | During `bun run dev` or `bun run start` |
+| Missing `OAUTH_SERVER_URL` / `OWNER_OPEN_ID` with `LOCAL_ADMIN_AUTH_BYPASS=true` and non-production | Server starts; local admin auth bypass can be used                 | During `bun run dev` or `bun run start` |
+| Test runtime (`bun run test`)                                                                       | No validation; tests can import freely                             | During `bun run test`                   |
 
 ### Example Error Output
 

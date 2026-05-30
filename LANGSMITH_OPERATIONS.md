@@ -17,9 +17,13 @@ LLM routing defaults:
 
 ```bash
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-chat
-AI_FALLBACK_PROVIDER=forge
-AI_FALLBACK_MODEL=gemini-2.5-flash
+AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_FALLBACK_PROVIDER=deepseek
+AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
+DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
+DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_MAX_TOKENS=2048
+AI_REQUEST_TIMEOUT_MS=60000
 ```
 
 ## 2) What You Should See In Trace Tree

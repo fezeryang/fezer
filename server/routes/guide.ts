@@ -8,7 +8,11 @@
 import type { Request, Response } from "express";
 import { orchestratorGraph } from "../agents/orchestrator/graph";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
-import { runWithTraceContext, traceSpan } from "../_core/observability/langsmith";
+import {
+  runWithTraceContext,
+  traceSpan,
+} from "../_core/observability/langsmith";
+import { sendE2eAgentResponse, shouldUseE2eAgentMock } from "./e2e-mock";
 
 /**
  * POST /api/guide
@@ -29,6 +33,14 @@ import { runWithTraceContext, traceSpan } from "../_core/observability/langsmith
  */
 export async function guideHandler(req: Request, res: Response): Promise<void> {
   try {
+    if (shouldUseE2eAgentMock()) {
+      sendE2eAgentResponse(res, {
+        panel: "guide",
+        text: "E2E mock guide response",
+      });
+      return;
+    }
+
     // 使用 LangSmith 追踪
     await traceSpan("api.guide", async () => {
       // 从请求体中获取用户输入，默认为导览引导语
@@ -45,16 +57,16 @@ export async function guideHandler(req: Request, res: Response): Promise<void> {
           // 调用编排器，强制使用 core 代理
           const result = await orchestratorGraph.invoke({
             userInput,
-            interactionType: "guide" as const,  // 固定为 guide 类型
+            interactionType: "guide" as const, // 固定为 guide 类型
             messages: [],
           });
 
           // 构建响应对象
           const response: AgentResponse = {
-            text: result.answer,  // Core Fezer 的介绍内容
-            panel: "guide",  // 显示导览面板
-            suggestedQuestions: result.uiAction.suggestedQuestions,  // 建议的后续问题
-            speakingAgentId: "core",  // 固定为 core 代理
+            text: result.answer, // Core Fezer 的介绍内容
+            panel: "guide", // 显示导览面板
+            suggestedQuestions: result.uiAction.suggestedQuestions, // 建议的后续问题
+            speakingAgentId: "core", // 固定为 core 代理
           };
 
           // 返回 JSON 响应

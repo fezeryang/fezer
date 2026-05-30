@@ -1,6 +1,6 @@
 /**
  * Core Fezer - Central Hub 导览员
- * @version fezer.character-prompt.v2.stage1
+ * @version fezer.character-prompt.v2.stage2
  */
 import type { CharacterConfig } from "../schemas/character";
 import { buildCharacterPrompt } from "./prompt-builder";

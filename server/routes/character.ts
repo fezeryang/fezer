@@ -8,7 +8,15 @@
 import type { Request, Response } from "express";
 import { orchestratorGraph } from "../agents/orchestrator/graph";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
-import { runWithTraceContext, traceSpan } from "../_core/observability/langsmith";
+import {
+  runWithTraceContext,
+  traceSpan,
+} from "../_core/observability/langsmith";
+import {
+  sendE2eAgentResponse,
+  shouldUseE2eAgentMock,
+  toE2eFezerType,
+} from "./e2e-mock";
 
 /**
  * POST /api/character
@@ -32,6 +40,16 @@ export async function characterHandler(
   res: Response
 ): Promise<void> {
   try {
+    if (shouldUseE2eAgentMock()) {
+      const { characterId = "core" } = req.body as {
+        characterId?: string;
+      };
+      sendE2eAgentResponse(res, {
+        highlightCharacterId: toE2eFezerType(characterId),
+      });
+      return;
+    }
+
     // 使用 LangSmith 追踪
     await traceSpan("api.character", async () => {
       // 从请求体中获取角色 ID 和用户输入
@@ -56,16 +74,16 @@ export async function characterHandler(
           const result = await orchestratorGraph.invoke({
             userInput,
             characterId,
-            interactionType: "click" as const,  // 点击交互类型
+            interactionType: "click" as const, // 点击交互类型
             messages: [],
           });
 
           // 构建响应对象
           const response: AgentResponse = {
-            text: result.answer,  // 角色的回答
-            panel: "character",  // 显示角色面板
-            highlightCharacterId: characterId as any,  // 高亮当前角色
-            speakingAgentId: result.currentPrimaryAgent,  // 回答的 Agent ID
+            text: result.answer, // 角色的回答
+            panel: "character", // 显示角色面板
+            highlightCharacterId: characterId as any, // 高亮当前角色
+            speakingAgentId: result.currentPrimaryAgent, // 回答的 Agent ID
           };
 
           // 返回 JSON 响应

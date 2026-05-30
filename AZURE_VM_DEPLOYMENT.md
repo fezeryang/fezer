@@ -3,6 +3,7 @@
 ## 前言
 
 本指南将一步步指导你在 Azure VM 上部署 Fezer 项目的完整后端，包括：
+
 - Node.js 服务（API）
 - MySQL 数据库
 - Nginx 反向代理
@@ -22,24 +23,26 @@
 
 2. 填写基本信息：
 
-| 配置项 | 填写内容 |
-|--------|----------|
-| **资源组** | 点击「新建」，输入 `fezer-rg` |
-| **虚拟机名称** | `fezer-backend` |
-| **区域** | 选择「East Asia」（香港）延迟低 |
-| **可用性区域** | 暂不需要 |
-| **镜像** | 选择「Ubuntu Server 22.04 LTS」 |
-| **大小** | 点击「查看所有大小」，选择 `Standard_B2s`（2核4GB） |
+| 配置项         | 填写内容                                            |
+| -------------- | --------------------------------------------------- |
+| **资源组**     | 点击「新建」，输入 `fezer-rg`                       |
+| **虚拟机名称** | `fezer-backend`                                     |
+| **区域**       | 选择「East Asia」（香港）延迟低                     |
+| **可用性区域** | 暂不需要                                            |
+| **镜像**       | 选择「Ubuntu Server 22.04 LTS」                     |
+| **大小**       | 点击「查看所有大小」，选择 `Standard_B2s`（2核4GB） |
 
 3. 设置管理员账户：
 
 选择「密码」或「SSH 公钥」：
+
 - **密码**：简单但安全性较低
 - **SSH 公钥**：推荐，更安全
 
 4. 配置入站端口：
 
 勾选：
+
 - ☑ SSH (22)
 - ☑ HTTP (80)
 - ☑ HTTPS (443)
@@ -49,6 +52,7 @@
 ### 1.3 获取 VM 信息
 
 创建完成后：
+
 1. 记下「公网 IP 地址」（后面会用到）
 2. 记下「用户名」（默认是 `azureuser`）
 
@@ -75,6 +79,7 @@ ssh azureuser@你的VM公网IP
 ```
 
 **连接成功后会看到：**
+
 ```
 Welcome to Ubuntu 22.04.4 LTS
 azureuser@fezer-backend:~$
@@ -107,6 +112,7 @@ npm -v
 ```
 
 **预期输出：**
+
 ```
 v20.x.x
 10.x.x
@@ -213,6 +219,7 @@ EXIT;
 ```
 
 **重要：记录以下信息**
+
 - 数据库名：`kinetic_portfolio`
 - 用户名：`fezer_user`
 - 密码：（你设置的密码）
@@ -273,11 +280,14 @@ OWNER_OPEN_ID=dev_owner_123
 
 # ========== AI 配置 ==========
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-chat
-AI_FALLBACK_PROVIDER=forge
-AI_FALLBACK_MODEL=gemini-2.5-flash
-DEEPSEEK_API_KEY=你的DeepSeek密钥
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_FALLBACK_PROVIDER=deepseek
+AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
+DEEPSEEK_API_KEY=你的NVIDIA密钥
+DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
+DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_MAX_TOKENS=2048
+AI_REQUEST_TIMEOUT_MS=60000
 
 # ========== LangSmith 监控 ==========
 LANGSMITH_TRACING=true
@@ -290,6 +300,7 @@ ALLOWED_ORIGINS=https://fezeryang.github.io,http://localhost:5173
 ```
 
 **保存文件：**
+
 - 按 `Ctrl + O`
 - 按 `Enter`
 - 按 `Ctrl + X` 退出
@@ -316,6 +327,7 @@ pm2 status
 ```
 
 **预期输出：**
+
 ```
 ┌────┬─────────────┬─────────┬─────────┐
 │ id │ name        │ status  │ cpu     │
@@ -335,6 +347,7 @@ pm2 startup
 ```
 
 **复制输出的命令并执行：**
+
 ```bash
 # 示例（实际复制你看到的输出）
 sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u azureuser --hp /home/azureuser
@@ -408,6 +421,7 @@ sudo nginx -t
 ```
 
 **预期输出：**
+
 ```
 nginx: configuration file /etc/nginx/nginx.conf test is successful
 ```
@@ -448,11 +462,11 @@ sudo ufw status
 
 ### 8.2 添加规则
 
-| 端口 | 协议 | 源 | 说明 |
-|------|------|-----|------|
-| 80 | TCP | Any | HTTP |
-| 443 | TCP | Any | HTTPS |
-| 22 | TCP | 你的IP | SSH（可选，限制你的IP） |
+| 端口 | 协议 | 源     | 说明                    |
+| ---- | ---- | ------ | ----------------------- |
+| 80   | TCP  | Any    | HTTP                    |
+| 443  | TCP  | Any    | HTTPS                   |
+| 22   | TCP  | 你的IP | SSH（可选，限制你的IP） |
 
 ---
 
@@ -599,6 +613,7 @@ pm2 logs fezer-api --lines 50
 ## 下一步
 
 部署完成后：
+
 1. ✅ 确认后端 API 正常运行
 2. ✅ 配置前端连接到后端
 3. ✅ 测试完整的对话功能

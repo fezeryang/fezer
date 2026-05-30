@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { LOCAL_API_BASE_URL } from "./support/constants";
 
 const questions = [
   "你好",
@@ -9,7 +10,6 @@ const questions = [
 
 test.describe("本地前端 API 连续测试", () => {
   test.use({
-    baseURL: "http://localhost:5173",
     timeout: 120000, // 2 分钟超时
   });
 
@@ -54,49 +54,46 @@ test.describe("本地前端 API 连续测试", () => {
     });
 
     console.log("页面已加载");
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: "local-jianli-page.png" });
 
     console.log("\n=== 开始连续提问测试 ===");
 
     // 在浏览器上下文中执行 API 调用
-    const testResults = await page.evaluate(async qs => {
-      const API_BASE = "http://localhost:3000";
-      const results: typeof results = [];
+    const testResults = await page.evaluate(
+      async ({ qs, apiBaseURL }) => {
+        const results: typeof results = [];
 
-      for (const q of qs) {
-        try {
-          const response = await fetch(`${API_BASE}/api/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userInput: q }),
-          });
+        for (const q of qs) {
+          try {
+            const response = await fetch(`${apiBaseURL}/api/chat`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userInput: q }),
+            });
 
-          const data = await response.json();
+            const data = await response.json();
 
-          results.push({
-            question: q,
-            success: response.ok,
-            status: response.status,
-            hasText: !!(data as { text?: string }).text,
-          });
+            results.push({
+              question: q,
+              success: response.ok,
+              status: response.status,
+              hasText: !!(data as { text?: string }).text,
+            });
 
-          console.log(`✓ [${q}] HTTP ${response.status}`);
-        } catch (error) {
-          results.push({
-            question: q,
-            success: false,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          console.log(`✗ [${q}] ${error}`);
+            console.log(`✓ [${q}] HTTP ${response.status}`);
+          } catch (error) {
+            results.push({
+              question: q,
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            console.log(`✗ [${q}] ${error}`);
+          }
         }
 
-        // 延迟 1 秒
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      return results;
-    }, questions);
+        return results;
+      },
+      { qs: questions, apiBaseURL: LOCAL_API_BASE_URL }
+    );
 
     // 输出结果
     console.log("\n=== 测试结果汇总 ===");
@@ -112,9 +109,6 @@ test.describe("本地前端 API 连续测试", () => {
     });
 
     console.log(`\n总计: ${successCount} 成功, ${failCount} 失败`);
-
-    // 截图
-    await page.screenshot({ path: "local-jianli-after-test.png" });
 
     // 断言
     expect(successCount).toBeGreaterThan(0);
