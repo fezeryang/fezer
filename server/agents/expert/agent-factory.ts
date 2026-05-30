@@ -4,7 +4,12 @@
 
 import type { AgentId } from "../tools/agent.tool";
 import { setAgentInvoker } from "../tools/agent.tool";
-import { invokeLLM, type Message, type Role } from "../../_core/llm";
+import {
+  invokeLLM,
+  isLLMProviderConfigurationError,
+  type Message,
+  type Role,
+} from "../../_core/llm";
 import {
   buildAgentSystemPrompt,
   CHARACTER_PROMPT_FRAMEWORK_VERSION,
@@ -712,6 +717,10 @@ export async function invokeAgent(
   try {
     return await invokeAgentInternal(agentId, input, options);
   } catch (error) {
+    if (isLLMProviderConfigurationError(error)) {
+      throw error;
+    }
+
     console.error(`Agent ${agentId} invoke error:`, error);
     const errorDetails =
       error instanceof Error
@@ -721,9 +730,7 @@ export async function invokeAgent(
     if (error instanceof Error && error.stack) {
       console.error(`Agent ${agentId} stack trace:`, error.stack);
     }
-    return {
-      answer: `抱歉，${getAgentRoleDescription(agentId)}遇到了技术问题。错误: ${errorDetails}`,
-    };
+    throw error;
   }
 }
 
@@ -741,13 +748,12 @@ export async function invokeMultipleAgents(
         const response = await invokeAgentInternal(id, input, options);
         return [id, response] as const;
       } catch (error) {
+        if (isLLMProviderConfigurationError(error)) {
+          throw error;
+        }
+
         console.error(`Agent ${id} invoke error:`, error);
-        return [
-          id,
-          {
-            answer: `抱歉，${id} agent 遇到了技术问题。`,
-          },
-        ] as const;
+        throw error;
       }
     })
   );

@@ -2,7 +2,6 @@ import { Canvas } from "@react-three/fiber";
 import { CameraController } from "./CameraController";
 import { ModelInstance, Room } from "./Room";
 import { Character, preloadCharacters } from "./Character";
-import { ChatModal } from "./ChatModal";
 import { Html } from "@react-three/drei";
 import {
   CORRIDOR_MODULES,
@@ -10,11 +9,12 @@ import {
   STRUCTURE_MODULES,
 } from "./assets/roomsConfig";
 import { CHARACTERS } from "./assets/characterConfig";
-import { Fragment, Suspense, useEffect, useState } from "react";
+import { Fragment, Suspense, useEffect } from "react";
 
 type SceneProps = {
   activeRoomId: string;
   onRoomSelect: (roomId: string) => void;
+  onChatRequest: (context: { characterId?: string; roomId?: string }) => void;
 };
 
 function LoadingFallback() {
@@ -26,12 +26,11 @@ function LoadingFallback() {
   );
 }
 
-export function Scene({ activeRoomId, onRoomSelect }: SceneProps) {
-  // 聊天弹窗状态
-  const [chatOpen, setChatOpen] = useState(false);
-  const [selectedCharacter, setSelectedCharacter] = useState<string | undefined>();
-  const [currentRoomId, setCurrentRoomId] = useState<string | undefined>();
-
+export function Scene({
+  activeRoomId,
+  onRoomSelect,
+  onChatRequest,
+}: SceneProps) {
   // 预加载角色模型
   useEffect(() => {
     preloadCharacters();
@@ -39,14 +38,7 @@ export function Scene({ activeRoomId, onRoomSelect }: SceneProps) {
 
   // 处理角色点击
   const handleCharacterClick = (characterId: string) => {
-    setSelectedCharacter(characterId);
-    setCurrentRoomId(activeRoomId);
-    setChatOpen(true);
-  };
-
-  // 处理聊天弹窗关闭
-  const handleChatClose = () => {
-    setChatOpen(false);
+    onChatRequest({ characterId, roomId: activeRoomId });
   };
 
   return (
@@ -124,14 +116,6 @@ export function Scene({ activeRoomId, onRoomSelect }: SceneProps) {
         </mesh>
       </Canvas>
 
-      {/* 聊天弹窗 */}
-      <ChatModal
-        isOpen={chatOpen}
-        characterId={selectedCharacter}
-        roomId={currentRoomId}
-        onClose={handleChatClose}
-        initialMessage="你好！"
-      />
     </>
   );
 }

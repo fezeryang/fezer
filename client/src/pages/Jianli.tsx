@@ -1,6 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { MessageCircle } from "lucide-react"
 import { Link } from "wouter"
+import { ChatModal } from "@/components/jianli/ChatModal"
 import { ROOM_IDS, ROOMS } from "@/components/jianli/assets/roomsConfig"
 
 const Scene = lazy(() =>
@@ -14,7 +16,27 @@ export default function Jianli() {
   const [activeRoomId, setActiveRoomId] = useState("central")
   const [isRoomPanelCollapsed, setIsRoomPanelCollapsed] = useState(false)
   const [isGuidePanelCollapsed, setIsGuidePanelCollapsed] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [chatContext, setChatContext] = useState<{
+    characterId?: string
+    roomId?: string
+  }>({ roomId: "central" })
   const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId])
+
+  const handleChatRequest = (context: {
+    characterId?: string
+    roomId?: string
+  }) => {
+    setChatContext({
+      characterId: context.characterId,
+      roomId: context.roomId ?? activeRoomId,
+    })
+    setIsChatOpen(true)
+  }
+
+  const handleCurrentRoomChat = () => {
+    handleChatRequest({ roomId: activeRoomId })
+  }
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-200">
@@ -26,7 +48,11 @@ export default function Jianli() {
           </div>
         }
       >
-        <Scene activeRoomId={activeRoomId} onRoomSelect={setActiveRoomId} />
+        <Scene
+          activeRoomId={activeRoomId}
+          onRoomSelect={setActiveRoomId}
+          onChatRequest={handleChatRequest}
+        />
       </Suspense>
 
       {/* UI 层 */}
@@ -169,8 +195,8 @@ export default function Jianli() {
 
         {/* 底部操作提示 */}
         <footer className="pointer-events-auto border-t border-slate-800/10 bg-slate-100/60 px-6 py-4 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-6 text-sm text-slate-700">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-4 text-sm text-slate-700 sm:gap-6">
               <span className="flex items-center gap-2">
                 <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">拖动</kbd>
                 探索视角
@@ -185,13 +211,31 @@ export default function Jianli() {
               </span>
             </div>
 
-            {/* 快速查看简历按钮 */}
-            <span className="text-xs text-slate-500">
-              已聚焦：{activeRoom.name}
-            </span>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <Button
+                type="button"
+                size="sm"
+                className="gap-2 rounded-xl bg-slate-900 px-3 text-xs text-white hover:bg-slate-800 sm:text-sm"
+                onClick={handleCurrentRoomChat}
+              >
+                <MessageCircle className="h-4 w-4" />
+                与当前房间 Agent 聊天
+              </Button>
+              <span className="text-xs text-slate-500">
+                已聚焦：{activeRoom.name}
+              </span>
+            </div>
           </div>
         </footer>
       </div>
+
+      <ChatModal
+        isOpen={isChatOpen}
+        characterId={chatContext.characterId}
+        roomId={chatContext.roomId}
+        onClose={() => setIsChatOpen(false)}
+        initialMessage="你好！"
+      />
 
       {/* 简历模态框 */}
       {showResumeModal && (

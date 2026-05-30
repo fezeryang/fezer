@@ -20,6 +20,7 @@ import {
   shouldUseE2eAgentMock,
   toE2eFezerType,
 } from "./e2e-mock";
+import { sendAgentRouteError } from "./errors";
 
 /**
  * POST /api/chat
@@ -110,11 +111,6 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
       );
     });
   } catch (error) {
-    // 错误处理
-    console.error("Chat API error:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
+    sendAgentRouteError(res, "Chat", error);
   }
 }

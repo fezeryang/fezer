@@ -1,12 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const invokeLLMMock = vi.fn();
+const isLLMProviderConfigurationErrorMock = vi.fn();
 const getLLMToolsByNamesMock = vi.fn();
 const getToolExecutionRegistryMock = vi.fn();
 const MAX_TOOL_CALL_LOOPS = 3;
 
 vi.mock("../../_core/llm", () => ({
   invokeLLM: invokeLLMMock,
+  isLLMProviderConfigurationError: isLLMProviderConfigurationErrorMock,
 }));
 
 vi.mock("../tools", () => ({
@@ -22,6 +24,11 @@ describe("expert agent tool loop", () => {
 
     getLLMToolsByNamesMock.mockReturnValue([]);
     getToolExecutionRegistryMock.mockReturnValue(new Map());
+    isLLMProviderConfigurationErrorMock.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("returns direct answer when no tool call is returned", async () => {
@@ -43,6 +50,16 @@ describe("expert agent tool loop", () => {
 
     expect(result.answer).toBe("direct answer");
     expect(invokeLLMMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("propagates agent execution failures instead of returning them as chat text", async () => {
+    const providerError = new Error("provider request failed");
+    invokeLLMMock.mockRejectedValueOnce(providerError);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const { invokeAgent } = await import("./agent-factory");
+
+    await expect(invokeAgent("core", "hello")).rejects.toBe(providerError);
   });
 
   it("preloads local website context for ordinary visitor questions without exposing tools to the model", async () => {

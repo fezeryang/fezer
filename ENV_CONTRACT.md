@@ -24,8 +24,8 @@ These variables have defaults or are optional for certain features.
 | `PORT`                             | Server listen port                                                        | `3000`                              | Optional                                                |
 | `NODE_ENV`                         | Runtime environment                                                       | `development`                       | Optional                                                |
 | `BUILT_IN_FORGE_API_URL`           | Built-in Forge API endpoint                                               | Empty string                        | Optional                                                |
-| `BUILT_IN_FORGE_API_KEY`           | Built-in Forge API key                                                    | Empty string                        | Optional                                                |
-| `DEEPSEEK_API_KEY`                 | DeepSeek-compatible API key                                               | Empty string                        | Optional (required when `AI_PRIMARY_PROVIDER=deepseek`) |
+| `BUILT_IN_FORGE_API_KEY`           | Built-in Forge API key                                                    | Empty string                        | Required only when Forge is enabled as an LLM provider or used by Forge-backed features |
+| `DEEPSEEK_API_KEY`                 | DeepSeek-compatible API key                                               | Empty string                        | Required when enabled as primary or fallback provider   |
 | `DEEPSEEK_BASE_URL`                | DeepSeek-compatible base URL                                              | `https://api.deepseek.com/v1`       | Optional                                                |
 | `DEEPSEEK_CHAT_TEMPLATE_THINKING`  | Sends `chat_template_kwargs.thinking` for NVIDIA-hosted DeepSeek when set | Unset                               | Optional                                                |
 | `AI_PRIMARY_PROVIDER`              | Primary LLM provider (`deepseek` or `forge`)                              | `deepseek`                          | Optional                                                |
@@ -120,9 +120,9 @@ VITE_ANALYTICS_WEBSITE_ID=prod-site-id
 
 **WARNING**: GitHub Pages is static hosting. Server-only variables (`DATABASE_URL`, `JWT_SECRET`, etc.) are **NOT** used here.
 
-### Azure Backend (API Server)
+### Backend API Server
 
-Set these as environment variables on the Azure server (via `/var/www/fezer/.env`, PM2 ecosystem file, shell profile, or systemd service):
+Set these as environment variables on the cloud server (via `/var/www/kinetic-portfolio/.env`, PM2 ecosystem file, shell profile, or systemd service):
 
 ```bash
 # Critical secrets
@@ -137,8 +137,6 @@ VITE_APP_ID=prod-app-id
 # Optional backend config
 PORT=3000
 NODE_ENV=production
-BUILT_IN_FORGE_API_URL=https://forge-backend.example.com
-BUILT_IN_FORGE_API_KEY=secret-backend-key
 AI_PRIMARY_PROVIDER=deepseek
 AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
 AI_FALLBACK_PROVIDER=deepseek
@@ -148,6 +146,9 @@ DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
 DEEPSEEK_CHAT_TEMPLATE_THINKING=false
 AI_MAX_TOKENS=2048
 AI_REQUEST_TIMEOUT_MS=60000
+
+# Forge is not required for Jianli agent chat when both providers are DeepSeek.
+# Set BUILT_IN_FORGE_API_URL / BUILT_IN_FORGE_API_KEY only for Forge-backed features.
 
 LANGSMITH_TRACING=true
 LANGSMITH_API_KEY=lsv2_prod_langsmith_key
@@ -198,6 +199,7 @@ The application uses a **two-phase approach** to balance safety and testability:
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------- |
 | Missing critical variable (DATABASE_URL, JWT_SECRET, etc.)                                          | Server exits immediately with error                                | During `bun run dev` or `bun run start` |
 | Invalid format (e.g., JWT_SECRET < 32 chars)                                                        | Server exits with validation error                                 | During `bun run dev` or `bun run start` |
+| Missing API key for enabled LLM provider (`AI_PRIMARY_PROVIDER` / `AI_FALLBACK_PROVIDER`)           | Server exits immediately with error                                | During `bun run dev` or `bun run start` |
 | Optional variable missing                                                                           | Server starts; feature may fail at usage time                      | During `bun run dev` or `bun run start` |
 | Missing `DATABASE_URL` with `LOCAL_CONTENT_IN_MEMORY_FALLBACK=true` and non-production              | Server starts; posts/works use in-memory fallback if DB calls fail | During `bun run dev` or `bun run start` |
 | Missing `OAUTH_SERVER_URL` / `OWNER_OPEN_ID` with `LOCAL_ADMIN_AUTH_BYPASS=true` and non-production | Server starts; local admin auth bypass can be used                 | During `bun run dev` or `bun run start` |

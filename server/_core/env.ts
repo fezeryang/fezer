@@ -43,6 +43,34 @@ interface ValidationResult {
   errors: string[];
 }
 
+type LLMProvider = "deepseek" | "forge";
+
+function normalizeAIProvider(value: string | undefined): LLMProvider {
+  return value?.trim().toLowerCase() === "forge" ? "forge" : "deepseek";
+}
+
+function collectRequiredProviderKeys(): string[] {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    parseBooleanFlag(process.env.E2E_MOCK_AGENT_API)
+  ) {
+    return [];
+  }
+
+  const primaryProvider = normalizeAIProvider(process.env.AI_PRIMARY_PROVIDER);
+  const fallbackProviderValue =
+    process.env.AI_FALLBACK_PROVIDER?.trim().toLowerCase();
+  const fallbackProvider =
+    fallbackProviderValue === "deepseek" || fallbackProviderValue === "forge"
+      ? (fallbackProviderValue as LLMProvider)
+      : primaryProvider;
+  const providers = new Set<LLMProvider>([primaryProvider, fallbackProvider]);
+
+  return Array.from(providers).map(provider =>
+    provider === "deepseek" ? "DEEPSEEK_API_KEY" : "BUILT_IN_FORGE_API_KEY"
+  );
+}
+
 function validateEnv(): ValidationResult {
   const missing: string[] = [];
   const errors: string[] = [];
@@ -75,6 +103,13 @@ function validateEnv(): ValidationResult {
   });
 
   for (const { name, value } of criticalVars) {
+    if (!value || value.trim() === "") {
+      missing.push(name);
+    }
+  }
+
+  for (const name of collectRequiredProviderKeys()) {
+    const value = process.env[name];
     if (!value || value.trim() === "") {
       missing.push(name);
     }

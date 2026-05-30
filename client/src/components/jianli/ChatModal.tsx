@@ -91,6 +91,8 @@ const getRoomBackground = (roomId: string | undefined) => {
 
 type ChatMode = "floating" | "sidebar";
 
+const CHAT_UNAVAILABLE_MESSAGE = "AI 服务暂时不可用，请稍后再试。";
+
 export function ChatModal({
   isOpen,
   characterId,
@@ -220,6 +222,13 @@ export function ChatModal({
       });
     } catch (error) {
       console.error("Chat error:", error);
+      const assistantMessage: ChatMessage = {
+        id: `${Date.now()}-error`,
+        role: "assistant",
+        content: CHAT_UNAVAILABLE_MESSAGE,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
     }
   };
 

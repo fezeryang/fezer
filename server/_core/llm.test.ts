@@ -69,6 +69,25 @@ describe("invokeLLM provider routing", () => {
     expect(payload.thinking).toBeUndefined();
   });
 
+  it("throws a typed provider configuration error when the enabled key is missing", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+    delete process.env.DEEPSEEK_API_KEY;
+    delete process.env.BUILT_IN_FORGE_API_KEY;
+
+    const { invokeLLM } = await import("./llm");
+
+    await expect(
+      invokeLLM({
+        messages: [{ role: "user", content: "hello" }],
+      })
+    ).rejects.toMatchObject({
+      name: "LLMProviderConfigurationError",
+      provider: "deepseek",
+      configVariable: "DEEPSEEK_API_KEY",
+    });
+  });
+
   it("supports NVIDIA-hosted DeepSeek chat template options", async () => {
     process.env.AI_PRIMARY_PROVIDER = "deepseek";
     process.env.AI_PRIMARY_MODEL = "deepseek-ai/deepseek-v4-flash";

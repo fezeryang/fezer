@@ -13,6 +13,7 @@ import {
   traceSpan,
 } from "../_core/observability/langsmith";
 import { sendE2eAgentResponse, shouldUseE2eAgentMock } from "./e2e-mock";
+import { sendAgentRouteError } from "./errors";
 
 /**
  * POST /api/guide
@@ -75,11 +76,6 @@ export async function guideHandler(req: Request, res: Response): Promise<void> {
       );
     });
   } catch (error) {
-    // 错误处理
-    console.error("Guide API error:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
+    sendAgentRouteError(res, "Guide", error);
   }
 }

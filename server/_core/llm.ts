@@ -304,6 +304,16 @@ type ProviderRuntimeConfig = {
   source: "primary" | "fallback";
 };
 
+export class LLMProviderConfigurationError extends Error {
+  constructor(
+    public readonly provider: LLMProvider,
+    public readonly configVariable: "DEEPSEEK_API_KEY" | "BUILT_IN_FORGE_API_KEY"
+  ) {
+    super(`${configVariable} is not configured`);
+    this.name = "LLMProviderConfigurationError";
+  }
+}
+
 class LLMHttpError extends Error {
   constructor(
     public readonly provider: LLMProvider,
@@ -375,9 +385,18 @@ function getFallbackConfig(): ProviderRuntimeConfig {
 function assertProviderApiKey(config: ProviderRuntimeConfig): void {
   if (config.apiKey?.trim()) return;
   if (config.provider === "deepseek") {
-    throw new Error("DEEPSEEK_API_KEY is not configured");
+    throw new LLMProviderConfigurationError("deepseek", "DEEPSEEK_API_KEY");
   }
-  throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
+  throw new LLMProviderConfigurationError("forge", "BUILT_IN_FORGE_API_KEY");
+}
+
+export function isLLMProviderConfigurationError(
+  error: unknown
+): error is LLMProviderConfigurationError {
+  return (
+    error instanceof LLMProviderConfigurationError ||
+    (error instanceof Error && error.name === "LLMProviderConfigurationError")
+  );
 }
 
 function shouldFallback(error: unknown): boolean {
@@ -612,6 +631,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   };
 
   return traceSpan("invokeLLM", async () => {
+    const primaryStartedAt = Date.now();
     try {
       return await callProvider(primaryConfig, false);
     } catch (error) {
@@ -636,7 +656,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
               : "unknown";
 
       console.warn(
-        `[invokeLLM] fallback to ${fallbackConfig.provider}:${fallbackConfig.model}, reason=${fallbackReason}, has_tool_calls=${hasToolCallsInRequest}`
+        `[invokeLLM] fallback to ${fallbackConfig.provider}:${fallbackConfig.model}, reason=${fallbackReason}, primary=${primaryConfig.provider}:${primaryConfig.model}, elapsed_ms=${Date.now() - primaryStartedAt}, has_tool_calls=${hasToolCallsInRequest}`
       );
       return await callProvider(fallbackConfig, true);
     }

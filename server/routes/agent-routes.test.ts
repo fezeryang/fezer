@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Request, Response } from "express";
 
 vi.mock("../agents/orchestrator/graph", () => ({
@@ -8,6 +8,7 @@ vi.mock("../agents/orchestrator/graph", () => ({
 }));
 
 import { orchestratorGraph } from "../agents/orchestrator/graph";
+import { LLMProviderConfigurationError } from "../_core/llm";
 import { chatHandler } from "./chat";
 import { guideHandler } from "./guide";
 import { characterHandler } from "./character";
@@ -42,6 +43,11 @@ function createRes(): MockResponse {
 describe("Agent API routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("POST /api/chat", () => {
@@ -189,8 +195,27 @@ describe("Agent API routes", () => {
       expect(res.statusCode).toBe(500);
       expect(res.body).toMatchObject({
         error: "Internal server error",
-        message: "orchestrator failure",
+        message: "服务器暂时无法完成请求，请稍后再试。",
       });
+    });
+
+    it("returns sanitized 503 for chat provider configuration errors", async () => {
+      vi.mocked(orchestratorGraph.invoke).mockRejectedValueOnce(
+        new LLMProviderConfigurationError("forge", "BUILT_IN_FORGE_API_KEY")
+      );
+
+      const req = createReq({ userInput: "hello" });
+      const res = createRes();
+
+      await chatHandler(req, res as unknown as Response);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.body).toEqual({
+        error: "AI service unavailable",
+        code: "AI_SERVICE_UNAVAILABLE",
+        message: "AI 服务暂时不可用，请稍后再试。",
+      });
+      expect(JSON.stringify(res.body)).not.toContain("BUILT_IN_FORGE_API_KEY");
     });
 
     it("returns 500 for guide route when orchestrator throws", async () => {
@@ -206,7 +231,7 @@ describe("Agent API routes", () => {
       expect(res.statusCode).toBe(500);
       expect(res.body).toMatchObject({
         error: "Internal server error",
-        message: "guide failure",
+        message: "服务器暂时无法完成请求，请稍后再试。",
       });
     });
 
@@ -223,7 +248,7 @@ describe("Agent API routes", () => {
       expect(res.statusCode).toBe(500);
       expect(res.body).toMatchObject({
         error: "Internal server error",
-        message: "character failure",
+        message: "服务器暂时无法完成请求，请稍后再试。",
       });
     });
   });

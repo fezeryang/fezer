@@ -9,8 +9,25 @@ import type {
   AgentResponse,
 } from "@fezer/shared/schemas/agent";
 
-// API 基础 URL，开发环境使用本地，生产环境使用相对路径
+// API 基础 URL，开发环境使用本地，生产环境由 VITE_API_URL 指向后端
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
+function toPublicChatError(errorData: unknown, status: number): Error {
+  if (
+    errorData &&
+    typeof errorData === "object" &&
+    "message" in errorData &&
+    typeof (errorData as { message?: unknown }).message === "string"
+  ) {
+    return new Error((errorData as { message: string }).message);
+  }
+
+  if (status === 503) {
+    return new Error("AI 服务暂时不可用，请稍后再试。");
+  }
+
+  return new Error("消息发送失败，请稍后再试。");
+}
 
 export interface UseAgentChatOptions {
   onError?: (error: Error) => void;
@@ -53,7 +70,7 @@ export function useAgentChat(
           const errorData = await response
             .json()
             .catch(() => ({ error: "Unknown error" }));
-          throw new Error(errorData.error || `API error: ${response.status}`);
+          throw toPublicChatError(errorData, response.status);
         }
 
         const data = await response.json();
@@ -86,7 +103,8 @@ export function useAgentChat(
         });
 
         if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
+          const errorData = await response.json().catch(() => undefined);
+          throw toPublicChatError(errorData, response.status);
         }
 
         const data = await response.json();
@@ -122,7 +140,8 @@ export function useAgentChat(
         });
 
         if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
+          const errorData = await response.json().catch(() => undefined);
+          throw toPublicChatError(errorData, response.status);
         }
 
         const data = await response.json();
