@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
@@ -9,8 +9,6 @@ declare global {
     p5: any;
   }
 }
-
-type ViewMode = "initial" | "hub";
 
 type HubItem = {
   id: string;
@@ -37,7 +35,7 @@ const HUB_ITEMS: HubItem[] = [
     title: "LOGO1",
     description: "Strict reference variant from mylogo/logo1.html.",
     accent: "var(--accent-1)",
-    href: "/about/logo/logo1",
+    href: "/lab/logo/logo1",
   },
   {
     id: "logo2",
@@ -45,28 +43,11 @@ const HUB_ITEMS: HubItem[] = [
     title: "LOGO2",
     description: "Biotic choreography variant with staged formation.",
     accent: "var(--accent-2)",
-    href: "/about/logo/logo2",
-  },
-  {
-    id: "kinetic",
-    meta: "Project 03",
-    title: "KINETIC",
-    description: "Fluid transitions between particles and glyph choreography.",
-    accent: "var(--accent-3)",
-    href: "/about/logo/logo2",
-  },
-  {
-    id: "about",
-    meta: "Project 04",
-    title: "ABOUT",
-    description: "Return to profile context and FEZER system menu.",
-    accent: "#e8eaf6",
-    href: "/about",
+    href: "/lab/logo/logo2",
   },
 ];
 
 export default function AboutLogo() {
-  const [view, setView] = useState<ViewMode>("initial");
   const [, setLocation] = useLocation();
   const clusterRef = useRef<HTMLDivElement>(null);
 
@@ -123,7 +104,7 @@ export default function AboutLogo() {
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
-      if (view !== "hub" || !clusterRef.current) {
+      if (!clusterRef.current) {
         return;
       }
 
@@ -137,21 +118,7 @@ export default function AboutLogo() {
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [view]);
-
-  useEffect(() => {
-    if (view !== "hub" && clusterRef.current) {
-      clusterRef.current.style.transform = "translate(0px, 0px)";
-    }
-  }, [view]);
-
-  const viewClass = useMemo(
-    () => ({
-      initial: `logo-hub-view ${view === "initial" ? "" : "logo-hub-view-hidden"}`,
-      hub: `logo-hub-view ${view === "hub" ? "" : "logo-hub-view-hidden"}`,
-    }),
-    [view]
-  );
+  }, []);
 
   return (
     <div className="logo-hub-root">
@@ -194,31 +161,6 @@ export default function AboutLogo() {
           z-index: 20;
         }
 
-        .logo-hub-view-hidden {
-          opacity: 0;
-          pointer-events: none;
-          transform: scale(0.95) translateY(20px);
-        }
-
-        .logo-hub-trigger {
-          cursor: pointer;
-          padding: 2rem 4rem;
-          border: 1px solid rgba(0, 0, 0, 0.1);
-          background: rgba(255, 255, 255, 0.4);
-          backdrop-filter: blur(10px);
-          border-radius: 100px;
-          font-weight: 800;
-          font-size: 1.5rem;
-          letter-spacing: -0.02em;
-          transition: all 0.4s ease;
-        }
-
-        .logo-hub-trigger:hover {
-          transform: scale(1.05);
-          background: #fff;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
-        }
-
         .logo-hub-container {
           width: 100%;
           height: 100%;
@@ -231,10 +173,9 @@ export default function AboutLogo() {
         .logo-hub-cluster {
           position: relative;
           width: min(800px, calc(100vw - 80px));
-          height: min(800px, calc(100vh - 120px));
+          height: min(420px, calc(100vh - 160px));
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          grid-template-rows: repeat(2, minmax(0, 1fr));
           gap: 40px;
           padding: 50px;
           transition: transform 0.24s ease-out;
@@ -265,16 +206,6 @@ export default function AboutLogo() {
         .logo-hub-item:nth-child(2) {
           animation-delay: -2s;
           border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-        }
-
-        .logo-hub-item:nth-child(3) {
-          animation-delay: -4s;
-          border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
-        }
-
-        .logo-hub-item:nth-child(4) {
-          animation-delay: -6s;
-          border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%;
         }
 
         .logo-hub-item-content {
@@ -316,36 +247,6 @@ export default function AboutLogo() {
           color: rgba(0, 0, 0, 0.6);
         }
 
-        .logo-hub-quick-nav {
-          position: fixed;
-          top: 96px;
-          left: 40px;
-          z-index: 35;
-          display: flex;
-          gap: 8px;
-        }
-
-        .logo-hub-quick-link {
-          display: inline-flex;
-          align-items: center;
-          border-radius: 999px;
-          border: 1px solid rgba(0, 0, 0, 0.2);
-          background: rgba(255, 255, 255, 0.68);
-          padding: 8px 14px;
-          font-family: "JetBrains Mono", monospace;
-          font-size: 0.7rem;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          transition: all 0.22s ease;
-          backdrop-filter: blur(6px);
-        }
-
-        .logo-hub-quick-link:hover {
-          background: #111;
-          color: #fff;
-          border-color: #111;
-        }
-
         @keyframes logo-hub-morphing {
           0% {
             border-radius: 45% 55% 70% 30% / 30% 40% 60% 70%;
@@ -372,10 +273,6 @@ export default function AboutLogo() {
             font-size: 0.68rem;
           }
 
-          .logo-hub-quick-nav {
-            top: 88px;
-            left: 16px;
-          }
         }
       `}</style>
 
@@ -400,22 +297,7 @@ export default function AboutLogo() {
       <GrainOverlay />
       <CustomCursor />
 
-      <section className={viewClass.initial}>
-        <button className="logo-hub-trigger" onClick={() => setView("hub")}>
-          ENTER ECOSYSTEM
-        </button>
-      </section>
-
-      <section className={viewClass.hub}>
-        <div className="logo-hub-quick-nav">
-          <button className="logo-hub-quick-link" onClick={() => setView("initial")}>
-            ← Entrance
-          </button>
-          <Link href="/about" className="logo-hub-quick-link">
-            Back to About
-          </Link>
-        </div>
-
+      <section className="logo-hub-view">
         <div className="logo-hub-container">
           <div ref={clusterRef} className="logo-hub-cluster">
             {HUB_ITEMS.map((item) => (

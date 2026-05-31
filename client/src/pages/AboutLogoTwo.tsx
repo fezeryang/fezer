@@ -280,22 +280,16 @@ export default function AboutLogoTwo() {
 
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/about/logo"
+              href="/lab/logo"
               className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white"
             >
               Logo Hub
             </Link>
             <Link
-              href="/about/logo/logo1"
+              href="/lab/logo/logo1"
               className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white"
             >
               Go Logo 01
-            </Link>
-            <Link
-              href="/about"
-              className="pointer-events-auto rounded-md border border-black/25 bg-white/75 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-black/70 backdrop-blur transition-colors hover:bg-black hover:text-white"
-            >
-              Back to About
             </Link>
           </div>
         </div>

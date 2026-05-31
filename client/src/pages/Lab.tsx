@@ -3,6 +3,8 @@ import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
+import logoPreviewUrl from "@/data/fezer_logo_square_1024.png";
+import { Link } from "wouter";
 
 declare global {
   interface Window {
@@ -13,6 +15,8 @@ declare global {
 export default function Lab() {
   const [scrollT, setScrollT] = useState(0);
   const p5InstanceRef = useRef<any>(null);
+  const tapeLocalT = Math.max(0, Math.min(1, (scrollT - 0.85) / 0.15));
+  const logoFrameLeft = `calc(50% + ${-tapeLocalT * 1000 + 500 + 390 - 175}px)`;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,8 +35,13 @@ export default function Lab() {
 
     const p5 = window.p5 as any;
     let cubeTex: any[] = [];
+    let logoPreviewImage: any = null;
 
     const sketch = (p: any) => {
+      p.preload = function () {
+        logoPreviewImage = p.loadImage(logoPreviewUrl);
+      };
+
       p.setup = function () {
         const canvas = p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
         canvas.parent("p5-container");
@@ -189,6 +198,9 @@ export default function Lab() {
 
         if (i % 2 === 0) {
           drawVideoPlayback(size, p);
+        } else if (i === 1 && logoPreviewImage) {
+          p.texture(logoPreviewImage);
+          p.plane(size);
         } else {
           p.texture(cubeTex[i % 6]);
           p.plane(size);
@@ -247,6 +259,22 @@ export default function Lab() {
       <Navigation />
       <GrainOverlay />
       <CustomCursor />
+
+      {scrollT >= 0.85 ? (
+        <Link
+          href="/lab/logo"
+          aria-label="Open logo lab"
+          className="fixed z-20 block"
+          style={{
+            left: logoFrameLeft,
+            top: "calc(50% - 175px)",
+            width: "350px",
+            height: "350px",
+          }}
+        >
+          <span className="sr-only">Open logo lab</span>
+        </Link>
+      ) : null}
 
       <DampedScrollView>
         <div className="relative w-full" style={{ height: "600vh" }}>

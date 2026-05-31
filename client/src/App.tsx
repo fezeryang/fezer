@@ -62,6 +62,16 @@ function AdminRouteLoading() {
   );
 }
 
+function RedirectTo({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setLocation(to);
+  }, [setLocation, to]);
+
+  return null;
+}
+
 function RoutePageLoading() {
   return (
     <RouteLoadingScreen
@@ -283,9 +293,18 @@ function Router() {
             <Route path={"/blog/:slug"}>
               {params => <BlogPostDetail slug={params.slug} />}
             </Route>
-            <Route path={"/about/logo/logo1"} component={AboutLogoOne} />
-            <Route path={"/about/logo/logo2"} component={AboutLogoTwo} />
-            <Route path={"/about/logo"} component={AboutLogo} />
+            <Route path={"/lab/logo/logo1"} component={AboutLogoOne} />
+            <Route path={"/lab/logo/logo2"} component={AboutLogoTwo} />
+            <Route path={"/lab/logo"} component={AboutLogo} />
+            <Route path={"/about/logo/logo1"}>
+              <RedirectTo to="/lab/logo/logo1" />
+            </Route>
+            <Route path={"/about/logo/logo2"}>
+              <RedirectTo to="/lab/logo/logo2" />
+            </Route>
+            <Route path={"/about/logo"}>
+              <RedirectTo to="/lab/logo" />
+            </Route>
             <Route path={"/about"} component={About} />
             <Route path={"/admin/blog"}>
               <Suspense fallback={<AdminRouteLoading />}>

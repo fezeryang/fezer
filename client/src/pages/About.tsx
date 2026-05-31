@@ -265,7 +265,7 @@ export default function About() {
                     </Link>
 
                     <Link
-                      href="/about/logo"
+                      href="/lab/logo"
                       role="menuitem"
                       onClick={() => setIsBubbleOpen(false)}
                       className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"

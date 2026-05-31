@@ -12,24 +12,17 @@ export default function AboutLogoOne() {
 
       <div className="pointer-events-none fixed left-4 top-4 z-[10001] flex flex-wrap gap-2">
         <Link
-          href="/about/logo"
+          href="/lab/logo"
           className="pointer-events-auto rounded-full border border-black/25 bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white"
         >
-          ← Back to Hub
+          ← Back to Logo
         </Link>
 
         <Link
-          href="/about/logo/logo2"
+          href="/lab/logo/logo2"
           className="pointer-events-auto rounded-full border border-black/25 bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white"
         >
           Go Logo2
-        </Link>
-
-        <Link
-          href="/about"
-          className="pointer-events-auto rounded-full border border-black/25 bg-white/80 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-black/75 shadow-sm backdrop-blur transition-colors hover:bg-black hover:text-white"
-        >
-          About
         </Link>
       </div>
     </div>
