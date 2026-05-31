@@ -164,6 +164,9 @@ importers:
       langsmith:
         specifier: ^0.5.20
         version: 0.5.20(ws@8.20.0)
+      lottie-react:
+        specifier: ^2.4.0
+        version: 2.4.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       lucide-react:
         specifier: ^0.453.0
         version: 0.453.0(react@19.2.1)
@@ -4142,6 +4145,15 @@ packages:
     resolution: {integrity: sha512-kL+RGZCcJi9BvJtzg2kshO192Ddy9hv3ij+cPrVPWSRzgCWCVazoQJxOjAwgK53NomL07HB7GPHW120FimjNhQ==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
+
+  lottie-react@2.4.1:
+    resolution: {integrity: sha512-LQrH7jlkigIIv++wIyrOYFLHSKQpEY4zehPicL9bQsrt1rnoKRYCYgpCUe5maqylNtacy58/sQDZTkwMcTRxZw==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lottie-web@5.13.0:
+    resolution: {integrity: sha512-+gfBXl6sxXMPe8tKQm7qzLnUy5DUPJPKIyRHwtpCpyUEYjHYRJC/5gjUvdkuO2c3JllrPtHXH5UJJK8LRYl5yQ==}
 
   lucide-react@0.523.0:
     resolution: {integrity: sha512-rUjQoy7egZT9XYVXBK1je9ckBnNp7qzRZOhLQx5RcEp2dCGlXo+mv6vf7Am4LimEcFBJIIZzSGfgTqc9QCrPSw==}
@@ -10296,6 +10308,14 @@ snapshots:
   lucide-react@0.453.0(react@19.2.1):
     dependencies:
       react: 19.2.1
+
+  lottie-react@2.4.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+    dependencies:
+      lottie-web: 5.13.0
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
+
+  lottie-web@5.13.0: {}
 
   lucide-react@0.523.0(react@18.3.1):
     dependencies:

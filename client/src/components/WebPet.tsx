@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import Lottie from "lottie-react";
+import catAnimation from "../../../thecat/cat.json";
 import { useWebPet } from "../hooks/useWebPet";
 import { TEST_IDS } from "./web-pet/testIds";
 import {
@@ -386,15 +388,13 @@ export default function WebPet() {
           zIndex: 9999,
         }}
       >
-        <img
-          src="/avatars/kitty-bongopixel.gif"
-          alt=""
-          aria-hidden="true"
+        <Lottie
+          animationData={catAnimation}
+          loop={!prefersReducedMotion}
+          autoplay={!prefersReducedMotion}
           style={{
             width: "100%",
             height: "100%",
-            objectFit: "contain",
-            imageRendering: "pixelated",
           }}
         />
       </div>
