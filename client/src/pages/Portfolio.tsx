@@ -331,13 +331,6 @@ export default function Portfolio() {
                 <strong>作品集</strong>{" "}
                 记录了我在人工智能应用与创意技术探索中的实践。
               </p>
-              <Link
-                href="/jianli"
-                className="inline-flex items-center gap-2 rounded-lg bg-text-main px-6 py-3 text-sand-base transition-opacity hover:opacity-90"
-              >
-                <span>探索 3D 互动简历</span>
-                <span>→</span>
-              </Link>
             </div>
 
             {/* Works Grid */}
