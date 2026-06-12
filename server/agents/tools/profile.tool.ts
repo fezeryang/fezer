@@ -5,7 +5,7 @@
 
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { PROFILE, SKILLS, EXPERIENCE } from "@fezer/shared/resume/profile";
+import { buildProfileKnowledge } from "./profile-knowledge";
 
 /**
  * getProfile Tool
@@ -13,29 +13,31 @@ import { PROFILE, SKILLS, EXPERIENCE } from "@fezer/shared/resume/profile";
  */
 export const getProfileTool = tool(
   async ({ includeDetails = false }) => {
+    const profile = buildProfileKnowledge();
+
     return {
-      name: PROFILE.name,
-      title: PROFILE.title,
-      location: PROFILE.location,
-      bio: PROFILE.bio,
+      name: profile.name,
+      title: profile.title,
+      location: profile.location,
+      bio: profile.bio,
+      identity: profile.identity,
+      education: includeDetails ? profile.education : profile.education.slice(0, 1),
+      privacyRules: profile.privacyRules,
+      answerRules: profile.answerRules,
       skills: includeDetails
-        ? SKILLS
-        : Object.keys(SKILLS).map(category => ({
-            category,
-            items: (SKILLS as any)[category].length,
+        ? profile.skills
+        : profile.skills.map(group => ({
+            category: group.category,
+            items: group.items.length,
           })),
-      experienceCount: EXPERIENCE.length,
+      projectCount: profile.projects.length,
+      experienceCount: profile.experiences.length + profile.practices.length,
       experience: includeDetails
-        ? EXPERIENCE.map(exp => ({
-            company: exp.company,
-            position: exp.position,
+        ? [...profile.experiences, ...profile.practices]
+        : [...profile.experiences, ...profile.practices].map(exp => ({
+            title: exp.title,
             period: exp.period,
-            description: exp.description,
-          }))
-        : EXPERIENCE.map(exp => ({
-            company: exp.company,
-            position: exp.position,
-            period: exp.period,
+            summary: exp.summary,
           })),
     };
   },
@@ -59,10 +61,13 @@ export const getProfileTool = tool(
  */
 export const getContactInfoTool = tool(
   async () => {
+    const profile = buildProfileKnowledge();
+
     return {
-      email: PROFILE.email,
-      name: PROFILE.name,
-      title: PROFILE.title,
+      email: profile.email,
+      name: profile.name,
+      title: profile.title,
+      location: profile.location,
     };
   },
   {

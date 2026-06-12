@@ -5,7 +5,7 @@
 
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { SKILLS, INTERESTS } from "@fezer/shared/resume/profile";
+import { buildProfileKnowledge } from "./profile-knowledge";
 
 /**
  * getSkills Tool
@@ -13,30 +13,28 @@ import { SKILLS, INTERESTS } from "@fezer/shared/resume/profile";
  */
 export const getSkillsTool = tool(
   async ({ category }) => {
+    const profile = buildProfileKnowledge();
+    const skillGroups = profile.skills;
+
     if (category && category !== "all") {
-      const categoryKey = category as keyof typeof SKILLS;
-      if (categoryKey in SKILLS) {
+      const matchedGroup = skillGroups.find(group =>
+        group.category.toLowerCase().includes(category.toLowerCase())
+      );
+
+      if (matchedGroup) {
         return {
-          category,
-          skills: SKILLS[categoryKey],
-        };
-      }
-      // 尝试模糊匹配
-      const matchedKey = Object.keys(SKILLS).find(key =>
-        key.toLowerCase().includes(category.toLowerCase())
-      ) as keyof typeof SKILLS;
-      if (matchedKey) {
-        return {
-          category: matchedKey,
-          skills: SKILLS[matchedKey],
+          category: matchedGroup.category,
+          skills: matchedGroup.items,
         };
       }
     }
 
     // 返回所有技能概览
     return {
-      categories: Object.keys(SKILLS),
-      skills: SKILLS,
+      categories: skillGroups.map(group => group.category),
+      skills: Object.fromEntries(
+        skillGroups.map(group => [group.category, group.items])
+      ),
     };
   },
   {
@@ -59,13 +57,14 @@ export const getSkillsTool = tool(
  */
 export const hasSkillTool = tool(
   async ({ skill }) => {
+    const profile = buildProfileKnowledge();
     const skillLower = skill.toLowerCase();
     const matches: string[] = [];
 
-    for (const [category, items] of Object.entries(SKILLS)) {
-      for (const item of items) {
+    for (const group of profile.skills) {
+      for (const item of group.items) {
         if (item.toLowerCase().includes(skillLower)) {
-          matches.push(`${category}: ${item}`);
+          matches.push(`${group.category}: ${item}`);
         }
       }
     }
@@ -92,19 +91,27 @@ export const hasSkillTool = tool(
  */
 export const getInterestsTool = tool(
   async ({ category }) => {
+    const profile = buildProfileKnowledge();
+    const interestGroups = profile.interests;
+
     if (category && category !== "all") {
-      const categoryKey = category as keyof typeof INTERESTS;
-      if (categoryKey in INTERESTS) {
+      const matchedGroup = interestGroups.find(group =>
+        group.category.toLowerCase().includes(category.toLowerCase())
+      );
+
+      if (matchedGroup) {
         return {
-          category,
-          interests: INTERESTS[categoryKey],
+          category: matchedGroup.category,
+          interests: matchedGroup.items,
         };
       }
     }
 
     return {
-      categories: Object.keys(INTERESTS),
-      interests: INTERESTS,
+      categories: interestGroups.map(group => group.category),
+      interests: Object.fromEntries(
+        interestGroups.map(group => [group.category, group.items])
+      ),
     };
   },
   {

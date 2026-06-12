@@ -63,6 +63,9 @@ describe("expert agent tool loop", () => {
   });
 
   it("preloads local website context for ordinary visitor questions without exposing tools to the model", async () => {
+    const getProfileFullInvoke = vi.fn(async () => ({
+      profile: { name: "Fezer", body: "structured profile" },
+    }));
     const getProfileInvoke = vi.fn(async () => ({ name: "Fezer" }));
     const getSkillsInvoke = vi.fn(async () => ({
       skills: { ai: ["Agent Workflow"] },
@@ -73,6 +76,13 @@ describe("expert agent tool loop", () => {
 
     getToolExecutionRegistryMock.mockReturnValue(
       new Map([
+        [
+          "get_profile_full",
+          {
+            name: "get_profile_full",
+            invoke: getProfileFullInvoke,
+          },
+        ],
         [
           "get_profile",
           {
@@ -114,6 +124,7 @@ describe("expert agent tool loop", () => {
     const result = await invokeAgent("core", "你好，请介绍一下你是谁");
 
     expect(result.answer).toBe("profile answer");
+    expect(getProfileFullInvoke).toHaveBeenCalledWith({ locale: "zh-CN" });
     expect(getProfileInvoke).toHaveBeenCalledWith({ includeDetails: false });
     expect(getSkillsInvoke).toHaveBeenCalledWith({ category: "all" });
     expect(getProjectsInvoke).toHaveBeenCalledWith({
@@ -129,7 +140,53 @@ describe("expert agent tool loop", () => {
       firstCall.messages.some(
         (msg: any) =>
           msg.role === "system" &&
-          String(msg.content).includes("服务器已预先检索到的站内资料")
+          String(msg.content).includes("服务器已预先检索到的真实个人资料")
+      )
+    ).toBe(true);
+  });
+
+  it("always preloads the structured public profile before answering", async () => {
+    const getProfileFullInvoke = vi.fn(async () => ({
+      profile: { name: "Fezer", body: "mandatory profile context" },
+    }));
+
+    getToolExecutionRegistryMock.mockReturnValue(
+      new Map([
+        [
+          "get_profile_full",
+          {
+            name: "get_profile_full",
+            invoke: getProfileFullInvoke,
+          },
+        ],
+      ])
+    );
+
+    invokeLLMMock.mockResolvedValueOnce({
+      id: "1",
+      created: 1,
+      model: "deepseek-chat",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "answer with context" },
+          finish_reason: "stop",
+        },
+      ],
+    });
+
+    const { invokeAgent } = await import("./agent-factory");
+    const result = await invokeAgent("visual", "你适合什么方向？");
+
+    expect(result.answer).toBe("answer with context");
+    expect(getProfileFullInvoke).toHaveBeenCalledWith({ locale: "zh-CN" });
+
+    const firstCall = invokeLLMMock.mock.calls[0][0];
+    expect(
+      firstCall.messages.some(
+        (msg: any) =>
+          msg.role === "system" &&
+          String(msg.content).includes("mandatory profile context")
       )
     ).toBe(true);
   });

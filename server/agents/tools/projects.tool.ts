@@ -5,7 +5,7 @@
 
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { EXPERIENCE } from "@fezer/shared/resume/profile";
+import { buildProfileKnowledge, matchesCategory } from "./profile-knowledge";
 
 /**
  * getProjects Tool
@@ -13,32 +13,31 @@ import { EXPERIENCE } from "@fezer/shared/resume/profile";
  */
 export const getProjectsTool = tool(
   async ({ category, limit = 5 }) => {
-    let results = EXPERIENCE;
+    const profile = buildProfileKnowledge();
+    let results = profile.projects;
 
-    // 按类别过滤
     if (category && category !== "all") {
-      const categoryLower = category.toLowerCase();
-      results = results.filter(exp => {
-        const content = `${exp.company} ${exp.position} ${exp.description}`.toLowerCase();
-        return (
-          content.includes(categoryLower) ||
-          exp.position.toLowerCase().includes(categoryLower)
-        );
-      });
+      results = results.filter(project => matchesCategory(project.categories, category));
     }
 
-    // 限制数量
     const limited = results.slice(0, limit);
 
     return {
       category: category || "all",
       count: limited.length,
       projects: limited.map(exp => ({
-        company: exp.company,
-        position: exp.position,
+        name: exp.name,
         period: exp.period,
-        description: exp.description,
-        highlights: exp.highlights || [],
+        summary: exp.summary,
+        techStack: exp.techStack,
+        categories: exp.categories,
+        highlights: exp.highlights,
+      })),
+      experiences: [...profile.experiences, ...profile.practices].map(exp => ({
+        title: exp.title,
+        period: exp.period,
+        summary: exp.summary,
+        categories: exp.categories,
       })),
     };
   },
@@ -67,19 +66,21 @@ export const getProjectsTool = tool(
  */
 export const getProjectByIndexTool = tool(
   async ({ index }) => {
+    const profile = buildProfileKnowledge();
     const idx = parseInt(String(index));
-    if (idx < 0 || idx >= EXPERIENCE.length) {
-      throw new Error(`Invalid index: ${index}. Valid range is 0-${EXPERIENCE.length - 1}`);
+    if (idx < 0 || idx >= profile.projects.length) {
+      throw new Error(`Invalid index: ${index}. Valid range is 0-${profile.projects.length - 1}`);
     }
 
-    const exp = EXPERIENCE[idx];
+    const project = profile.projects[idx];
     return {
       index: idx,
-      company: exp.company,
-      position: exp.position,
-      period: exp.period,
-      description: exp.description,
-      highlights: exp.highlights || [],
+      name: project.name,
+      period: project.period,
+      summary: project.summary,
+      techStack: project.techStack,
+      categories: project.categories,
+      highlights: project.highlights,
     };
   },
   {

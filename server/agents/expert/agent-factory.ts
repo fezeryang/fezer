@@ -64,12 +64,10 @@ const AGENT_TOOL_CONFIGS: Record<
       "get_profile",
       "get_skills",
       "get_projects",
-      "search_knowledge",
       "search_content",
-      "get_project_details",
-      "get_faq",
       "get_blog_posts",
       "get_works_detail",
+      "get_profile_full",
       "ask_other_agent",
       "ask_multiple_agents",
     ],
@@ -82,6 +80,7 @@ const AGENT_TOOL_CONFIGS: Record<
       "get_projects",
       "search_content",
       "get_works_detail",
+      "get_profile_full",
       "ask_other_agent",
     ],
     canConsult: ["ai", "writer"],
@@ -91,10 +90,9 @@ const AGENT_TOOL_CONFIGS: Record<
       "get_profile",
       "get_skills",
       "get_projects",
-      "search_knowledge",
       "search_content",
-      "get_project_details",
       "get_works_detail",
+      "get_profile_full",
       "ask_other_agent",
     ],
     canConsult: ["builder", "reader"],
@@ -106,6 +104,7 @@ const AGENT_TOOL_CONFIGS: Record<
       "get_interests",
       "search_content",
       "get_blog_posts",
+      "get_profile_full",
       "ask_other_agent",
     ],
     canConsult: ["reader", "visual"],
@@ -114,10 +113,9 @@ const AGENT_TOOL_CONFIGS: Record<
     tools: [
       "get_profile",
       "get_interests",
-      "search_knowledge",
       "search_content",
-      "get_faq",
       "get_blog_posts",
+      "get_profile_full",
       "ask_other_agent",
     ],
     canConsult: ["writer", "wanderer"],
@@ -129,6 +127,7 @@ const AGENT_TOOL_CONFIGS: Record<
       "get_interests",
       "search_content",
       "get_works_detail",
+      "get_profile_full",
       "ask_other_agent",
     ],
     canConsult: ["writer", "wanderer"],
@@ -139,6 +138,7 @@ const AGENT_TOOL_CONFIGS: Record<
       "get_interests",
       "search_content",
       "get_blog_posts",
+      "get_profile_full",
       "ask_other_agent",
     ],
     canConsult: ["reader", "visual"],
@@ -147,8 +147,9 @@ const AGENT_TOOL_CONFIGS: Record<
 
 const MAX_DYNAMIC_TOOL_COUNT = 4;
 const MAX_TOOL_CALL_LOOPS = 3;
-const TOOL_CONTEXT_CHAR_LIMIT = 6000;
+const TOOL_CONTEXT_CHAR_LIMIT = 11000;
 const TOOL_RESULT_CHAR_LIMIT = 1200;
+const PROFILE_TOOL_RESULT_CHAR_LIMIT = 9000;
 
 type DirectToolRequest = {
   name: string;
@@ -225,6 +226,8 @@ function buildDirectToolRequests(
     requests.push({ name, input: toolInput });
   };
 
+  add("get_profile_full", { locale: "zh-CN" });
+
   const wantsProfile = containsAny(text, [
     "你是谁",
     "是谁",
@@ -297,7 +300,6 @@ function buildDirectToolRequests(
   if (wantsProjects) {
     const category = inferProjectCategory(text);
     add("get_projects", { category, limit: 5 });
-    add("get_project_details", {});
     add("get_works_detail", { limit: 5 });
     add("search_content", { query: input, topK: 3, category: "work" });
   }
@@ -308,8 +310,7 @@ function buildDirectToolRequests(
   }
 
   if (wantsGuide) {
-    add("get_faq", { category: "guide" });
-    add("search_knowledge", { query: input, topK: 3, category: "website" });
+    add("search_content", { query: input, topK: 3, category: "profile" });
   }
 
   if (wantsContact) {
@@ -431,9 +432,12 @@ async function buildDirectToolContext(
       }
     );
 
-    blocks.push(
-      `[${request.name}] ${truncateText(content, TOOL_RESULT_CHAR_LIMIT)}`
-    );
+    const resultLimit =
+      request.name === "get_profile_full"
+        ? PROFILE_TOOL_RESULT_CHAR_LIMIT
+        : TOOL_RESULT_CHAR_LIMIT;
+
+    blocks.push(`[${request.name}] ${truncateText(content, resultLimit)}`);
   }
 
   if (blocks.length === 0) {
@@ -442,7 +446,7 @@ async function buildDirectToolContext(
 
   return truncateText(
     [
-      "服务器已预先检索到的站内资料如下。回答时优先依据这些资料；资料不足时明确说明不确定，不得编造。",
+      "服务器已预先检索到的真实个人资料如下。回答时必须优先依据这些资料；资料不足时明确说明不确定，不得编造。",
       ...blocks,
     ].join("\n\n"),
     TOOL_CONTEXT_CHAR_LIMIT
