@@ -81,12 +81,11 @@ LOCAL_CONTENT_IN_MEMORY_FALLBACK=false
 
 # LLM routing
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_PRIMARY_MODEL=deepseek-chat
 AI_FALLBACK_PROVIDER=deepseek
-AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
-DEEPSEEK_API_KEY=your-nvidia-api-key
-DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
-DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_FALLBACK_MODEL=deepseek-chat
+DEEPSEEK_API_KEY=your-deepseek-api-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 AI_MAX_TOKENS=2048
 AI_REQUEST_TIMEOUT_MS=60000
 
@@ -138,12 +137,11 @@ VITE_APP_ID=prod-app-id
 PORT=3000
 NODE_ENV=production
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_PRIMARY_MODEL=deepseek-chat
 AI_FALLBACK_PROVIDER=deepseek
-AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
-DEEPSEEK_API_KEY=prod-nvidia-key
-DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
-DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+AI_FALLBACK_MODEL=deepseek-chat
+DEEPSEEK_API_KEY=prod-deepseek-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 AI_MAX_TOKENS=2048
 AI_REQUEST_TIMEOUT_MS=60000
 

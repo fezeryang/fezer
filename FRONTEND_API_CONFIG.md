@@ -17,11 +17,7 @@ VITE_API_URL=http://localhost:3000
 
 ```bash
 # 生产环境 API 地址
-# 替换为你的 Azure VM 公网 IP 或域名
-VITE_API_URL=http://你的VM公网IP
-
-# 如果配置了域名：
-# VITE_API_URL=https://api.yourdomain.com
+VITE_API_URL=https://api.fezern8n.com
 ```
 
 ---

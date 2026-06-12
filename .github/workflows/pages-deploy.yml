@@ -43,6 +43,7 @@ jobs:
         run: pnpm exec vite build
         env:
           VITE_BASE_PATH: ${{ github.event.repository.name != github.repository_owner && format('/{0}/', github.event.repository.name) || '/' }}
+          VITE_API_URL: https://api.fezern8n.com
 
       # SPA Fallback: GitHub Pages serves 404.html for missing routes.
       # The custom 404.html in client/public/ handles the redirect to index.html.

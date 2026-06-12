@@ -280,12 +280,11 @@ OWNER_OPEN_ID=dev_owner_123
 
 # ========== AI 配置 ==========
 AI_PRIMARY_PROVIDER=deepseek
-AI_PRIMARY_MODEL=deepseek-ai/deepseek-v4-flash
+AI_PRIMARY_MODEL=deepseek-chat
 AI_FALLBACK_PROVIDER=deepseek
-AI_FALLBACK_MODEL=deepseek-ai/deepseek-v4-flash
+AI_FALLBACK_MODEL=deepseek-chat
 DEEPSEEK_API_KEY=你的NVIDIA密钥
-DEEPSEEK_BASE_URL=https://integrate.api.nvidia.com/v1
-DEEPSEEK_CHAT_TEMPLATE_THINKING=false
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 AI_MAX_TOKENS=2048
 AI_REQUEST_TIMEOUT_MS=60000
 
@@ -514,7 +513,7 @@ sudo mysql -u fezer_user -p kinetic_portfolio
 在本地项目创建 `.env.production`：
 
 ```bash
-VITE_API_URL=http://你的VM公网IP
+VITE_API_URL=https://api.fezern8n.com
 ```
 
 **方式二：临时测试**

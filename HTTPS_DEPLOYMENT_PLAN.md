@@ -39,7 +39,7 @@
 
 4. **更新前端配置**
    ```bash
-   VITE_API_URL=https://api.yourdomain.com
+   VITE_API_URL=https://api.fezern8n.com
    ```
 
 ---
@@ -68,7 +68,7 @@
 
 5. **更新前端配置**
    ```bash
-   VITE_API_URL=https://api.yourdomain.com
+   VITE_API_URL=https://api.fezern8n.com
    ```
 
 ---
@@ -126,7 +126,7 @@ curl https://api.yourdomain.com/api/chat \
 
 2. 或在 `.env.production` 中：
    ```bash
-   VITE_API_URL=https://api.yourdomain.com
+   VITE_API_URL=https://api.fezern8n.com
    ```
 
 3. 提交并推送到 GitHub
