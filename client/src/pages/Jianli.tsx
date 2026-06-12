@@ -4,6 +4,29 @@ import { MessageCircle } from "lucide-react"
 import { Link } from "wouter"
 import { ChatModal } from "@/components/jianli/ChatModal"
 import { ROOM_IDS, ROOMS } from "@/components/jianli/assets/roomsConfig"
+import {
+  PROFILE,
+  SKILLS,
+  EXPERIENCE,
+  EDUCATION,
+  INTERESTS,
+} from "@fezer/shared/resume"
+
+const SKILL_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
+  { label: "AI 与应用", items: SKILLS.ai },
+  { label: "AI 协同开发", items: SKILLS.tools },
+  { label: "数据分析", items: SKILLS.data },
+  { label: "产品与执行", items: SKILLS.product },
+]
+
+const INTEREST_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> =
+  [
+    { label: "AI", items: INTERESTS.ai },
+    { label: "阅读", items: INTERESTS.reading },
+    { label: "写作", items: INTERESTS.writing },
+    { label: "设计", items: INTERESTS.design },
+    { label: "旅行", items: INTERESTS.travel },
+  ]
 
 const Scene = lazy(() =>
   import("@/components/jianli/Scene").then((module) => ({
@@ -262,8 +285,11 @@ export default function Jianli() {
                 <h3 className="mb-2 text-lg font-semibold text-slate-800">
                   简介
                 </h3>
-                <p className="text-slate-700">
-                  全栈开发者 | 3D 互动爱好者 | AI 探索者
+                <p className="whitespace-pre-line text-slate-700">
+                  {PROFILE.bio}
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  {PROFILE.location} · {PROFILE.title}
                 </p>
               </section>
 
@@ -271,11 +297,57 @@ export default function Jianli() {
                 <h3 className="mb-2 text-lg font-semibold text-slate-800">
                   核心能力
                 </h3>
-                <ul className="list-disc list-inside space-y-1 text-slate-700">
-                  <li>前端：React, Next.js, TypeScript</li>
-                  <li>后端：Node.js, Express, PostgreSQL</li>
-                  <li>3D：Three.js, React Three Fiber</li>
-                  <li>AI：LangChain, LangGraph</li>
+                <ul className="space-y-2 text-slate-700">
+                  {SKILL_GROUPS_FOR_SUMMARY.map(group => (
+                    <li key={group.label}>
+                      <span className="font-medium text-slate-800">
+                        {group.label}：
+                      </span>
+                      {group.items.join("、")}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="mb-2 text-lg font-semibold text-slate-800">
+                  实习经历
+                </h3>
+                <ul className="space-y-3 text-slate-700">
+                  {EXPERIENCE.map(item => (
+                    <li key={`${item.company}-${item.period}`}>
+                      <p className="font-medium text-slate-800">
+                        {item.position} · {item.company}
+                        <span className="ml-2 text-sm text-slate-500">
+                          {item.period}
+                        </span>
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {item.description}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="mb-2 text-lg font-semibold text-slate-800">
+                  教育背景
+                </h3>
+                <ul className="space-y-2 text-slate-700">
+                  {EDUCATION.map(item => (
+                    <li key={item.school}>
+                      <p className="font-medium text-slate-800">
+                        {item.school} · {item.degree}
+                        <span className="ml-2 text-sm text-slate-500">
+                          {item.period}
+                        </span>
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {item.description}
+                      </p>
+                    </li>
+                  ))}
                 </ul>
               </section>
 
@@ -283,10 +355,16 @@ export default function Jianli() {
                 <h3 className="mb-2 text-lg font-semibold text-slate-800">
                   兴趣方向
                 </h3>
-                <p className="text-slate-700">
-                  AI 应用与自动化 | 写作与表达 | 阅读与思考 |
-                  视觉设计 | 爬山与旅行
-                </p>
+                <ul className="space-y-1 text-slate-700">
+                  {INTEREST_GROUPS_FOR_SUMMARY.map(group => (
+                    <li key={group.label}>
+                      <span className="font-medium text-slate-800">
+                        {group.label}：
+                      </span>
+                      {group.items.join("、")}
+                    </li>
+                  ))}
+                </ul>
               </section>
 
               <section className="border-t border-slate-300/70 pt-4">
