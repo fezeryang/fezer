@@ -36,6 +36,7 @@ export default function Lab() {
     const p5 = window.p5 as any;
     let cubeTex: any[] = [];
     let logoPreviewImage: any = null;
+    let hasWebGL = false;
 
     const sketch = (p: any) => {
       p.preload = function () {
@@ -43,8 +44,21 @@ export default function Lab() {
       };
 
       p.setup = function () {
-        const canvas = p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
+        let canvas;
+        try {
+          canvas = p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
+        } catch (error) {
+          console.warn("Lab WebGL unavailable; skipping p5 canvas.", error);
+          p.noLoop();
+          return;
+        }
         canvas.parent("p5-container");
+        hasWebGL = Boolean(p._renderer?.isP3D);
+        if (!hasWebGL) {
+          console.warn("Lab WebGL unavailable; skipping p5 canvas.");
+          p.noLoop();
+          return;
+        }
 
         for (let i = 0; i < 6; i++) {
           let pg = p.createGraphics(400, 400);
@@ -56,6 +70,11 @@ export default function Lab() {
       };
 
       p.draw = function () {
+        if (!hasWebGL) {
+          p.clear();
+          return;
+        }
+
         const scrollY = window.scrollY;
         const scrollHeight = document.body.scrollHeight - window.innerHeight;
         const scrollT = scrollHeight > 0 ? scrollY / scrollHeight : 0;

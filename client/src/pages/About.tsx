@@ -33,6 +33,7 @@ export default function About() {
 
     const p5 = window.p5 as any;
     let prisms: any[] = [];
+    let hasWebGL = false;
 
     class Prism {
       pos: any;
@@ -82,12 +83,25 @@ export default function About() {
 
     const sketch = (p: any) => {
       p.setup = function () {
-        const canvas = p.createCanvas(
-          window.innerWidth,
-          window.innerHeight,
-          p.WEBGL
-        );
+        let canvas;
+        try {
+          canvas = p.createCanvas(
+            window.innerWidth,
+            window.innerHeight,
+            p.WEBGL
+          );
+        } catch (error) {
+          console.warn("About WebGL unavailable; skipping p5 canvas.", error);
+          p.noLoop();
+          return;
+        }
         canvas.parent("p5-container");
+        hasWebGL = Boolean(p._renderer?.isP3D);
+        if (!hasWebGL) {
+          console.warn("About WebGL unavailable; skipping p5 canvas.");
+          p.noLoop();
+          return;
+        }
 
         for (let i = 0; i < 8; i++) {
           prisms.push(new Prism(p));
@@ -95,6 +109,11 @@ export default function About() {
       };
 
       p.draw = function () {
+        if (!hasWebGL) {
+          p.clear();
+          return;
+        }
+
         p.background(252, 252, 252);
 
         p.ambientLight(200);

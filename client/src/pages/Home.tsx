@@ -164,108 +164,128 @@ function TimePrismSection() {
       }
 
       const sketch = (p: any) => {
-      const getCanvasSize = () => {
-        const width = Math.min(500, Math.max(280, window.innerWidth * 0.44));
-        return Math.floor(width);
-      };
+        let hasWebGL = false;
 
-      const drawTimeRing = (
-        val: number,
-        maxVal: number,
-        radius: number,
-        color: [number, number, number, number]
-      ) => {
-        const segments = 24;
-        const step = p.TWO_PI / segments;
-        const activeAngle = p.map(val, 0, maxVal, 0, p.TWO_PI);
+        const getCanvasSize = () => {
+          const width = Math.min(500, Math.max(280, window.innerWidth * 0.44));
+          return Math.floor(width);
+        };
 
-        for (let i = 0; i < segments; i++) {
-          const angle = i * step;
-          const x = p.cos(angle) * radius;
-          const y = p.sin(angle) * radius;
+        const drawTimeRing = (
+          val: number,
+          maxVal: number,
+          radius: number,
+          color: [number, number, number, number]
+        ) => {
+          const segments = 24;
+          const step = p.TWO_PI / segments;
+          const activeAngle = p.map(val, 0, maxVal, 0, p.TWO_PI);
+
+          for (let i = 0; i < segments; i++) {
+            const angle = i * step;
+            const x = p.cos(angle) * radius;
+            const y = p.sin(angle) * radius;
+
+            p.push();
+            p.translate(x, y, 0);
+            p.rotateZ(angle);
+
+            const isActive = angle < activeAngle;
+            if (isActive) {
+              p.fill(color[0], color[1], color[2], 180);
+              p.stroke(color[0], color[1], color[2], 255);
+              p.strokeWeight(2);
+            } else {
+              p.noFill();
+              p.stroke(0, 15);
+              p.strokeWeight(1);
+            }
+
+            p.box(10, 30, 10);
+
+            if (isActive && i % 4 === 0) {
+              p.strokeWeight(0.5);
+              p.line(0, 0, 0, -x, -y, -50);
+            }
+
+            p.pop();
+          }
+        };
+
+        p.setup = function () {
+          p.pixelDensity(1);
+          p.disableFriendlyErrors = true;
+          const size = getCanvasSize();
+          let canvas;
+          try {
+            canvas = p.createCanvas(size, size, p.WEBGL);
+          } catch (error) {
+            console.warn("Time prism WebGL unavailable; skipping p5 canvas.", error);
+            p.noLoop();
+            return;
+          }
+          canvas.parent(canvasContainerRef.current);
+          canvas.elt.style.pointerEvents = "none";
+          hasWebGL = Boolean(p._renderer?.isP3D);
+          if (!hasWebGL) {
+            console.warn("Time prism WebGL unavailable; skipping p5 canvas.");
+            p.noLoop();
+            return;
+          }
+          p.smooth();
+          if (!visibleRef.current) {
+            p.noLoop();
+          }
+        };
+
+        p.draw = function () {
+          if (!hasWebGL) {
+            p.clear();
+            return;
+          }
+
+          if (!visibleRef.current) {
+            p.clear();
+            return;
+          }
+
+          const now = new Date();
+          const h = now.getHours();
+          const m = now.getMinutes();
+          const s = now.getSeconds();
+          const ms = now.getMilliseconds();
+
+          p.clear();
+          p.ambientLight(200);
+          p.pointLight(255, 255, 255, 200, -200, 300);
+
+          p.rotateX(p.frameCount * 0.005);
+          p.rotateY(p.frameCount * 0.008);
+
+          drawTimeRing(s + ms / 1000, 60, 180, [0, 200, 255, 100]);
 
           p.push();
-          p.translate(x, y, 0);
-          p.rotateZ(angle);
-
-          const isActive = angle < activeAngle;
-          if (isActive) {
-            p.fill(color[0], color[1], color[2], 180);
-            p.stroke(color[0], color[1], color[2], 255);
-            p.strokeWeight(2);
-          } else {
-            p.noFill();
-            p.stroke(0, 15);
-            p.strokeWeight(1);
-          }
-
-          p.box(10, 30, 10);
-
-          if (isActive && i % 4 === 0) {
-            p.strokeWeight(0.5);
-            p.line(0, 0, 0, -x, -y, -50);
-          }
-
+          p.rotateZ(p.PI / 3);
+          drawTimeRing(m + s / 60, 60, 140, [255, 0, 150, 100]);
           p.pop();
-        }
-      };
 
-      p.setup = function () {
-        p.pixelDensity(1);
-        p.disableFriendlyErrors = true;
-        const size = getCanvasSize();
-        const canvas = p.createCanvas(size, size, p.WEBGL);
-        canvas.parent(canvasContainerRef.current);
-        canvas.elt.style.pointerEvents = "none";
-        p.smooth();
-        if (!visibleRef.current) {
-          p.noLoop();
-        }
-      };
+          p.push();
+          p.rotateX(p.PI / 4);
+          drawTimeRing(h + m / 60, 24, 100, [255, 200, 0, 100]);
+          p.pop();
 
-      p.draw = function () {
-        if (!visibleRef.current) {
-          p.clear();
-          return;
-        }
+          p.push();
+          p.noFill();
+          p.stroke(0, 40);
+          p.strokeWeight(0.5);
+          p.sphere(40 + p.sin(p.frameCount * 0.05) * 5);
+          p.pop();
+        };
 
-        const now = new Date();
-        const h = now.getHours();
-        const m = now.getMinutes();
-        const s = now.getSeconds();
-        const ms = now.getMilliseconds();
-
-        p.clear();
-        p.ambientLight(200);
-        p.pointLight(255, 255, 255, 200, -200, 300);
-
-        p.rotateX(p.frameCount * 0.005);
-        p.rotateY(p.frameCount * 0.008);
-
-        drawTimeRing(s + ms / 1000, 60, 180, [0, 200, 255, 100]);
-
-        p.push();
-        p.rotateZ(p.PI / 3);
-        drawTimeRing(m + s / 60, 60, 140, [255, 0, 150, 100]);
-        p.pop();
-
-        p.push();
-        p.rotateX(p.PI / 4);
-        drawTimeRing(h + m / 60, 24, 100, [255, 200, 0, 100]);
-        p.pop();
-
-        p.push();
-        p.noFill();
-        p.stroke(0, 40);
-        p.strokeWeight(0.5);
-        p.sphere(40 + p.sin(p.frameCount * 0.05) * 5);
-        p.pop();
-      };
-
-      p.windowResized = function () {
-        const size = getCanvasSize();
-        p.resizeCanvas(size, size);
-      };
+        p.windowResized = function () {
+          const size = getCanvasSize();
+          p.resizeCanvas(size, size);
+        };
       };
 
       instance = new p5(sketch);

@@ -233,13 +233,27 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
     let rotY = Math.PI / 4;
     const targetRotX = -Math.PI / 6;
     const targetRotY = Math.PI / 4;
+    let hasWebGL = false;
 
     const sketch = (p: any) => {
       p.setup = function () {
         p.pixelDensity(1);
-        const canvas = p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
+        let canvas;
+        try {
+          canvas = p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
+        } catch (error) {
+          console.warn("Blog cover WebGL unavailable; skipping p5 canvas.", error);
+          p.noLoop();
+          return;
+        }
         canvas.parent("p5-cover-canvas");
         canvas.elt.style.pointerEvents = "none";
+        hasWebGL = Boolean(p._renderer?.isP3D);
+        if (!hasWebGL) {
+          console.warn("Blog cover WebGL unavailable; skipping p5 canvas.");
+          p.noLoop();
+          return;
+        }
 
         for (let i = 0; i < cols; i++) {
           monoliths[i] = [];
@@ -253,6 +267,11 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
       };
 
       p.draw = function () {
+        if (!hasWebGL) {
+          p.clear();
+          return;
+        }
+
         const targetScrollY = window.scrollY;
         smoothedScrollY = p.lerp(smoothedScrollY, targetScrollY, 0.08);
         const progress = p.constrain(smoothedScrollY / p.height, 0, 1);
