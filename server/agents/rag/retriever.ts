@@ -7,6 +7,7 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { WEBSITE_CONTENT, PROJECT_DETAILS, FAQ } from "@fezer/shared/knowledge";
+import { getContentIndex } from "../../content";
 
 /**
  * 知识条目
@@ -23,7 +24,24 @@ interface KnowledgeItem {
 /**
  * 构建知识库索引
  */
+const profileIndex = getContentIndex().profile;
+
 const knowledgeIndex: KnowledgeItem[] = [
+  ...(profileIndex
+    ? [
+        {
+          id: "profile",
+          title: profileIndex.name,
+          text: `${profileIndex.bio}\n${profileIndex.skills.join(", ")}\n${Object.entries(
+            profileIndex.contact
+          )
+            .map(([key, value]) => `${key}: ${value}`)
+            .join("\n")}`,
+          source: "profile",
+          category: "profile",
+        },
+      ]
+    : []),
   ...WEBSITE_CONTENT.map(item => ({
     id: item.id,
     title: item.title,
@@ -121,15 +139,15 @@ export const knowledgeSearchTool = tool(
     description: `搜索 Fezer 的知识库，包括网站内容、项目详情、FAQ 等。
 用于回答关于 Fezer 的具体问题，如项目经验、技能详情、网站介绍等。
 
-支持按类别过滤：website、project、faq`,
+支持按类别过滤：website、project、profile、faq`,
     schema: z.object({
       query: z.string().describe("搜索查询，支持关键词和自然语言"),
       topK: z.number().optional().default(3).describe("返回结果数量，默认 3"),
       category: z
-        .enum(["website", "project", "faq"])
+        .enum(["website", "project", "profile", "faq"])
         .optional()
         .describe(
-          "按类别过滤：website（网站内容）、project（项目详情）、faq（常见问题）"
+          "按类别过滤：website（网站内容）、project（项目详情）、profile（个人资料）、faq（常见问题）"
         ),
     }),
   }

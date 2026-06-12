@@ -31,13 +31,13 @@ export const WEBSITE_CONTENT = [
     source: "about",
     text: `关于 Fezer
 
-Fezer 是一位全栈开发者和 AI 探索者。
+Fezer 是一名 AI 产品与 Agent 工作流实践者，中央财经大学保险专业硕士在读。
 
-他热爱技术，专注于全栈开发和 AI 应用。相信技术可以改变世界，也在不断探索和学习。
+他关注如何把真实需求拆解成可运行的 AI 应用，尤其是 Agent 工具编排、RAG 问答、多模态内容生成、数据分析与产品验证。
 
-技能树涵盖前端、后端、AI 应用等多个领域。喜欢把想法变成现实，无论是构建一个网站，还是设计一个 AI 工作流。
+他的差异化背景是金融、保险与统计分析，但主定位不是金融专家或保险专家。
 
-除了技术，也热爱阅读、写作、设计和旅行。这些爱好丰富了生活，也为技术工作提供了灵感和视角。`,
+更适合 AI 产品原型、Agent 工作流、RAG 问答、多模态内容自动化、数据分析驱动的产品验证等方向。`,
   },
   {
     id: "portfolio",
@@ -47,12 +47,12 @@ Fezer 是一位全栈开发者和 AI 探索者。
 
 Fezer 参与过多个项目，包括：
 
-1. 企业级前端应用 - 使用 React、TypeScript、Next.js
-2. AI 聊天应用 - 集成 GPT、Claude、Gemini
-3. 自动化工作流 - 使用 LangChain、LangGraph
-4. 3D 可视化项目 - 使用 Three.js、React Three Fiber
+1. AI 驱动的期权交易分析平台 - 基于 Gemini 2.5 Pro、Python 和实时金融数据 API
+2. 智能客服 Agent 系统 - 基于 RAG、情绪检测和 LLM
+3. AI 模拟面试官系统 - 基于语音交互、Pinecone 和 AI 问题匹配
+4. 个人主页与项目展示平台 - 使用 GitHub Pages、React 和 Three.js
 
-每个项目都注重用户体验和代码质量。`,
+每个项目都注重用户体验、验证路径和可复用工作流。`,
   },
   {
     id: "blog",
@@ -76,53 +76,55 @@ Fezer 定期分享技术文章，主题包括：
 export const PROJECT_DETAILS = [
   {
     id: "project-1",
-    name: "企业级前端应用",
-    description: "为某科技公司开发的内部管理系统，包括数据可视化、权限管理、工作流审批等功能。",
-    techStack: ["React", "TypeScript", "Next.js", "Tailwind CSS", "tRPC", "PostgreSQL"],
-    role: "全栈开发",
+    name: "AI 驱动的期权交易分析平台",
+    description:
+      "面向期权投资者的 AI 决策辅助平台，流程是实时新闻、公司公告和行情数据进入 AI 综合分析，再辅助生成期权链模拟买卖建议。",
+    techStack: ["Gemini 2.5 Pro", "Python", "实时金融数据 API", "Agent 工具链", "K 线可视化"],
+    role: "AI 产品与分析",
     highlights: [
-      "重构前端项目，提升性能 40%",
-      "设计并实现权限管理系统",
-      "建立 CI/CD 流程",
+      "设计了“100 万虚拟资金 + AI 辅助 / 无 AI 辅助”的对照模块。",
+      "用累计收益、胜率、最大回撤等指标量化 AI 辅助对决策结果的影响。",
+      "针对复杂金融模型工具调用不稳定的问题，引入工具描述重写、few-shot 示例和 Hook 机制。",
     ],
     source: "portfolio",
   },
   {
     id: "project-2",
-    name: "AI 聊天应用",
-    description: "集成多家 LLM 提供商的智能对话应用，支持多轮对话、工具调用、流式响应。",
-    techStack: ["Next.js", "LangChain", "OpenAI API", "Claude API", "Vercel AI SDK"],
+    name: "智能客服 Agent 系统",
+    description:
+      "独立完成从需求分析、方案设计到上线部署的全流程，设计基于 RAG 架构的智能客服解决方案。",
+    techStack: ["FastGPT", "RAG", "情绪检测", "LLM"],
     role: "AI 应用开发",
     highlights: [
-      "实现统一的 LLM 调用接口",
-      "支持流式响应和工具调用",
-      "设计灵活的配置系统",
+      "基于场景化测试语料验证语义问答效果。",
+      "通过 Prompt 调优将回答准确率提升至 90% 以上。",
+      "引入用户情绪检测与动态路由机制，负面情绪自动转人工并生成工单。",
     ],
     source: "portfolio",
   },
   {
     id: "project-3",
-    name: "自动化工作流引擎",
-    description: "基于 LangGraph 的可视化工作流编排工具，支持拖拽式创建复杂的 AI 工作流。",
-    techStack: ["LangChain", "LangGraph", "React", "D3.js", "Node.js", "Express"],
-    role: "全栈开发 + AI 架构",
+    name: "AI 模拟面试官系统",
+    description:
+      "围绕缺乏真实面试反馈的用户痛点，独立设计并开发支持语音交互的沉浸式 AI 面试系统。",
+    techStack: ["ElevenLabs", "Pinecone", "AI 大模型"],
+    role: "AI 应用开发",
     highlights: [
-      "设计直观的节点编辑器",
-      "实现工作流版本管理",
-      "支持多种 LLM 和工具集成",
+      "基于 Pinecone 构建面试题库，实现语义级问题匹配与上下文追问逻辑。",
+      "设计多维评分体系，自动生成面试表现分析报告。",
     ],
     source: "portfolio",
   },
   {
     id: "project-4",
-    name: "3D 数据可视化",
-    description: "使用 WebGL 和 Three.js 实现的交互式 3D 数据可视化平台。",
-    techStack: ["Three.js", "React Three Fiber", "Drei", "WebGL", "GLSL"],
+    name: "个人主页与项目展示平台",
+    description:
+      "从零完成个人展示网站的 UI 设计、前端开发与部署，用于集中展示 AI 项目成果与个人作品。",
+    techStack: ["OpenCode", "GitHub Pages", "React", "Three.js"],
     role: "前端开发",
     highlights: [
-      "实现高性能的 3D 渲染",
-      "支持大数据量实时可视化",
-      "创建可复用的 3D 组件库",
+      "基于模块化页面结构沉淀项目介绍、技术栈与成果亮点。",
+      "结合 GitHub Pages 实现持续更新与在线托管。",
     ],
     source: "portfolio",
   },
@@ -135,28 +137,31 @@ export const FAQ = [
   {
     id: "faq-1",
     question: "这是什么类型的简历？",
-    answer: "这是一个互动式 3D 简历网站。与传统简历不同，它通过 3D 空间探索和多角色对话，让访客更生动地了解 Fezer 的能力和经历。",
+    answer:
+      "这是一个互动式 3D 简历网站。与传统简历不同，它通过 3D 空间探索和多角色对话，让访客更生动地了解 Fezer 的能力和经历。",
     category: "general",
     keywords: ["简历", "类型", "介绍"],
   },
   {
     id: "faq-2",
     question: "如何开始探索？",
-    answer: "建议从 Central Hub 开始，与 Core Fezer 对话了解全局。然后根据兴趣访问不同房间：Builder Room 了解技术能力，AI Lab 了解 AI 项目等。",
+    answer:
+      "建议从 Central Hub 开始，与 Core Fezer 对话了解全局。然后根据兴趣访问不同房间：Builder Room 了解技术能力，AI Lab 了解 AI 项目等。",
     category: "guide",
     keywords: ["开始", "探索", "导览"],
   },
   {
     id: "faq-3",
     question: "Fezer 的技术栈是什么？",
-    answer: "前端：React、TypeScript、Next.js、Tailwind CSS、Three.js。后端：Node.js、Express、tRPC、Drizzle ORM、PostgreSQL。AI：LangChain、LangGraph、OpenAI/Claude API。",
+    answer:
+      "前端：React、TypeScript、Three.js。AI：Agent 工作流、RAG、LangChain、LangGraph。数据与分析：Python、Pandas、SQL。产品与工程：Docker、MCP、Prompt 调优、场景化测试。",
     category: "technical",
     keywords: ["技术栈", "技能", "技术"],
   },
   {
     id: "faq-4",
     question: "可以联系 Fezer 吗？",
-    answer: "可以通过邮箱联系：fezer@example.com。也欢迎在 GitHub 上查看开源项目。",
+    answer: "可以通过邮箱联系：cookfezer@gmail.com。也欢迎在 GitHub 上查看开源项目。",
     category: "contact",
     keywords: ["联系", "邮箱", "合作"],
   },

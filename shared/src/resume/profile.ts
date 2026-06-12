@@ -1,5 +1,8 @@
 /**
  * 简历数据 - 个人简介
+ *
+ * 这份导出用于兼容仍然读取 `@fezer/shared/resume` 的代码路径。
+ * 内容应与公开简历资料保持一致，避免旧模板或占位信息回流。
  */
 
 /**
@@ -7,14 +10,10 @@
  */
 export const PROFILE = {
   name: "Fezer",
-  title: "全栈开发者 & AI 探索者",
-  location: "中国",
-  email: "fezer@example.com",
-  bio: `我是一个热爱技术的人，专注于全栈开发和 AI 应用。我相信技术可以改变世界，也在不断探索和学习。
-
-我的技能树涵盖前端、后端、AI 应用等多个领域。我喜欢把想法变成现实，无论是构建一个网站，还是设计一个 AI 工作流。
-
-除了技术，我也热爱阅读、写作、设计和旅行。这些爱好不仅丰富了我的生活，也为我的技术工作提供了灵感和视角。
+  title: "AI 产品与 Agent 工作流实践者",
+  location: "北京",
+  email: "cookfezer@gmail.com",
+  bio: `AI 产品与 Agent 工作流实践者，中央财经大学保险专业硕士在读。
 
 欢迎探索我的互动式 3D 简历，了解我是谁，我能做什么。`,
 };
@@ -23,12 +22,52 @@ export const PROFILE = {
  * 技能标签
  */
 export const SKILLS = {
-  frontend: ["React", "TypeScript", "Next.js", "Tailwind CSS", "Three.js", "Vite"],
-  backend: ["Node.js", "Express", "tRPC", "Drizzle ORM", "PostgreSQL", "MySQL"],
-  ai: ["LangChain", "LangGraph", "OpenAI API", "Claude API", "Agent Workflow"],
-  tools: ["Git", "Docker", "GitHub Actions", "Vercel", "ESLint", "Prettier"],
-  design: ["Figma", "UI Design", "3D Modeling", "Photography"],
-  soft: ["技术写作", "系统思考", "问题拆解", "快速学习", "跨领域整合"],
+  ai: [
+    "AI Agent",
+    "Agent 工作流",
+    "RAG",
+    "多模态 AI 应用",
+    "Prompt Engineering",
+    "LangChain",
+    "LangGraph",
+  ],
+  product: [
+    "需求分析",
+    "功能设计",
+    "开发验证",
+    "场景化测试",
+    "数据驱动迭代",
+  ],
+  data: [
+    "Python",
+    "Pandas",
+    "Scikit-learn",
+    "SQL",
+    "统计分析",
+    "Kaggle 竞赛经验",
+  ],
+  tools: [
+    "Docker",
+    "Skill",
+    "MCP",
+    "Cursor",
+    "Claude Code",
+    "OpenCode",
+    "GitHub Copilot",
+    "Codex",
+  ],
+  content: [
+    "新媒体内容策划",
+    "自动化发布",
+    "内容生成工作流",
+    "多平台分发验证",
+  ],
+  soft: [
+    "系统思考",
+    "问题拆解",
+    "快速学习",
+    "跨领域整合",
+  ],
 };
 
 /**
@@ -36,25 +75,29 @@ export const SKILLS = {
  */
 export const EXPERIENCE = [
   {
-    company: "某科技公司",
-    position: "全栈工程师",
-    period: "2022 - 至今",
-    description: "负责公司核心产品的全栈开发，包括前端架构、后端 API 设计和 AI 功能集成。",
+    company: "B2B 企业 AI 内容生成平台",
+    position: "AI 产品实习",
+    period: "2025.12 - 2026.03",
+    description:
+      "参与核心 Agent 模块研发，围绕热点输入、内容生成、多模态素材和自动化分发构建端到端工作流。",
     highlights: [
-      "重构前端项目，提升性能 40%",
-      "设计并实现 AI 聊天功能",
-      "建立 CI/CD 流程，提升部署效率",
+      "串联 LLM、抓取工具、图像/视频生成 API 与发布接口，支持内容生产与分发自动化。",
+      "搭建热点输入模块，结合 Docker 的新闻抓取与企业微信推送流程，形成结构化选题输入。",
+      "推进自动发布与海报生成 Agent 工作流，结合 Notion 进行选题与文案管理。",
+      "参与多模态生成模块，衔接 Minimax、Remotion、PDF 转视频及数字人方案。",
     ],
   },
   {
-    company: "某创业公司",
-    position: "前端开发者",
-    period: "2020 - 2022",
-    description: "负责公司产品的前端开发和用户界面设计。",
+    company: "综合实习经历",
+    position: "实习生",
+    period: "2025.01 - 2025.03",
+    description:
+      "独立负责全员社保核算与申报工作，参与互联网运营、产品调研与品牌建设。",
     highlights: [
-      "从零搭建 React + TypeScript 项目",
-      "实现响应式设计，支持多端适配",
-      "优化首屏加载速度，提升用户体验",
+      "搭建标准化管理台账，确保月度处理零差错。",
+      "参与多平台账号矩阵与内容分发策略，熟悉用户增长逻辑。",
+      "输出产品市场调研与竞品分析报告，理解产品从需求到落地的流程。",
+      "协助官网内容优化、新媒体运营和商务合作洽谈。",
     ],
   },
 ];
@@ -64,10 +107,10 @@ export const EXPERIENCE = [
  */
 export const EDUCATION = [
   {
-    school: "某大学",
-    degree: "计算机科学与技术",
-    period: "2016 - 2020",
-    description: "系统学习计算机基础课程，包括数据结构、算法、操作系统、网络等。",
+    school: "中央财经大学",
+    degree: "保险专业硕士在读",
+    period: "在读",
+    description: "具备金融、保险、统计、经济与数据分析相关学习背景。",
   },
 ];
 
