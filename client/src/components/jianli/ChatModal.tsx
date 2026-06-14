@@ -388,12 +388,23 @@ export function ChatModal({
                   <div className="prose prose-sm max-w-none font-chill-huofangsong">
                     <Streamdown
                       components={{
-                        p: ({ children }) => (
-                          <p>{linkifyRoomNames(String(children), handleRoomLinkClick)}</p>
-                        ),
-                        li: ({ children }) => (
-                          <li>{linkifyRoomNames(String(children), handleRoomLinkClick)}</li>
-                        ),
+                        p: ({ children }) => {
+                          // 提取文本内容
+                          const text = typeof children === 'string'
+                            ? children
+                            : Array.isArray(children)
+                              ? children.map(c => typeof c === 'string' ? c : '').join('')
+                              : String(children);
+                          return <p>{linkifyRoomNames(text, handleRoomLinkClick)}</p>;
+                        },
+                        li: ({ children }) => {
+                          const text = typeof children === 'string'
+                            ? children
+                            : Array.isArray(children)
+                              ? children.map(c => typeof c === 'string' ? c : '').join('')
+                              : String(children);
+                          return <li>{linkifyRoomNames(text, handleRoomLinkClick)}</li>;
+                        },
                       }}
                     >
                       {msg.content}

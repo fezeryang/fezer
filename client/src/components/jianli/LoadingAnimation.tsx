@@ -47,9 +47,7 @@ export function LoadingAnimation({
     const loadAnimation = async () => {
       try {
         // 动态导入 Lottie JSON
-        const response = await fetch(
-          `${import.meta.env.BASE_URL}thecat/cat Mark loading.json`
-        );
+        const response = await fetch("/thecat/cat Mark loading.json");
 
         if (!response.ok) {
           throw new Error("Failed to load animation");
