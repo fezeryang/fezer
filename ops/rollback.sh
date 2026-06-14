@@ -5,7 +5,8 @@
 
 set -euo pipefail
 
-APP_DIR="/var/www/kinetic-portfolio"
+APP_DIR="/var/www/fezer"
+PM2_APP_NAME="fezer-api"
 PM2_CONFIG="ops/ecosystem.config.cjs"
 
 # Colors
@@ -51,19 +52,19 @@ log "Building application..."
 pnpm run build
 
 log "Reloading PM2 service..."
-if pm2 describe kinetic-portfolio >/dev/null 2>&1; then
-    pm2 reload "$PM2_CONFIG" --env production --update-env
+if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
+    pm2 reload "$PM2_APP_NAME" --update-env
 else
     pm2 start "$PM2_CONFIG" --env production
 fi
 
 log "Verifying health..."
 # Try local health check first
-HEALTH_URL="http://127.0.0.1:3000/api/trpc/system.health?input=%7B%22timestamp%22%3A0%7D"
+HEALTH_URL="http://127.0.0.1:3000/api/trpc/system.health?input=%7B%22json%22%3A%7B%22timestamp%22%3A0%7D%7D"
 if curl -sf "$HEALTH_URL" | grep -q '"ok":true'; then
     log "Rollback successful!"
 else
     error "Rollback failed health check. Please investigate logs."
-    pm2 logs kinetic-portfolio --lines 20 --nostream
+    pm2 logs "$PM2_APP_NAME" --lines 20 --nostream
     exit 1
 fi

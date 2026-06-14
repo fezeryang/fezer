@@ -4,7 +4,7 @@
  * Usage:
  *   pm2 start ops/ecosystem.config.cjs
  *   pm2 reload ops/ecosystem.config.cjs --env production
- *   pm2 delete kinetic-portfolio
+ *   pm2 delete fezer-api
  * 
  * Startup persistence (run ONCE after first deploy):
  *   pm2 save
@@ -13,9 +13,9 @@
 module.exports = {
   apps: [
     {
-      name: "kinetic-portfolio",
+      name: "fezer-api",
       script: "./dist/index.js",
-      cwd: "/var/www/kinetic-portfolio",
+      cwd: "/var/www/fezer",
       
       // Production environment
       node_args: "--experimental-specifier-resolution=node",

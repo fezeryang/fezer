@@ -5,14 +5,14 @@ This document provides guidance for observability, backup, and rollback procedur
 ## 1. Observability
 
 ### Log Locations
-- **PM2 Logs**: `/home/fezer/.pm2/logs/` (or wherever PM2 is configured to store logs)
+- **PM2 Logs**: `/home/openclawed/.pm2/logs/` (or wherever PM2 is configured to store logs)
 - **Application Logs**: `/var/log/kinetic-portfolio/` (as defined in `deploy.sh`)
 - **Nginx Logs**: `/var/log/nginx/kinetic-portfolio-api.access.log` and `error.log`
 
 ### Monitoring Commands
 ```bash
 # View real-time PM2 logs
-pm2 logs kinetic-portfolio
+pm2 logs fezer-api
 
 # Check process status and resource usage
 pm2 status
@@ -26,13 +26,13 @@ df -h
 ```
 
 ### Health Endpoints
-- **Internal**: `http://localhost:3000/api/trpc/system.health?input=%7B%22timestamp%22%3A0%7D`
-- **External**: `https://api.your-domain.com/health` (mapped via Nginx)
+- **Internal**: `http://localhost:3000/api/trpc/system.health?input=%7B%22json%22%3A%7B%22timestamp%22%3A0%7D%7D`
+- **External**: `https://api.your-domain.com/api/trpc/system.health?input=%7B%22json%22%3A%7B%22timestamp%22%3A0%7D%7D`
 
 ### Triage Checklist
 1. **Service Down (502 Bad Gateway)**:
    - Check if PM2 process is running: `pm2 status`
-   - Check PM2 logs for crashes: `pm2 logs kinetic-portfolio --lines 100`
+   - Check PM2 logs for crashes: `pm2 logs fezer-api --lines 100`
    - Check if port 3000 is bound: `sudo netstat -tulpn | grep 3000`
 2. **Database Errors**:
    - Check `DATABASE_URL` in `.env`
@@ -56,7 +56,7 @@ df -h
 ```
 
 ### Restore Procedure
-1. **Stop the service**: `pm2 stop kinetic-portfolio`
+1. **Stop the service**: `pm2 stop fezer-api`
 2. **Restore database**:
    ```bash
    gunzip < backups/db_backup_YYYYMMDD_HHMMSS.sql.gz | mysql -h <host> -u <user> -p <db_name>
@@ -66,7 +66,7 @@ df -h
    # Run a count query on a key table
    mysql -h <host> -u <user> -p <db_name> -e "SELECT COUNT(*) FROM users;"
    ```
-4. **Start the service**: `pm2 start kinetic-portfolio`
+4. **Start the service**: `pm2 start fezer-api`
 
 ### Backup Integrity Check
 - Periodically (e.g., monthly) perform a restore drill on a staging/local environment to ensure backups are valid.

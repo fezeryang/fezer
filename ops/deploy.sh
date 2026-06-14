@@ -9,17 +9,18 @@
 # Prerequisites:
 #   - Node.js 20+, pnpm, PM2 installed
 #   - MySQL/MariaDB accessible via DATABASE_URL
-#   - .env file configured in /var/www/kinetic-portfolio/.env
+#   - .env file configured in /var/www/fezer/.env
 #
 set -euo pipefail
 
 # Configuration
-APP_DIR="/var/www/kinetic-portfolio"
+APP_DIR="/var/www/fezer"
 LOG_DIR="/var/log/kinetic-portfolio"
 REPO_URL="${REPO_URL:-git@github.com:your-org/kinetic-portfolio.git}"
 BRANCH="${BRANCH:-main}"
+PM2_APP_NAME="fezer-api"
 PM2_CONFIG="ops/ecosystem.config.cjs"
-HEALTH_URL="http://127.0.0.1:3000/api/trpc/system.health?input=%7B%22timestamp%22%3A0%7D"
+HEALTH_URL="http://127.0.0.1:3000/api/trpc/system.health?input=%7B%22json%22%3A%7B%22timestamp%22%3A0%7D%7D"
 HEALTH_TIMEOUT=30
 
 # Colors
@@ -135,9 +136,9 @@ reload_service() {
     cd "$APP_DIR"
     
     # Check if app is already running
-    if pm2 describe kinetic-portfolio >/dev/null 2>&1; then
+    if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
         # Graceful reload (zero-downtime)
-        pm2 reload "$PM2_CONFIG" --env production --update-env
+        pm2 reload "$PM2_APP_NAME" --update-env
     else
         # First deploy - start fresh
         pm2 start "$PM2_CONFIG" --env production
@@ -169,7 +170,7 @@ verify_health() {
     
     error "Health check failed after ${HEALTH_TIMEOUT}s"
     log "Recent PM2 logs:"
-    pm2 logs kinetic-portfolio --lines 20 --nostream
+    pm2 logs "$PM2_APP_NAME" --lines 20 --nostream
     return 1
 }
 
@@ -189,7 +190,7 @@ rollback() {
         cd "$APP_DIR"
         git checkout "$ROLLBACK_COMMIT"
         pnpm run build
-        pm2 reload "$PM2_CONFIG" --env production
+        pm2 reload "$PM2_APP_NAME" --update-env
         warn "Rollback completed - please investigate the failure"
     else
         error "No rollback point available"

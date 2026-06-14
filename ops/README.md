@@ -10,8 +10,8 @@ sudo apt update && sudo apt install nginx certbot
 npm install -g pm2 pnpm
 
 # 2. Clone repo
-git clone <repo-url> /var/www/kinetic-portfolio
-cd /var/www/kinetic-portfolio
+git clone <repo-url> /var/www/fezer
+cd /var/www/fezer
 
 # 3. Configure environment
 cp .env.example .env
@@ -49,7 +49,7 @@ pm2 save
 
 ```bash
 # Local check (from server)
-curl -s 'http://127.0.0.1:3000/api/trpc/system.health?input=%7B%22timestamp%22%3A0%7D'
+curl -s 'http://127.0.0.1:3000/api/trpc/system.health?input=%7B%22json%22%3A%7B%22timestamp%22%3A0%7D%7D'
 
 # External HTTPS check
 ./ops/health-check.sh https://api.your-domain.com
@@ -62,9 +62,9 @@ curl -s 'http://127.0.0.1:3000/api/trpc/system.health?input=%7B%22timestamp%22%3
 
 ```bash
 pm2 status                    # View process status
-pm2 logs kinetic-portfolio    # View logs
-pm2 reload ecosystem.config.cjs --env production  # Zero-downtime reload
-pm2 delete kinetic-portfolio  # Stop and remove
+pm2 logs fezer-api            # View logs
+pm2 reload fezer-api --update-env  # Zero-downtime reload
+pm2 delete fezer-api          # Stop and remove
 ```
 
 ## Troubleshooting
