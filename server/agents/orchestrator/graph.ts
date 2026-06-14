@@ -62,6 +62,11 @@ export function createOrchestratorGraph() {
       reducer: (_, current) => current,
       default: () => "chat" as const,
     }),
+    // 回答事实来源约束
+    grounding: Annotation<"public_profile" | undefined>({
+      reducer: (_, current) => current,
+      default: () => undefined,
+    }),
     // 当前主要 Agent
     currentPrimaryAgent: Annotation<AgentId>({
       reducer: (_, current) => current,
@@ -166,6 +171,7 @@ export function createOrchestratorGraph() {
         roomId,
         characterId,
         interactionType,
+        grounding,
         messages,
         currentPrimaryAgent,
       } = state;
@@ -187,6 +193,7 @@ export function createOrchestratorGraph() {
             characterId,
             interactionType,
             preferredAgent,
+            grounding,
             messages,
           })
       );

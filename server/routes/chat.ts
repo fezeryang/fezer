@@ -59,6 +59,7 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
         interactionType = "chat", // 交互类型：click/hover/chat/guide
         visitedRooms = [], // 已访问的房间列表
         discoveredCharacters = [], // 已发现的角色列表
+        grounding,
       } = req.body as FrontendAgentRequest;
 
       // 在追踪上下文中处理请求
@@ -90,6 +91,7 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
               | "guide",
             visitedRooms,
             discoveredCharacters,
+            grounding,
             messages: [],
           });
 

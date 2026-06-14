@@ -37,6 +37,7 @@ export interface AgentInvokeOptions {
     messages?: BaseMessage[];
     fromAgent?: string;
     conversationHistory?: any[];
+    grounding?: "public_profile";
   };
 }
 
@@ -150,6 +151,13 @@ const MAX_TOOL_CALL_LOOPS = 3;
 const TOOL_CONTEXT_CHAR_LIMIT = 11000;
 const TOOL_RESULT_CHAR_LIMIT = 1200;
 const PROFILE_TOOL_RESULT_CHAR_LIMIT = 9000;
+const PUBLIC_PROFILE_GROUNDING_POLICY = [
+  "【公开简历事实约束】",
+  "你正在回答 /jianli 互动简历中的问题。关于 Fezer 的身份、教育、技能、项目、实习、实践、联系方式和隐私边界，唯一事实来源是服务器预取的 get_profile_full/get_profile/get_skills/get_projects 等工具结果。",
+  "角色、房间、表达风格只影响语气和侧重点，不能覆盖或补充简历事实。",
+  "资料没有明确写出的内容，必须回答“目前公开简历资料里没有明确依据”，不能编造、合理推断或使用模型常识补全。",
+  "不得使用旧模板或占位信息，例如 fezer@example.com、某科技公司、某大学、全栈开发者 & AI 探索者。",
+].join("\n");
 
 type DirectToolRequest = {
   name: string;
@@ -518,6 +526,14 @@ async function invokeAgentInternal(
         // 构建消息历史
         const messages: Message[] = [
           { role: "system", content: systemPrompt },
+          ...(options?.context?.grounding === "public_profile"
+            ? [
+                {
+                  role: "system" as const,
+                  content: PUBLIC_PROFILE_GROUNDING_POLICY,
+                },
+              ]
+            : []),
           ...(directToolContext
             ? [{ role: "system" as const, content: directToolContext }]
             : []),

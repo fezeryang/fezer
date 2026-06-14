@@ -191,6 +191,60 @@ describe("expert agent tool loop", () => {
     ).toBe(true);
   });
 
+  it("adds strict public profile grounding rules for Jianli chat requests", async () => {
+    const getProfileFullInvoke = vi.fn(async () => ({
+      profile: {
+        name: "Fezer",
+        body: "中央财经大学保险专业硕士在读\n邮箱：cookfezer@gmail.com",
+      },
+    }));
+
+    getToolExecutionRegistryMock.mockReturnValue(
+      new Map([
+        [
+          "get_profile_full",
+          {
+            name: "get_profile_full",
+            invoke: getProfileFullInvoke,
+          },
+        ],
+      ])
+    );
+
+    invokeLLMMock.mockResolvedValueOnce({
+      id: "1",
+      created: 1,
+      model: "deepseek-chat",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "grounded profile answer" },
+          finish_reason: "stop",
+        },
+      ],
+    });
+
+    const { invokeAgent } = await import("./agent-factory");
+    const result = await invokeAgent("core", "请介绍 Fezer 的真实背景", {
+      context: { grounding: "public_profile" },
+    });
+
+    expect(result.answer).toBe("grounded profile answer");
+
+    const firstCall = invokeLLMMock.mock.calls[0][0];
+    const systemText = firstCall.messages
+      .filter((msg: any) => msg.role === "system")
+      .map((msg: any) => String(msg.content))
+      .join("\n");
+
+    expect(systemText).toContain("公开简历事实约束");
+    expect(systemText).toContain("唯一事实来源");
+    expect(systemText).toContain("目前公开简历资料里没有明确依据");
+    expect(systemText).toContain("fezer@example.com");
+    expect(systemText).toContain("中央财经大学保险专业硕士在读");
+    expect(systemText).toContain("cookfezer@gmail.com");
+  });
+
   it("enables a small dynamic tool set only for cross-agent requests", async () => {
     getLLMToolsByNamesMock.mockReturnValue([
       {

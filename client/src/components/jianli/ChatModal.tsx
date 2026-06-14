@@ -219,6 +219,7 @@ export function ChatModal({
         characterId: selectedAgentId || characterId,
         roomId,
         interactionType: activeAgentId ? "click" : "chat",
+        grounding: "public_profile",
       });
     } catch (error) {
       console.error("Chat error:", error);

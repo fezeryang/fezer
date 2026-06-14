@@ -21,6 +21,8 @@ export interface FrontendAgentRequest {
   visitedRooms?: string[];
   /** 已发现的角色列表 */
   discoveredCharacters?: string[];
+  /** 回答事实来源约束 */
+  grounding?: "public_profile";
 }
 
 /**

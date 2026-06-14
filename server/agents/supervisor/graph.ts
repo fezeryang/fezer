@@ -45,6 +45,10 @@ export const SupervisorState = Annotation.Root({
       default: () => undefined,
     }
   ),
+  grounding: Annotation<"public_profile" | undefined>({
+    reducer: (_, current) => current,
+    default: () => undefined,
+  }),
   preferredAgent: Annotation<AgentId | undefined>({
     reducer: (_, current) => current,
     default: () => undefined,
@@ -176,7 +180,7 @@ async function executeSingleAgent(
   state: typeof SupervisorState.State
 ): Promise<Partial<typeof SupervisorState.State>> {
   return traceSpan("supervisor.executeSingleAgent", async () => {
-    const { targetAgent, userInput, messages } = state;
+    const { targetAgent, userInput, messages, grounding } = state;
 
     const response = await runWithTraceContext(
       {
@@ -184,7 +188,7 @@ async function executeSingleAgent(
       },
       async () =>
         invokeAgent(targetAgent, userInput, {
-          context: { messages },
+          context: { messages, grounding },
         })
     );
 
@@ -207,11 +211,11 @@ async function executeParallelAgents(
   state: typeof SupervisorState.State
 ): Promise<Partial<typeof SupervisorState.State>> {
   return traceSpan("supervisor.executeParallelAgents", async () => {
-    const { consultAgents, userInput, messages } = state;
+    const { consultAgents, userInput, messages, grounding } = state;
 
     // 并行调用
     const responses = await invokeMultipleAgents(consultAgents, userInput, {
-      context: { messages },
+      context: { messages, grounding },
     });
 
     // 转换 Map 为对象
@@ -347,6 +351,7 @@ export async function askSupervisor(
     characterId?: string;
     interactionType?: "click" | "hover" | "chat" | "guide";
     preferredAgent?: AgentId;
+    grounding?: "public_profile";
     messages?: BaseMessage[];
   }
 ): Promise<{
@@ -360,6 +365,7 @@ export async function askSupervisor(
     characterId: context?.characterId,
     interactionType: context?.interactionType,
     preferredAgent: context?.preferredAgent,
+    grounding: context?.grounding,
     messages: context?.messages || [],
   });
 
