@@ -9,6 +9,7 @@ import { useAgentChat } from "../../hooks/useAgentChat";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import { resolveFezerTypeFromSpatialContext } from "@fezer/shared/characters";
+import { ThinkingIndicator } from "./ThinkingIndicator";
 
 interface ChatMessage {
   id: string;
@@ -117,7 +118,7 @@ export function ChatModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { sendMessage, isLoading } = useAgentChat({
+  const { sendMessage, isLoading, thinkingState } = useAgentChat({
     onSuccess: response => {
       const assistantMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -380,24 +381,11 @@ export function ChatModal({
             </div>
           ))}
           {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-white px-4 py-2 rounded-2xl rounded-bl-md shadow-sm">
-                <div className="flex gap-1">
-                  <span
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0ms" }}
-                  />
-                  <span
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "150ms" }}
-                  />
-                  <span
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "300ms" }}
-                  />
-                </div>
-              </div>
-            </div>
+            <ThinkingIndicator
+              agentName={currentAgentName}
+              agentColor={currentAgentColor}
+              thinkingStep={thinkingState?.step}
+            />
           )}
           <div ref={messagesEndRef} />
         </div>

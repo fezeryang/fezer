@@ -34,6 +34,10 @@ export interface UseAgentChatOptions {
   onSuccess?: (response: AgentResponse) => void;
 }
 
+export interface ThinkingState {
+  step: string;
+}
+
 export interface UseAgentChatReturn {
   sendMessage: (request: FrontendAgentRequest) => Promise<AgentResponse>;
   sendGuide: (userInput?: string) => Promise<AgentResponse>;
@@ -43,6 +47,7 @@ export interface UseAgentChatReturn {
   ) => Promise<AgentResponse>;
   isLoading: boolean;
   error: Error | null;
+  thinkingState?: ThinkingState;
 }
 
 /**
@@ -53,11 +58,15 @@ export function useAgentChat(
 ): UseAgentChatReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [thinkingState, setThinkingState] = useState<ThinkingState | undefined>(
+    undefined
+  );
 
   const sendMessage = useCallback(
     async (request: FrontendAgentRequest): Promise<AgentResponse> => {
       setIsLoading(true);
       setError(null);
+      setThinkingState({ step: "正在分析问题..." });
 
       try {
         const response = await fetch(`${API_BASE}/api/chat`, {
@@ -65,6 +74,9 @@ export function useAgentChat(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(request),
         });
+
+        // 更新思考状态
+        setThinkingState({ step: "正在整理回答..." });
 
         if (!response.ok) {
           const errorData = await response
@@ -85,6 +97,7 @@ export function useAgentChat(
         throw error;
       } finally {
         setIsLoading(false);
+        setThinkingState(undefined);
       }
     },
     [options]
@@ -167,5 +180,6 @@ export function useAgentChat(
     sendCharacterMessage,
     isLoading,
     error,
+    thinkingState,
   };
 }

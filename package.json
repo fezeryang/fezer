@@ -71,7 +71,7 @@
     "input-otp": "^1.4.2",
     "jose": "6.1.0",
     "langsmith": "^0.5.20",
-    "lottie-react": "^2.4.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.453.0",
     "marked": "^17.0.4",
     "mysql2": "^3.15.0",
