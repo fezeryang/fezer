@@ -257,6 +257,7 @@ export default function Jianli() {
         characterId={chatContext.characterId}
         roomId={chatContext.roomId}
         onClose={() => setIsChatOpen(false)}
+        onRoomSwitch={setActiveRoomId}
         initialMessage="你好！"
       />
 

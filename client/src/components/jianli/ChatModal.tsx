@@ -10,6 +10,7 @@ import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import { resolveFezerTypeFromSpatialContext } from "@fezer/shared/characters";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { linkifyRoomNames } from "./utils/roomLinks";
 
 interface ChatMessage {
   id: string;
@@ -23,6 +24,7 @@ interface ChatModalProps {
   characterId?: string;
   roomId?: string;
   onClose: () => void;
+  onRoomSwitch?: (roomId: string) => void;
   initialMessage?: string;
 }
 
@@ -99,6 +101,7 @@ export function ChatModal({
   characterId,
   roomId,
   onClose,
+  onRoomSwitch,
   initialMessage,
 }: ChatModalProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -117,6 +120,17 @@ export function ChatModal({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const modalRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 房间链接点击处理
+  const handleRoomLinkClick = useCallback(
+    (targetRoomId: string) => {
+      if (onRoomSwitch) {
+        onRoomSwitch(targetRoomId);
+        onClose();
+      }
+    },
+    [onRoomSwitch, onClose]
+  );
 
   const { sendMessage, isLoading, thinkingState } = useAgentChat({
     onSuccess: response => {
@@ -372,7 +386,18 @@ export function ChatModal({
               >
                 {msg.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none font-chill-huofangsong">
-                    <Streamdown>{msg.content}</Streamdown>
+                    <Streamdown
+                      components={{
+                        p: ({ children }) => (
+                          <p>{linkifyRoomNames(String(children), handleRoomLinkClick)}</p>
+                        ),
+                        li: ({ children }) => (
+                          <li>{linkifyRoomNames(String(children), handleRoomLinkClick)}</li>
+                        ),
+                      }}
+                    >
+                      {msg.content}
+                    </Streamdown>
                   </div>
                 ) : (
                   <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
