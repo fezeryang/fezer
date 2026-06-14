@@ -10,7 +10,6 @@ import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import { resolveFezerTypeFromSpatialContext } from "@fezer/shared/characters";
 import { ThinkingIndicator } from "./ThinkingIndicator";
-import { linkifyRoomNames } from "./utils/roomLinks";
 
 interface ChatMessage {
   id: string;
@@ -120,17 +119,6 @@ export function ChatModal({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const modalRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // 房间链接点击处理
-  const handleRoomLinkClick = useCallback(
-    (targetRoomId: string) => {
-      if (onRoomSwitch) {
-        onRoomSwitch(targetRoomId);
-        onClose();
-      }
-    },
-    [onRoomSwitch, onClose]
-  );
 
   const { sendMessage, isLoading, thinkingState } = useAgentChat({
     onSuccess: response => {
@@ -386,29 +374,7 @@ export function ChatModal({
               >
                 {msg.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none font-chill-huofangsong">
-                    <Streamdown
-                      components={{
-                        p: ({ children }) => {
-                          // 提取文本内容
-                          const text = typeof children === 'string'
-                            ? children
-                            : Array.isArray(children)
-                              ? children.map(c => typeof c === 'string' ? c : '').join('')
-                              : String(children);
-                          return <p>{linkifyRoomNames(text, handleRoomLinkClick)}</p>;
-                        },
-                        li: ({ children }) => {
-                          const text = typeof children === 'string'
-                            ? children
-                            : Array.isArray(children)
-                              ? children.map(c => typeof c === 'string' ? c : '').join('')
-                              : String(children);
-                          return <li>{linkifyRoomNames(text, handleRoomLinkClick)}</li>;
-                        },
-                      }}
-                    >
-                      {msg.content}
-                    </Streamdown>
+                    <Streamdown>{msg.content}</Streamdown>
                   </div>
                 ) : (
                   <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
