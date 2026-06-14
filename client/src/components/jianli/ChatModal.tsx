@@ -10,6 +10,7 @@ import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import { resolveFezerTypeFromSpatialContext } from "@fezer/shared/characters";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { processRoomLinksInDOM } from "./utils/roomLinksDom";
 
 interface ChatMessage {
   id: string;
@@ -119,6 +120,18 @@ export function ChatModal({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const modalRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageContainerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // 房间链接点击处理
+  const handleRoomLinkClick = useCallback(
+    (targetRoomId: string) => {
+      if (onRoomSwitch) {
+        onRoomSwitch(targetRoomId);
+        onClose();
+      }
+    },
+    [onRoomSwitch, onClose]
+  );
 
   const { sendMessage, isLoading, thinkingState } = useAgentChat({
     onSuccess: response => {
@@ -137,6 +150,20 @@ export function ChatModal({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // 处理房间链接（在消息渲染后）
+  useEffect(() => {
+    if (!onRoomSwitch) return;
+
+    messages.forEach((msg) => {
+      if (msg.role === "assistant") {
+        const container = messageContainerRefs.current.get(msg.id);
+        if (container) {
+          processRoomLinksInDOM(container, handleRoomLinkClick);
+        }
+      }
+    });
+  }, [messages, onRoomSwitch, handleRoomLinkClick]);
 
   // 打开聊天窗口时重置消息
   useEffect(() => {
@@ -373,7 +400,14 @@ export function ChatModal({
                 }`}
               >
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm max-w-none font-chill-huofangsong">
+                  <div
+                    ref={(el) => {
+                      if (el) {
+                        messageContainerRefs.current.set(msg.id, el);
+                      }
+                    }}
+                    className="prose prose-sm max-w-none font-chill-huofangsong"
+                  >
                     <Streamdown>{msg.content}</Streamdown>
                   </div>
                 ) : (
