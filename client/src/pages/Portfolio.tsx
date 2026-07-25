@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "wouter";
+import { Box } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
@@ -345,18 +346,43 @@ export default function Portfolio() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {works.map(work => (
-                    <Link key={work.slug} href={work.link || `/${work.slug}`}>
-                      <div className="stat-box p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                        <h3 className="text-xl font-bold mb-3 text-text-main">
-                          {work.title}
-                        </h3>
-                        <p className="text-sm text-text-secondary leading-relaxed">
-                          {work.description || "内容待补充"}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
+                  {works.map(work => {
+                    const workLink = work.link || `/${work.slug}`;
+                    const isExternalLink = workLink.startsWith('/3d-models/') || workLink.startsWith('http');
+                    const is3DModel = workLink.startsWith('/3d-models/');
+
+                    return isExternalLink ? (
+                      <a key={work.slug} href={workLink} target="_blank" rel="noopener noreferrer">
+                        <div className="stat-box p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                          <div className="flex items-start justify-between mb-3">
+                            <h3 className="text-xl font-bold text-text-main">
+                              {work.title}
+                            </h3>
+                            {is3DModel && (
+                              <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                                <Box className="h-3 w-3" />
+                                3D
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-text-secondary leading-relaxed">
+                            {work.description || "内容待补充"}
+                          </p>
+                        </div>
+                      </a>
+                    ) : (
+                      <Link key={work.slug} href={workLink}>
+                        <div className="stat-box p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                          <h3 className="text-xl font-bold mb-3 text-text-main">
+                            {work.title}
+                          </h3>
+                          <p className="text-sm text-text-secondary leading-relaxed">
+                            {work.description || "内容待补充"}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>
