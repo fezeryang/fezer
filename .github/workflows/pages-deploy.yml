@@ -35,17 +35,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Base Path Strategy:
-      # - Custom domain mode: USE_CUSTOM_DOMAIN=true → VITE_BASE_PATH="/" (root)
-      # - User-page mode (username.github.io): USE_CUSTOM_DOMAIN=false, VITE_BASE_PATH="/" (root)
-      # - Repo-page mode (username.github.io/repo): USE_CUSTOM_DOMAIN=false, VITE_BASE_PATH="/repo/" (subpath)
+      # - Custom domain mode (home.fezern8n.com): VITE_BASE_PATH="/" (root)
+      # - User-page mode (username.github.io): VITE_BASE_PATH="/" (root)
+      # - Repo-page mode (username.github.io/repo): VITE_BASE_PATH="/repo/" (subpath)
       # Must include trailing slash for proper asset path resolution.
+      #
+      # IMPORTANT: When using custom domain, set VITE_BASE_PATH to "/" directly.
       - name: Build frontend only
         run: pnpm exec vite build
         env:
-          # Set to true when using custom domain (home.fezern8n.com) - forces root path
-          USE_CUSTOM_DOMAIN: true
-          # Base path: "/" for custom domain, "/repo/" for subpath GitHub Pages
-          VITE_BASE_PATH: ${{ (env.USE_CUSTOM_DOMAIN == 'true') && '/' || (github.event.repository.name != github.repository_owner && format('/{0}/', github.event.repository.name) || '/') }}
+          # Using custom domain - force root path
+          VITE_BASE_PATH: "/"
           VITE_API_URL: https://api.fezern8n.com
 
       # SPA Fallback: GitHub Pages serves 404.html for missing routes.
