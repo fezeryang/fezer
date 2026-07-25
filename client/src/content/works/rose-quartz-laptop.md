@@ -4,7 +4,7 @@ description: "玫瑰水晶材质的笔记本电脑 3D 模型，展示了独特�
 date: "2025-07-25"
 tags: ["3D", "WebGL", "笔记本", "水晶材质", "产品设计"]
 technologies: "WebGL, JavaScript, Crystal Rendering"
-link: "/3d-models/rose-quartz-laptop.html"
+link: "3d-models/rose-quartz-laptop.html"
 ---
 
 # 玫瑰水晶笔记本电脑

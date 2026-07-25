@@ -4,7 +4,7 @@ description: "传统木质牛车 3D 交互模型，展示了古代交通工具�
 date: "2025-07-25"
 tags: ["3D", "WebGL", "交通工具", "传统工艺"]
 technologies: "WebGL, JavaScript, Interactive 3D"
-link: "/3d-models/wooden-ox-cart.html"
+link: "3d-models/wooden-ox-cart.html"
 ---
 
 # 木质牛车

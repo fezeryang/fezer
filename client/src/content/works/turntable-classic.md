@@ -4,7 +4,7 @@ description: "经典唱片机 3D 模型，展示了复古音响设备的设计�
 date: "2025-07-25"
 tags: ["3D", "WebGL", "音响设备", "复古设计"]
 technologies: "WebGL, JavaScript"
-link: "/3d-models/turntable-classic.html"
+link: "3d-models/turntable-classic.html"
 ---
 
 # 经典唱片机

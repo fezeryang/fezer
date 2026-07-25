@@ -4,7 +4,7 @@ description: "中国古塔 3D 模型，展示了中国古代建筑的精湛工�
 date: "2025-07-25"
 tags: ["3D", "WebGL", "中国建筑", "古塔", "文化遗产"]
 technologies: "WebGL, JavaScript"
-link: "/3d-models/ancient-pagoda.html"
+link: "3d-models/ancient-pagoda.html"
 ---
 
 # 古塔

@@ -4,7 +4,7 @@ description: "精美的威尼斯狂欢节面具 3D 模型，展示了复杂的�
 date: "2025-07-25"
 tags: ["3D", "WebGL", "艺术", "文化", "面具"]
 technologies: "WebGL, JavaScript, Three.js"
-link: "/3d-models/venetian-mask.html"
+link: "3d-models/venetian-mask.html"
 ---
 
 # 威尼斯面具

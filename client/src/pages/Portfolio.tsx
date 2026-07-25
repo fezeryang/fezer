@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Box } from "lucide-react";
+import { Box, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
@@ -14,7 +15,12 @@ declare global {
 }
 
 export default function Portfolio() {
+  const [isModelsExpanded, setIsModelsExpanded] = useState(false);
   const works = loadWorks();
+
+  // Separate 3D models from regular works
+  const modelWorks = works.filter(w => w.link?.includes('3d-models'));
+  const regularWorks = works.filter(w => !w.link?.includes('3d-models'));
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.p5) return;
@@ -340,52 +346,103 @@ export default function Portfolio() {
                 精选作品
               </h2>
 
-              {works.length === 0 ? (
+              {regularWorks.length === 0 ? (
                 <div className="stat-box p-6 text-text-secondary font-mono text-sm">
                   内容待补充
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {works.map(work => {
+                  {regularWorks.map(work => {
                     const workLink = work.link || `/${work.slug}`;
-                    const isExternalLink = workLink.startsWith('/3d-models/') || workLink.startsWith('http');
-                    const is3DModel = workLink.startsWith('/3d-models/');
 
-                    return isExternalLink ? (
-                      <a key={work.slug} href={workLink} target="_blank" rel="noopener noreferrer">
-                        <div className="stat-box p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                          <div className="flex items-start justify-between mb-3">
-                            <h3 className="text-xl font-bold text-text-main">
-                              {work.title}
-                            </h3>
-                            {is3DModel && (
-                              <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-                                <Box className="h-3 w-3" />
-                                3D
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-text-secondary leading-relaxed">
-                            {work.description || "内容待补充"}
-                          </p>
-                        </div>
-                      </a>
-                    ) : (
+                    return (
                       <Link key={work.slug} href={workLink}>
-                        <div className="stat-box p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                        <motion.div
+                          className="stat-box rounded-3xl border border-slate-900/10 bg-slate-50/72 backdrop-blur-md shadow-[0_18px_60px_rgba(15,23,42,0.12)] p-6 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.97]"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ type: "spring", damping: 1.0, stiffness: 100 }}
+                        >
                           <h3 className="text-xl font-bold mb-3 text-text-main">
                             {work.title}
                           </h3>
                           <p className="text-sm text-text-secondary leading-relaxed">
                             {work.description || "内容待补充"}
                           </p>
-                        </div>
+                        </motion.div>
                       </Link>
                     );
                   })}
                 </div>
               )}
             </div>
+
+            {/* 3D Models Section */}
+            {modelWorks.length > 0 && (
+              <div className="max-w-4xl mt-12">
+                <motion.div
+                  className="rounded-3xl border border-slate-900/10 bg-slate-50/72 backdrop-blur-md shadow-[0_18px_60px_rgba(15,23,42,0.12)] overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <button
+                    onClick={() => setIsModelsExpanded(!isModelsExpanded)}
+                    className="flex items-center justify-between w-full p-6 hover:bg-slate-100/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Box className="h-5 w-5 text-slate-700" />
+                      <h3 className="text-xl font-bold text-text-main">3D 模型作品</h3>
+                      <span className="text-sm text-slate-500">({modelWorks.length})</span>
+                    </div>
+                    <ChevronDown className={`transition-transform duration-300 text-slate-500 ${isModelsExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isModelsExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-6 pb-6">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {modelWorks.map(model => {
+                              const modelLink = model.link;
+
+                              return (
+                                <a
+                                  key={model.slug}
+                                  href={modelLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <motion.div
+                                    className="rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    transition={{ type: "spring", damping: 1.0, stiffness: 100 }}
+                                  >
+                                    <h4 className="text-sm font-bold text-text-main mb-2 line-clamp-2">
+                                      {model.title}
+                                    </h4>
+                                    <p className="text-xs text-slate-600 line-clamp-3">
+                                      {model.description}
+                                    </p>
+                                  </motion.div>
+                                </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              </div>
+            )}
           </div>
         </div>
       </DampedScrollView>

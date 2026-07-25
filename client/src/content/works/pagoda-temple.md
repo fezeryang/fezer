@@ -4,7 +4,7 @@ description: "采用 supreme 真实材质渲染的宝塔 3D 模型，展示了�
 date: "2025-07-25"
 tags: ["3D", "WebGL", "东方建筑", "宝塔", "传统文化"]
 technologies: "WebGL, JavaScript, PBR Materials"
-link: "/3d-models/pagoda-temple.html"
+link: "3d-models/pagoda-temple.html"
 ---
 
 # Supreme 宝塔

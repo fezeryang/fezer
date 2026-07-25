@@ -4,7 +4,7 @@ description: "可折叠的唱片机 3D 交互模型，支持机械结构展示�
 date: "2025-07-25"
 tags: ["3D", "WebGL", "音响设备", "机械结构"]
 technologies: "WebGL, JavaScript, Interactive 3D"
-link: "/3d-models/turntable-v2.html"
+link: "3d-models/turntable-v2.html"
 ---
 
 # 唱片机 V2
