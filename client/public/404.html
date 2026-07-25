@@ -8,21 +8,38 @@
     // GitHub Pages returns this 404.html for any unmatched route.
     // We redirect back to index.html with the original path in a query param.
     // Then index.html uses history.pushState to restore the route — no loop.
+    //
+    // Supports both:
+    // - Custom domain: home.fezern8n.com/about → /?redirect=/about
+    // - Subpath GitHub Pages: fezeryang.github.io/fezer/about → /fezer/?redirect=/about
     (function() {
       var l = window.location;
-      var pathname = l.pathname;   // e.g., /fezer/about
+      var pathname = l.pathname;   // e.g., /about (custom) or /fezer/about (subpath)
       var search = l.search;       // e.g., ?foo=bar
       var hash = l.hash;           // e.g., #section
 
-      // Extract route after the repo name:
-      // pathname.split('/') = ['', 'fezer', 'about'] → parts[2] = 'about'
       var parts = pathname.split('/');
-      var route = (parts[2] || '') + search + hash;
 
-      // Build base path: /fezer or /
-      var basePath = '/' + (parts[1] || '');
+      // Detect deployment mode:
+      // - Custom domain: ['', 'about'] → parts[1] = 'about', no repo subpath
+      // - Subpath GitHub Pages: ['', 'fezer', 'about'] → parts[1] = 'fezer'
+      //
+      // Heuristic: If parts[1] looks like a repo name (no dots) and parts[2] exists,
+      // assume subpath mode. Otherwise, assume root/custom domain mode.
+      var hasSubpath = parts.length > 2 && parts[1] && !parts[1].includes('.');
 
-      // Redirect to /fezer/?redirect=about  (or /?redirect= for user pages)
+      var basePath, route;
+      if (hasSubpath) {
+        // Subpath mode: /fezer/about → basePath=/fezer, route=/about
+        basePath = '/' + parts[1];
+        route = '/' + (parts.slice(2).join('/') || '') + search + hash;
+      } else {
+        // Root/custom domain mode: /about → basePath=/, route=/about
+        basePath = '/';
+        route = pathname + search + hash;
+      }
+
+      // Redirect to base/?redirect=route
       var redirectUrl = l.protocol + '//' + l.hostname +
         (l.port ? ':' + l.port : '') +
         basePath + '/?redirect=' + encodeURIComponent(route);
