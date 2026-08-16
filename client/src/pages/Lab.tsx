@@ -6,6 +6,12 @@ import DampedScrollView from "@/components/DampedScrollView";
 import logoPreviewUrl from "@/data/fezer_logo_square_1024.png";
 import { Link } from "wouter";
 
+const labImageUrls = Array.from(
+  { length: 6 },
+  (_, index) =>
+    `${import.meta.env.BASE_URL}studioimage/catlogo-${String(index + 1).padStart(2, "0")}.png`
+);
+
 declare global {
   interface Window {
     p5: any;
@@ -31,7 +37,7 @@ export default function Lab() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.p5) return;
+    if (typeof window === "undefined" || !window.p5) return;
 
     const p5 = window.p5 as any;
     let cubeTex: any[] = [];
@@ -41,12 +47,17 @@ export default function Lab() {
     const sketch = (p: any) => {
       p.preload = function () {
         logoPreviewImage = p.loadImage(logoPreviewUrl);
+        cubeTex = labImageUrls.map(imageUrl => p.loadImage(imageUrl));
       };
 
       p.setup = function () {
         let canvas;
         try {
-          canvas = p.createCanvas(window.innerWidth, window.innerHeight, p.WEBGL);
+          canvas = p.createCanvas(
+            window.innerWidth,
+            window.innerHeight,
+            p.WEBGL
+          );
         } catch (error) {
           console.warn("Lab WebGL unavailable; skipping p5 canvas.", error);
           p.noLoop();
@@ -58,12 +69,6 @@ export default function Lab() {
           console.warn("Lab WebGL unavailable; skipping p5 canvas.");
           p.noLoop();
           return;
-        }
-
-        for (let i = 0; i < 6; i++) {
-          let pg = p.createGraphics(400, 400);
-          drawProceduralTexture(pg, i, p);
-          cubeTex.push(pg);
         }
 
         p.pixelDensity(1);
@@ -79,7 +84,7 @@ export default function Lab() {
         const scrollHeight = document.body.scrollHeight - window.innerHeight;
         const scrollT = scrollHeight > 0 ? scrollY / scrollHeight : 0;
 
-        let camZ = (p.height / 2) / p.tan(p.PI / 6);
+        let camZ = p.height / 2 / p.tan(p.PI / 6);
         p.camera(0, 0, camZ + scrollT * 500, 0, 0, 0, 0, 1, 0);
 
         p.clear();
@@ -96,6 +101,8 @@ export default function Lab() {
           renderTape(scrollT, p);
         }
 
+        drawWaveField(scrollT, p);
+
         if (p.random() > 0.95) {
           drawGlitch(p);
         }
@@ -106,32 +113,6 @@ export default function Lab() {
       };
     };
 
-    const drawProceduralTexture = (pg: any, index: number, p: any) => {
-      pg.background(255);
-      pg.noStroke();
-      const colors = ["#ff0055", "#00ff99", "#0066ff", "#f3ff00", "#080808", "#ffffff"];
-
-      pg.fill(colors[index]);
-      pg.rect(0, 0, pg.width, pg.height);
-
-      pg.fill(0, 50);
-      for (let i = 0; i < 10; i++) {
-        pg.ellipse(pg.random(pg.width), pg.random(pg.height), pg.random(50, 200));
-      }
-
-      pg.fill(255);
-      pg.textSize(40);
-      pg.textAlign(pg.CENTER, pg.CENTER);
-      pg.text("DATA_IMG_" + index, pg.width / 2, pg.height / 2);
-
-      pg.stroke(0, 30);
-      for (let i = 0; i < pg.width; i += 4) {
-        for (let j = 0; j < pg.height; j += 4) {
-          if (pg.random() > 0.8) pg.point(i, j);
-        }
-      }
-    };
-
     const renderCube = (t: number, p: any) => {
       p.push();
       let rotateVal = t * p.PI * 4;
@@ -140,6 +121,7 @@ export default function Lab() {
       p.rotateZ(rotateVal * 0.2);
 
       let size = 220 + p.sin(p.frameCount * 0.05) * 10;
+      let wavePhase = p.frameCount * 0.045 + t * p.TWO_PI;
 
       const faces = [
         [0, 0, size / 2],
@@ -160,13 +142,63 @@ export default function Lab() {
       ];
 
       faces.forEach((face, i) => {
+        const wave = p.sin(wavePhase + i * 0.85);
+        const secondaryWave = p.sin(wavePhase * 0.62 - i * 0.45);
+
         p.push();
-        p.translate(face[0], face[1], face[2]);
+        p.translate(
+          face[0] + wave * 5,
+          face[1] + secondaryWave * 5,
+          face[2] + wave * 3
+        );
         rotations[i]();
+        p.rotateZ(wave * 0.025);
+        p.rotateX(secondaryWave * 0.02);
+        p.scale(1 + wave * 0.022, 1 - wave * 0.018);
         p.texture(cubeTex[i]);
         p.plane(size);
         p.pop();
       });
+
+      p.push();
+      p.noFill();
+      p.stroke(42, 42, 42, 28);
+      p.strokeWeight(1);
+      p.rotateX(p.HALF_PI);
+      for (let i = 0; i < 3; i++) {
+        const ringWave = p.sin(wavePhase * 0.8 + i) * 14;
+        p.ellipse(0, 0, size * (1.4 + i * 0.28) + ringWave);
+      }
+      p.pop();
+
+      p.pop();
+    };
+
+    const drawWaveField = (t: number, p: any) => {
+      if (t >= 0.85) {
+        return;
+      }
+
+      p.push();
+      p.resetMatrix();
+      p.noFill();
+      p.stroke(42, 42, 42, 18);
+      p.strokeWeight(1);
+
+      const centerY = p.height * 0.5;
+      const waveTime = p.frameCount * 0.032 + t * p.TWO_PI;
+
+      for (let band = 0; band < 6; band++) {
+        p.beginShape();
+        for (let x = -p.width / 2; x <= p.width / 2; x += 32) {
+          const wave =
+            p.sin(x * 0.012 + waveTime + band * 0.7) * (8 + band * 1.5) +
+            p.sin(x * 0.026 - waveTime * 0.7) * 4;
+          const y = centerY - p.height / 2 + (band - 2.5) * 78 + wave;
+          p.vertex(x, y, -520);
+        }
+        p.endShape();
+      }
 
       p.pop();
     };
@@ -244,7 +276,7 @@ export default function Lab() {
 
       p.stroke(255, 150);
       p.strokeWeight(2);
-      let lineY = (p.frameCount * 5) % size - size / 2;
+      let lineY = ((p.frameCount * 5) % size) - size / 2;
       p.line(-size / 2, lineY, size / 2, lineY);
       p.pop();
     };
@@ -260,7 +292,12 @@ export default function Lab() {
       p.line(0, y, p.width, y);
 
       p.fill(255, 0, 85, 100);
-      p.rect(p.random(p.width), p.random(p.height), p.random(100, 300), p.random(5, 20));
+      p.rect(
+        p.random(p.width),
+        p.random(p.height),
+        p.random(100, 300),
+        p.random(5, 20)
+      );
       p.pop();
     };
 
@@ -274,7 +311,11 @@ export default function Lab() {
 
   return (
     <div className="w-full bg-white overflow-x-hidden">
-      <div id="p5-container" className="fixed inset-0 w-full h-screen" />
+      <div
+        id="p5-container"
+        data-testid="lab-canvas"
+        className="pointer-events-none fixed inset-0 z-[1] h-screen w-full"
+      />
       <Navigation />
       <GrainOverlay />
       <CustomCursor />
@@ -300,14 +341,23 @@ export default function Lab() {
           <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
             <div className="pointer-events-auto">
               <h1 className="text-6xl md:text-8xl font-bold text-white mix-blend-difference">
-                Fezer<br />实验室
+                Fezer
+                <br />
+                实验室
               </h1>
             </div>
 
             <div className="text-right text-sm font-mono pointer-events-auto">
-              <div>帧率: <span id="fps">60</span></div>
-              <div>滚动位置: <span id="scrollVal">{Math.round(scrollT * 100)}%</span></div>
-              <div>阶段: {scrollT < 0.6 ? "01" : scrollT < 0.85 ? "02" : "03"}</div>
+              <div>
+                帧率: <span id="fps">60</span>
+              </div>
+              <div>
+                滚动位置:{" "}
+                <span id="scrollVal">{Math.round(scrollT * 100)}%</span>
+              </div>
+              <div>
+                阶段: {scrollT < 0.6 ? "01" : scrollT < 0.85 ? "02" : "03"}
+              </div>
             </div>
           </div>
         </div>
