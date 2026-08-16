@@ -1,8 +1,13 @@
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 
-export default function Navigation() {
+type NavigationProps = {
+  variant?: "default" | "editorial";
+};
+
+export default function Navigation({ variant = "default" }: NavigationProps) {
   const [location] = useLocation();
+  const isEditorial = variant === "editorial";
 
   const isItemActive = (href: string) => {
     if (href === "/") {
@@ -21,9 +26,18 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 flex justify-end items-center p-8 pointer-events-none">
-      <div className="flex gap-8 pointer-events-auto">
-        {navItems.map((item) => (
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 flex justify-end items-center p-8 pointer-events-none ${
+        isEditorial ? "navigation--editorial" : ""
+      }`}
+      aria-label="Primary navigation"
+    >
+      <div
+        className={`flex gap-8 pointer-events-auto ${
+          isEditorial ? "navigation__items" : ""
+        }`}
+      >
+        {navItems.map(item => (
           <Link
             key={item.href}
             href={item.href}
