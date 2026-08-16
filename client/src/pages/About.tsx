@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { marked } from "marked";
+import { useEffect, useRef } from "react";
+import { ArrowDown, ArrowUpRight, Github, Mail, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
 import { getDefaultProfile } from "@/content/loaders";
+import "./About.css";
 
 declare global {
   interface Window {
@@ -13,454 +14,314 @@ declare global {
   }
 }
 
-export default function About() {
-  const p5InstanceRef = useRef<any>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const bubbleMenuRef = useRef<HTMLDivElement>(null);
-  const [isBubbleOpen, setIsBubbleOpen] = useState(false);
-  const profile = getDefaultProfile();
+type Prism = {
+  x: number;
+  y: number;
+  z: number;
+  width: number;
+  height: number;
+  depth: number;
+  rotation: number;
+  phase: number;
+  color: [number, number, number];
+};
 
-  const scrollToSection = (sectionId: string) => {
-    setIsBubbleOpen(false);
-    const target = document.getElementById(sectionId);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
+function AboutPrismCanvas() {
+  const canvasHostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !window.p5) return;
-
-    const p5 = window.p5 as any;
-    let prisms: any[] = [];
-    let hasWebGL = false;
-
-    class Prism {
-      pos: any;
-      size: number;
-      rotSpeed: number;
-      color: any;
-
-      constructor(pInstance: any) {
-        this.pos = pInstance.createVector(
-          pInstance.random(-300, 300),
-          pInstance.random(-300, 300),
-          pInstance.random(-300, 300)
-        );
-        this.size = pInstance.random(50, 200);
-        this.rotSpeed = pInstance.random(0.01, 0.02);
-        this.color = pInstance.color(
-          pInstance.random(200, 255),
-          pInstance.random(200, 255),
-          pInstance.random(230, 255),
-          40
-        );
-      }
-
-      update(pInstance: any) {
-        let m = pInstance.createVector(
-          pInstance.mouseX - pInstance.width / 2,
-          pInstance.mouseY - pInstance.height / 2,
-          0
-        );
-        let diff = p5.Vector.sub(m, this.pos);
-        this.pos.add(diff.mult(0.01));
-      }
-
-      display(pInstance: any) {
-        pInstance.push();
-        pInstance.translate(this.pos.x, this.pos.y, this.pos.z);
-        pInstance.rotateX(pInstance.frameCount * this.rotSpeed);
-        pInstance.rotateZ(pInstance.frameCount * this.rotSpeed * 0.5);
-
-        pInstance.stroke(0, 0, 0, 15);
-        pInstance.fill(this.color);
-
-        pInstance.box(this.size, this.size * 0.1, this.size * 1.5);
-        pInstance.pop();
-      }
+    if (typeof window === "undefined" || !window.p5 || !canvasHostRef.current) {
+      return;
     }
 
+    const host = canvasHostRef.current;
+    let hasWebGL = false;
+    let prisms: Prism[] = [];
+
     const sketch = (p: any) => {
-      p.setup = function () {
+      const getCanvasSize = () => ({
+        width: Math.max(window.innerWidth, 300),
+        height: Math.max(window.innerHeight, 260),
+      });
+
+      p.setup = () => {
+        const { width, height } = getCanvasSize();
         let canvas;
+
         try {
-          canvas = p.createCanvas(
-            window.innerWidth,
-            window.innerHeight,
-            p.WEBGL
-          );
+          canvas = p.createCanvas(width, height, p.WEBGL);
         } catch (error) {
-          console.warn("About WebGL unavailable; skipping p5 canvas.", error);
-          p.noLoop();
-          return;
-        }
-        canvas.parent("p5-container");
-        hasWebGL = Boolean(p._renderer?.isP3D);
-        if (!hasWebGL) {
-          console.warn("About WebGL unavailable; skipping p5 canvas.");
+          console.warn(
+            "About WebGL unavailable; skipping prism canvas.",
+            error
+          );
           p.noLoop();
           return;
         }
 
-        for (let i = 0; i < 8; i++) {
-          prisms.push(new Prism(p));
+        canvas.parent(host);
+        canvas.style("display", "block");
+        hasWebGL = Boolean(p._renderer?.isP3D);
+
+        if (!hasWebGL) {
+          console.warn("About WebGL unavailable; skipping prism canvas.");
+          p.noLoop();
+          return;
         }
+
+        const scale = Math.min(width, height) / 720;
+        prisms = [
+          {
+            x: -150 * scale,
+            y: -20 * scale,
+            z: -30 * scale,
+            width: 210 * scale,
+            height: 18 * scale,
+            depth: 320 * scale,
+            rotation: -0.2,
+            phase: 0.2,
+            color: [194, 211, 207],
+          },
+          {
+            x: 105 * scale,
+            y: 50 * scale,
+            z: -80 * scale,
+            width: 150 * scale,
+            height: 16 * scale,
+            depth: 250 * scale,
+            rotation: 0.34,
+            phase: 1.8,
+            color: [211, 202, 225],
+          },
+          {
+            x: 10 * scale,
+            y: -120 * scale,
+            z: 36 * scale,
+            width: 240 * scale,
+            height: 14 * scale,
+            depth: 120 * scale,
+            rotation: -0.08,
+            phase: 3.2,
+            color: [202, 216, 219],
+          },
+          {
+            x: -40 * scale,
+            y: 135 * scale,
+            z: 55 * scale,
+            width: 180 * scale,
+            height: 12 * scale,
+            depth: 92 * scale,
+            rotation: 0.18,
+            phase: 4.6,
+            color: [221, 211, 228],
+          },
+        ];
+        p.noStroke();
       };
 
-      p.draw = function () {
+      p.draw = () => {
         if (!hasWebGL) {
-          p.clear();
           return;
         }
 
-        p.background(252, 252, 252);
+        p.clear();
+        p.ambientLight(220, 224, 230);
+        p.directionalLight(255, 255, 255, -0.3, -0.5, -1);
 
-        p.ambientLight(200);
-        p.pointLight(
-          255,
-          255,
-          255,
-          p.mouseX - p.width / 2,
-          p.mouseY - p.height / 2,
-          500
+        const maxScroll = Math.max(
+          document.documentElement.scrollHeight - window.innerHeight,
+          1
         );
+        const targetScrollProgress = Math.min(
+          Math.max(window.scrollY / maxScroll, 0),
+          1
+        );
+        const scrollProgress =
+          (p as any).__scrollProgress === undefined
+            ? targetScrollProgress
+            : p.lerp((p as any).__scrollProgress, targetScrollProgress, 0.08);
+        (p as any).__scrollProgress = scrollProgress;
+
+        const pointerX = (p.mouseX - p.width / 2) * 0.00018;
+        const pointerY = (p.mouseY - p.height / 2) * 0.00012;
+        const scrollTurn = scrollProgress * Math.PI * 0.72;
+        const scrollLift = (scrollProgress - 0.5) * 180;
 
         p.push();
-        p.rotateX(p.frameCount * 0.002);
-        p.rotateY(p.frameCount * 0.001);
+        p.translate(
+          Math.sin(scrollProgress * Math.PI) * 42,
+          scrollLift,
+          Math.sin(scrollProgress * Math.PI * 2) * 80
+        );
+        p.rotateX(scrollProgress * 0.42 + pointerY);
+        p.rotateY(scrollTurn + pointerX);
+        p.rotateZ(Math.sin(scrollProgress * Math.PI) * 0.12);
 
-        prisms.forEach(prism => {
-          prism.update(p);
-          prism.display(p);
+        prisms.forEach((prism, index) => {
+          p.push();
+          const phase =
+            prism.phase + scrollProgress * Math.PI * (index % 2 ? -0.8 : 0.55);
+          p.translate(
+            prism.x + Math.sin(phase) * scrollProgress * 34,
+            prism.y + Math.cos(phase) * scrollProgress * 22,
+            prism.z
+          );
+          p.rotateZ(
+            prism.rotation + Math.sin(p.frameCount * 0.006 + phase) * 0.025
+          );
+          p.rotateY(Math.sin(scrollProgress * Math.PI + phase) * 0.16);
+          p.stroke(...prism.color, 68);
+          p.strokeWeight(0.75);
+          p.fill(...prism.color, 15);
+          p.box(prism.width, prism.height, prism.depth);
+          p.pop();
         });
 
         p.pop();
       };
 
-      p.windowResized = function () {
-        p.resizeCanvas(window.innerWidth, window.innerHeight);
+      p.windowResized = () => {
+        const { width, height } = getCanvasSize();
+        p.resizeCanvas(width, height);
       };
     };
 
-    const instance = new p5(sketch);
-    p5InstanceRef.current = instance;
+    const instance = new window.p5(sketch);
 
     return () => {
       instance.remove();
     };
   }, []);
 
-  useEffect(() => {
-    if (!isBubbleOpen) {
-      return;
-    }
+  return (
+    <div
+      ref={canvasHostRef}
+      className="about-geometry-layer"
+      data-testid="about-geometry"
+      aria-hidden="true"
+    />
+  );
+}
 
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as Node;
-      const clickedTrigger = triggerRef.current?.contains(target);
-      const clickedMenu = bubbleMenuRef.current?.contains(target);
-
-      if (!clickedTrigger && !clickedMenu) {
-        setIsBubbleOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsBubbleOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
-    window.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [isBubbleOpen]);
+export default function About() {
+  const profile = getDefaultProfile();
 
   return (
-    <div className="w-full min-h-screen bg-sand-base overflow-x-hidden font-huiwen-zhengkai">
-      <div id="p5-container" className="fixed inset-0 w-full h-screen" />
-      <Navigation />
+    <div className="about-page">
+      <AboutPrismCanvas />
+      <Navigation variant="editorial" />
       <GrainOverlay />
       <CustomCursor />
 
       <DampedScrollView>
-        {/* Content Wrapper */}
-        <div className="relative z-10 grid grid-cols-12 gap-6 min-h-screen p-12">
-          {/* Left Navigation - narrow */}
-          <div className="col-span-1 flex flex-col justify-between border-l border-text-main border-opacity-10 pl-4">
-            <div className="writing-mode-vertical text-xs font-bold tracking-widest text-text-main opacity-60 space-y-8">
-              <span>归档 — 2024</span>
-              <span>叙事</span>
-              <span>探索</span>
+        <main className="about-page__content">
+          <section
+            id="about-hero"
+            data-testid="about-hero"
+            className="about-section about-hero"
+          >
+            <div className="about-hero__archive" aria-label="Archive">
+              <span>归档 — 2026</span>
+              <span>数字探索者</span>
             </div>
-          </div>
 
-          {/* Main Content - wider */}
-          <main className="col-span-9 pt-24 px-8">
-            <header className="mb-32">
-              <div className="relative mb-8 inline-flex flex-col">
-                <div
-                  ref={bubbleMenuRef}
-                  className={`absolute -top-4 left-1/2 z-30 w-[280px] -translate-x-1/2 -translate-y-full border border-black bg-[#d1d5db] p-1 shadow-[inset_1px_1px_0px_#ffffff,inset_-1px_-1px_0px_#8e949e,10px_10px_0px_rgba(0,0,0,0.2)] transition-all duration-300 [transform-style:preserve-3d] ${
-                    isBubbleOpen
-                      ? "visible translate-y-0 opacity-100"
-                      : "invisible translate-y-4 opacity-0"
-                  }`}
-                  role="menu"
-                  aria-label="FEZER bubble menu"
-                >
-                  <div className="mb-1 flex items-center justify-between bg-gradient-to-r from-[#000080] to-[#1084d0] px-2 py-1 font-mono text-[11px] text-white">
-                    <span>ABOUT_MENU.EXE</span>
-                    <div className="flex gap-0.5">
-                      <span className="flex h-3.5 w-3.5 items-center justify-center border border-black bg-[#d1d5db] text-[9px] text-black shadow-[inset_1px_1px_0px_#fff]">
-                        _
-                      </span>
-                      <span className="flex h-3.5 w-3.5 items-center justify-center border border-black bg-[#d1d5db] text-[9px] text-black shadow-[inset_1px_1px_0px_#fff]">
-                        ×
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-0.5">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => scrollToSection("about-intro")}
-                      className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
-                    >
-                      <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
-                      <span className="uppercase">intro</span>
-                      <span className="ml-auto font-mono text-[10px] opacity-70">
-                        F1
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => scrollToSection("about-projects")}
-                      className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
-                    >
-                      <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
-                      <span className="uppercase">projects</span>
-                      <span className="ml-auto font-mono text-[10px] opacity-70">
-                        F5
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => scrollToSection("about-contact")}
-                      className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
-                    >
-                      <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
-                      <span className="uppercase">contact</span>
-                      <span className="ml-auto font-mono text-[10px] opacity-70">
-                        CTRL+C
-                      </span>
-                    </button>
-
-                    <div className="mx-1 my-0.5 h-px bg-[#888] shadow-[0_1px_0_#fff]" />
-
-                    <Link
-                      href="/jianli"
-                      role="menuitem"
-                      onClick={() => setIsBubbleOpen(false)}
-                      className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
-                    >
-                      <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
-                      <span className="uppercase">3D简历</span>
-                      <span className="ml-auto font-mono text-[10px] opacity-70">
-                        F3
-                      </span>
-                    </Link>
-
-                    <Link
-                      href="/lab/logo"
-                      role="menuitem"
-                      onClick={() => setIsBubbleOpen(false)}
-                      className="group flex items-center gap-3 border border-transparent px-3 py-2.5 text-[13px] font-medium transition-all hover:border-dotted hover:border-white hover:bg-[#0046ff] hover:text-white"
-                    >
-                      <span className="h-4 w-4 shrink-0 bg-white shadow-[inset_1px_1px_#888,inset_-1px_-1px_#eee] transition-colors group-hover:bg-[#a3e635]" />
-                      <span className="uppercase">logo</span>
-                      <span className="ml-auto font-mono text-[10px] opacity-70">
-                        ENTER
-                      </span>
-                    </Link>
-                  </div>
-
-                  <div className="absolute -bottom-[15px] left-1/2 h-0 w-0 -translate-x-1/2 border-l-[10px] border-r-[10px] border-t-[15px] border-l-transparent border-r-transparent border-t-black" />
-                </div>
-
-                <button
-                  ref={triggerRef}
-                  onClick={() => setIsBubbleOpen(current => !current)}
-                  className="cursor-pointer border-none bg-[#d1d5db] px-10 py-4 text-left text-6xl font-extrabold uppercase leading-tight tracking-[0.2rem] text-[#374151] shadow-[inset_3px_3px_0px_#ffffff,inset_-3px_-3px_0px_#8e949e,6px_6px_15px_rgba(0,0,0,0.4)] transition-transform duration-100 [clip-path:polygon(10%_0,100%_0,90%_100%,0_100%)] md:text-7xl"
-                  aria-expanded={isBubbleOpen}
-                  aria-haspopup="menu"
-                >
-                  {profile?.name ?? "FEZER"}
-                </button>
-              </div>
-              <p className="text-lg text-text-main opacity-70 max-w-md">
-                {profile?.bio ?? "待补充"}
+            <div className="about-hero__copy about-reveal">
+              <p className="about-section__eyebrow">01 / ABOUT</p>
+              <h1>{profile?.name?.toUpperCase() ?? "FEZER"}</h1>
+              <p className="about-hero__roles">
+                AI Product <span>·</span> Agent <span>·</span> Human-AI Workflow
               </p>
-            </header>
-
-            {/* Profile Sections */}
-            <section className="space-y-16">
-              <article id="about-intro" className="grid grid-cols-2 gap-10">
-                <div className="text-sm font-mono text-text-main opacity-60">
-                  简介
-                </div>
-                <div className="text-lg text-text-main opacity-70">
-                  {profile?.body ? (
-                    <div
-                      className="prose max-w-none text-inherit"
-                      dangerouslySetInnerHTML={{
-                        __html: marked.parse(profile.body) as string,
-                      }}
-                    />
-                  ) : (
-                    "待补充"
-                  )}
-                </div>
-              </article>
-
-              {/* Skills Section */}
-              <article id="about-skills" className="grid grid-cols-2 gap-10">
-                <div className="text-sm font-mono text-text-main opacity-60">
-                  技能与兴趣
-                </div>
-                <div>
-                  <span className="text-xs font-bold tracking-widest text-text-main opacity-50 block mb-3">
-                    技能与兴趣
-                  </span>
-                  {profile?.skills && profile.skills.length > 0 ? (
-                    <ul className="space-y-2">
-                      {profile.skills.map((skill, idx) => (
-                        <li
-                          key={idx}
-                          className="text-lg text-text-main opacity-70"
-                        >
-                          • {skill}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-lg text-text-main opacity-50">待补充</p>
-                  )}
-                </div>
-              </article>
-
-              {/* Projects Section */}
-              <article id="about-projects" className="grid grid-cols-2 gap-10">
-                <div className="text-sm font-mono text-text-main opacity-60">
-                  项目
-                </div>
-                <div>
-                  <span className="text-xs font-bold tracking-widest text-text-main opacity-50 block mb-3">
-                    项目
-                  </span>
-                  {profile?.projects && profile.projects.length > 0 ? (
-                    <ul className="space-y-2">
-                      {profile.projects.map((project, idx) => (
-                        <li
-                          key={idx}
-                          className="text-lg text-text-main opacity-70"
-                        >
-                          <a
-                            href={project.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:opacity-100 transition-opacity"
-                          >
-                            {project.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-lg text-text-main opacity-50">待补充</p>
-                  )}
-                </div>
-              </article>
-
-              {/* Contact Section */}
-              <article id="about-contact" className="grid grid-cols-2 gap-10">
-                <div className="text-sm font-mono text-text-main opacity-60">
-                  联系方式
-                </div>
-                <div>
-                  <span className="text-xs font-bold tracking-widest text-text-main opacity-50 block mb-3">
-                    联系方式
-                  </span>
-                  {profile?.contact &&
-                  Object.keys(profile.contact).length > 0 ? (
-                    <ul className="space-y-2">
-                      {Object.entries(profile.contact).map(
-                        ([platform, link]) => (
-                          <li
-                            key={platform}
-                            className="text-lg text-text-main opacity-70"
-                          >
-                            <a
-                              href={link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:opacity-100 transition-opacity"
-                            >
-                              {platform}
-                            </a>
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  ) : (
-                    <p className="text-lg text-text-main opacity-50">待补充</p>
-                  )}
-                </div>
-              </article>
-            </section>
-          </main>
-
-          {/* Right Info Panel - narrow */}
-          <aside className="col-span-2 flex flex-col justify-end border-l border-text-main border-opacity-10 pl-3">
-            <div className="glass-card p-4">
-              <div className="space-y-2 text-[10px] font-mono text-text-main opacity-70 mb-3">
-                <div className="flex justify-between pb-1 border-b border-text-main border-opacity-10">
-                  <span>姓名</span>
-                  <span className="truncate ml-1">{profile?.name ?? "—"}</span>
-                </div>
-                <div className="flex justify-between pb-1 border-b border-text-main border-opacity-10">
-                  <span>地区</span>
-                  <span className="truncate ml-1">
-                    {profile?.locale ?? "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between pb-1 border-b border-text-main border-opacity-10">
-                  <span>技能</span>
-                  <span>{profile?.skills.length ?? 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>项目</span>
-                  <span>{profile?.projects.length ?? 0}</span>
-                </div>
-              </div>
-              <p className="text-[10px] leading-tight text-text-main opacity-50">
-                数字桌面 · 思考碎片 · 实验场
+              <p className="about-hero__intro">
+                最近总在折腾 AI、Agent，还有那些不做出来就不肯消失的小想法。
               </p>
             </div>
-          </aside>
-        </div>
+
+            <div className="about-hero__footer">
+              <span>Personal / Experimental / In progress</span>
+              <span className="about-scroll-cue">
+                SCROLL <ArrowDown size={14} strokeWidth={1.2} />
+              </span>
+            </div>
+          </section>
+
+          <section
+            id="about-intro"
+            data-testid="about-intro"
+            className="about-section about-intro"
+          >
+            <div className="about-section__frame">
+              <div className="about-section__index">
+                <span>02 / ABOUT</span>
+                <span className="about-section__index-line" />
+              </div>
+
+              <div className="about-intro__copy about-reveal">
+                <h2>About Me</h2>
+                <p className="about-intro__body">
+                  我是 Fezer。最近大部分时间在和 AI、Agent
+                  以及各种还没想明白的问题打交道。
+                  比起只讨论它们能不能做，我更喜欢先做出来，再看看好不好用。有时候是产品，
+                  有时候是小工具，有时候只是一个突然想试试的念头。
+                </p>
+                <p className="about-intro__education">
+                  M.S. Candidate · Central University of Finance and Economics
+                </p>
+                <p className="about-intro__location">
+                  <MapPin size={15} strokeWidth={1.4} /> Beijing, China
+                </p>
+                <Link className="about-text-link" href="/portfolio">
+                  See what I&apos;m building <ArrowUpRight size={15} />
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="about-contact"
+            data-testid="about-contact"
+            className="about-section about-contact"
+          >
+            <div className="about-contact__frame">
+              <div className="about-section__index">
+                <span>03 / CONTACT</span>
+                <span className="about-section__index-line" />
+              </div>
+
+              <div className="about-contact__copy about-reveal">
+                <h2>Say Hi.</h2>
+                <p>如果你最近也在做点有意思的事，欢迎来打个招呼。</p>
+
+                <div className="about-contact__links">
+                  <a
+                    className="about-contact__link about-contact__link--wide"
+                    href="mailto:cookfezer@gmail.com"
+                    data-testid="about-email-link"
+                  >
+                    <Mail size={22} strokeWidth={1.25} />
+                    <span>cookfezer@gmail.com</span>
+                    <ArrowUpRight size={15} />
+                  </a>
+                  <a
+                    className="about-contact__link"
+                    href="https://github.com/fezeryang/fezer"
+                    target="_blank"
+                    rel="noreferrer"
+                    data-testid="about-github-link"
+                  >
+                    <Github size={21} strokeWidth={1.25} />
+                    <span>GitHub</span>
+                    <ArrowUpRight size={15} />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <footer className="about-footer">
+              <span>FEZER © 2026</span>
+              <span>Beijing / Internet</span>
+            </footer>
+          </section>
+        </main>
       </DampedScrollView>
     </div>
   );
