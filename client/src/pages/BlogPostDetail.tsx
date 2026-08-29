@@ -67,7 +67,7 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
     return {
       html: result.html,
       sections: result.sections.filter(
-        section => section.level === 2 || section.level === 3
+        section => section.level >= 2 && section.level <= 4
       ),
     };
   }, [post.body]);

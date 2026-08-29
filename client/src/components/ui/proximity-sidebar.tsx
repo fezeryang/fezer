@@ -60,36 +60,37 @@ const SCROLL_SETTLE_MS = 480;
 
 /**
  * Blog paper palette (blog pages hardcode their palette instead of using
- * the global design tokens).
+ * the global design tokens). The 1px dashes anti-alias lighter than their
+ * nominal color, so the tiers run darker than the matching text tones.
  */
 const DASH_PRESETS: Record<SectionKind, DashPreset> = {
   title: {
     base: 40,
     bump: 70,
     thickness: 1,
-    className: "bg-[#2a2a2a]",
+    className: "bg-[#1c1b1a]",
   },
   subtitle: {
     base: 36,
     bump: 64,
     thickness: 1,
-    className: "bg-[#2a2a2a]",
+    className: "bg-[#1c1b1a]",
   },
   section: {
     base: 30,
     bump: 56,
     thickness: 1,
-    className: "bg-[#d1cdc7]",
+    className: "bg-[#6a6560]",
   },
   body: {
     base: 24,
     bump: 50,
     thickness: 1,
-    className: "bg-[#d1cdc7]",
+    className: "bg-[#8e8a85]",
   },
 };
 
-const ACTIVE_DASH_CLASS = "bg-[#2a2a2a]";
+const ACTIVE_DASH_CLASS = "bg-[#1c1b1a]";
 
 const getSectionElement = (id: string) =>
   typeof document === "undefined" ? null : document.getElementById(id);
@@ -141,17 +142,23 @@ const Dash = ({
   sectionKind,
   side,
 }: DashProps) => {
-  const ref = useRef<HTMLButtonElement>(null);
+  // sections with an empty id are inert "body dashes" (content-density
+  // markers): rendered as spans, not buttons — nothing to focus or click
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const spanRef = useRef<HTMLSpanElement>(null);
   const preset = DASH_PRESETS[sectionKind];
   const activeWidth = preset.base + preset.bump;
 
   useEffect(() => {
-    registerDash(section.id, ref.current);
+    if (!section.id) return;
+    registerDash(section.id, buttonRef.current);
     return () => registerDash(section.id, null);
   }, [registerDash, section.id]);
 
   const distance = useTransform(mouseY, y => {
-    const rect = ref.current?.getBoundingClientRect();
+    const rect =
+      buttonRef.current?.getBoundingClientRect() ??
+      spanRef.current?.getBoundingClientRect();
     if (!rect) return RADIUS;
     return y - (rect.top + rect.height / 2);
   });
@@ -173,9 +180,35 @@ const Dash = ({
     mass: 0.7,
   });
 
+  const dash = (
+    <motion.span
+      className={`block transition-colors duration-150 ease-out group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 ${
+        active ? ACTIVE_DASH_CLASS : preset.className
+      }`}
+      style={{
+        height: preset.thickness,
+        scaleX,
+        transformOrigin: side === "left" ? "left center" : "right center",
+        width: MAX_DASH_WIDTH,
+      }}
+    />
+  );
+
+  if (!section.id) {
+    return (
+      <span
+        ref={spanRef}
+        aria-hidden="true"
+        className="flex h-px w-[110px] items-center"
+      >
+        {dash}
+      </span>
+    );
+  }
+
   return (
     <button
-      ref={ref}
+      ref={buttonRef}
       type="button"
       aria-current={active ? "location" : undefined}
       aria-label={`Go to ${section.label}`}
@@ -183,17 +216,7 @@ const Dash = ({
       className="group flex h-px w-[110px] items-center border-0 bg-transparent p-0 outline-none"
       onClick={() => onSelect(section.id)}
     >
-      <motion.span
-        className={`block transition-colors duration-150 ease-out group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 ${
-          active ? ACTIVE_DASH_CLASS : preset.className
-        }`}
-        style={{
-          height: preset.thickness,
-          scaleX,
-          transformOrigin: side === "left" ? "left center" : "right center",
-          width: MAX_DASH_WIDTH,
-        }}
-      />
+      {dash}
     </button>
   );
 };
@@ -418,7 +441,7 @@ const ProximitySidebar = ({
     >
       <div
         className={cn(
-          "pointer-events-auto flex flex-col gap-2",
+          "pointer-events-auto flex h-[45vh] flex-col justify-between gap-2",
           side === "right" ? "items-end" : "items-start"
         )}
         onPointerMove={event => {
@@ -431,9 +454,9 @@ const ProximitySidebar = ({
           mouseY.set(Infinity);
         }}
       >
-        {sections.map(section => (
+        {sections.map((section, index) => (
           <Dash
-            key={section.id}
+            key={section.id || `body-dash-${index}`}
             active={section.id === activeId}
             mouseY={mouseY}
             onSelect={selectSection}

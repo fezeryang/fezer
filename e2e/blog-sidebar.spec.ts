@@ -3,11 +3,15 @@ import { expect, test } from "@playwright/test";
 const BLOG_POST_SLUG = "/blog/deploy-ollama-on-school-ai-platform";
 const SIDEBAR_NAV = 'nav[aria-label="Page sections"]';
 // 11 h2 + 10 h3 headings in this post
-const EXPECTED_DASHES = 21;
+const EXPECTED_HEADING_DASHES = 21;
+// content-weight body dashes appended by BODY_DASH_RATIO (~25%)
+const EXPECTED_BODY_DASHES = 5;
 const CLICK_TARGET_INDEX = 6;
 
 const waitForSidebar = (page: import("@playwright/test").Page) =>
-  expect(page.locator(`${SIDEBAR_NAV} button`)).toHaveCount(EXPECTED_DASHES);
+  expect(page.locator(`${SIDEBAR_NAV} button`)).toHaveCount(
+    EXPECTED_HEADING_DASHES
+  );
 
 const getHeadingIds = (page: import("@playwright/test").Page) =>
   page.evaluate(() =>
@@ -17,15 +21,22 @@ const getHeadingIds = (page: import("@playwright/test").Page) =>
   );
 
 test.describe("Blog post ProximitySidebar", () => {
-  test("renders one dash per h2/h3 heading on desktop", async ({ page }) => {
+  test("renders heading dashes plus content-weight body dashes", async ({
+    page,
+  }) => {
     await page.goto(BLOG_POST_SLUG, { waitUntil: "domcontentloaded" });
 
-    const dashes = page.locator(`${SIDEBAR_NAV} button`);
-    await expect(dashes).toHaveCount(EXPECTED_DASHES);
+    // interactive heading dashes
+    const buttons = page.locator(`${SIDEBAR_NAV} button`);
+    await expect(buttons).toHaveCount(EXPECTED_HEADING_DASHES);
+    // inert body dashes interleaved for content density
+    await expect(
+      page.locator(`${SIDEBAR_NAV} span[aria-hidden="true"]`)
+    ).toHaveCount(EXPECTED_BODY_DASHES);
 
     const ids = await getHeadingIds(page);
-    expect(ids).toHaveLength(EXPECTED_DASHES);
-    // every dash targets an existing heading id
+    expect(ids).toHaveLength(EXPECTED_HEADING_DASHES);
+    // every heading dash targets an existing heading id
     for (const id of ids) {
       await expect(page.locator(`[id="${id}"]`)).toHaveCount(1);
     }

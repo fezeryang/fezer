@@ -109,6 +109,34 @@ describe("ProximitySidebar", () => {
     expect(buttons[1].getAttribute("aria-label")).toBe("Go to Beta");
   });
 
+  it("renders body dashes (empty id) as inert non-buttons", async () => {
+    const { default: ProximitySidebar } = await import(
+      "../ui/proximity-sidebar"
+    );
+    mountSectionElement("alpha", 100, 150, 100);
+
+    const { container } = render(
+      <ProximitySidebar
+        sections={[
+          { id: "alpha", label: "Alpha", level: 2 },
+          { id: "", label: "Alpha", level: 4 },
+          { id: "", label: "Alpha", level: 4 },
+        ]}
+        side="right"
+      />
+    );
+
+    // only the heading dash is interactive
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    // body dashes render as aria-hidden spans
+    const inert = container.querySelectorAll('span[aria-hidden="true"]');
+    expect(inert).toHaveLength(2);
+
+    // clicking an inert dash does not scroll anywhere
+    fireEvent.click(inert[0]);
+    expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+
   it("scrolls to the section layout offset minus scrollOffset on click", async () => {
     const { default: ProximitySidebar } = await import(
       "../ui/proximity-sidebar"

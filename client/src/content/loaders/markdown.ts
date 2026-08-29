@@ -1,4 +1,4 @@
-import { Marked, type Tokens } from "marked";
+import { Marked, type Token, type Tokens } from "marked";
 import sanitizeHtml from "sanitize-html";
 
 export interface TocSection {
@@ -11,6 +11,24 @@ export interface RenderedMarkdown {
   html: string;
   sections: TocSection[];
 }
+
+/**
+ * Extra "body dashes" per heading count — the density knob that makes the
+ * sidebar minimap reflect content weight, not just outline structure
+ * (~25% more dashes, allocated to the longest sections).
+ */
+export const BODY_DASH_RATIO = 0.25;
+/** A section needs at least this many content blocks to earn a body dash. */
+const BODY_DASH_MIN_BLOCKS = 4;
+/** Top-level lexer token types counted as one content block. */
+const BLOCK_TOKEN_TYPES = new Set([
+  "paragraph",
+  "code",
+  "list",
+  "blockquote",
+  "table",
+  "hr",
+]);
 
 /**
  * Strip inline markdown while keeping the readable text, e.g. for TOC labels
@@ -39,9 +57,69 @@ export function slugifyHeadingText(text: string): string {
 }
 
 /**
+ * Count content blocks (paragraphs, code blocks, lists…) belonging to each
+ * heading, in document order. Blocks before the first heading are ignored.
+ */
+function countBlocksPerSection(tokens: Token[]): number[] {
+  const counts: number[] = [];
+
+  for (const token of tokens) {
+    if (token.type === "heading") {
+      counts.push(0);
+    } else if (BLOCK_TOKEN_TYPES.has(token.type) && counts.length > 0) {
+      counts[counts.length - 1] += 1;
+    }
+  }
+
+  return counts;
+}
+
+/**
+ * Insert non-interactive body dashes (id: "", level: 4) after the dashes of
+ * the content-heaviest sections, so the minimap density tracks content
+ * length. Headings keep their own interactive dash regardless.
+ */
+function augmentWithBodyDashes(
+  sections: TocSection[],
+  blockCounts: number[]
+): TocSection[] {
+  const extras = Math.round(sections.length * BODY_DASH_RATIO);
+
+  const eligible = sections
+    .map((section, index) => ({
+      section,
+      index,
+      blocks: blockCounts[index] ?? 0,
+    }))
+    .filter(
+      ({ section, blocks }) =>
+        section.level >= 2 && blocks >= BODY_DASH_MIN_BLOCKS
+    )
+    .sort((a, b) => b.blocks - a.blocks || a.index - b.index);
+
+  const chosen = eligible.slice(0, extras);
+  if (!chosen.length) return sections;
+
+  const augmented = [...sections];
+  // splice from the back so earlier indices stay valid
+  for (const { section, index } of [...chosen].sort(
+    (a, b) => b.index - a.index
+  )) {
+    augmented.splice(index + 1, 0, {
+      id: "",
+      label: section.label,
+      level: 4,
+    });
+  }
+
+  return augmented;
+}
+
+/**
  * Render a blog post body to sanitized HTML while collecting its headings
- * as TOC sections. The ids in the HTML and in `sections` come from the same
- * renderer pass, so they can never drift apart.
+ * as TOC sections (augmented with content-weight body dashes). The ids in
+ * the HTML and in `sections` come from the same renderer pass, so they can
+ * never drift apart.
  *
  * Uses a private Marked instance — the global `marked` singleton is shared
  * with other pages (e.g. About), so heading-id injection must not leak.
@@ -87,5 +165,8 @@ export function renderBlogMarkdown(body: string): RenderedMarkdown {
     },
   });
 
-  return { html, sections };
+  const blockCounts = countBlocksPerSection(md.lexer(body));
+  const augmentedSections = augmentWithBodyDashes(sections, blockCounts);
+
+  return { html, sections: augmentedSections };
 }

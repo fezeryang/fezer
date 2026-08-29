@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BODY_DASH_RATIO,
   renderBlogMarkdown,
   slugifyHeadingText,
   stripInlineMarkdown,
@@ -123,5 +124,48 @@ describe("renderBlogMarkdown", () => {
   it("is deterministic across calls", () => {
     const body = "## Alpha\n\n## Alpha\n\n### Beta\n";
     expect(renderBlogMarkdown(body)).toEqual(renderBlogMarkdown(body));
+  });
+});
+
+describe("body dash augmentation", () => {
+  const para = (n: number) =>
+    Array.from({ length: n }, (_, i) => `p${i}\n`).join("\n");
+
+  it("adds an inert body dash after content-heavy sections", () => {
+    const { sections } = renderBlogMarkdown(
+      `## Long\n\n${para(5)}## Short\n\none\n`
+    );
+
+    // 2 headings → round(2 * 0.25) = 1 extra, given to the longest section
+    expect(sections).toEqual([
+      { id: "long", label: "Long", level: 2 },
+      { id: "", label: "Long", level: 4 },
+      { id: "short", label: "Short", level: 2 },
+    ]);
+  });
+
+  it("caps extras at the ratio of headings and skips thin sections", () => {
+    const { sections } = renderBlogMarkdown(
+      `## A\n\n${para(6)}## B\n\n${para(6)}## C\n\n${para(6)}## D\n\n${para(6)}## E\n\n${para(2)}`
+    );
+
+    // 5 headings → round(5 * 0.25) = 1 extra only, despite 4 eligible sections
+    expect(sections.filter(s => s.id === "")).toHaveLength(
+      Math.round(5 * BODY_DASH_RATIO)
+    );
+  });
+
+  it("never attaches body dashes to the post title (h1)", () => {
+    const { sections } = renderBlogMarkdown(`# Title\n\n${para(6)}## Body\n`);
+
+    expect(sections.some(s => s.id === "" && s.level === 1)).toBe(false);
+    expect(sections.filter(s => !s.id)).toHaveLength(0);
+  });
+
+  it("leaves the rendered html untouched by body dashes", () => {
+    const { html } = renderBlogMarkdown(`## Long\n\n${para(5)}## Short\n`);
+
+    expect(html.match(/<h2 /g)).toHaveLength(2);
+    expect(html.match(/<h\d /g)).toHaveLength(2);
   });
 });
