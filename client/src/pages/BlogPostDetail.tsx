@@ -1,11 +1,11 @@
+import { useMemo } from "react";
 import { Link } from "wouter";
-import { marked } from "marked";
-import sanitizeHtml from "sanitize-html";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
-import { getPostBySlug } from "@/content/loaders";
+import ProximitySidebar from "@/components/ui/proximity-sidebar";
+import { getPostBySlug, renderBlogMarkdown } from "@/content/loaders";
 
 type BlogPostDetailProps = {
   slug: string;
@@ -29,9 +29,15 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
       <div className="relative min-h-screen overflow-x-hidden bg-[#f2f0ed] text-[#3e3c3a]">
         <DampedScrollView>
           <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 text-center">
-            <p className="text-xs font-mono tracking-[0.24em] text-[#8e8a85] uppercase">Blog / 404</p>
-            <h1 className="mt-4 text-3xl font-semibold text-[#2a2a2a]">未找到该文章</h1>
-            <p className="mt-3 text-sm text-[#6a6560]">该链接可能已失效，或文章尚未发布。</p>
+            <p className="text-xs font-mono tracking-[0.24em] text-[#8e8a85] uppercase">
+              Blog / 404
+            </p>
+            <h1 className="mt-4 text-3xl font-semibold text-[#2a2a2a]">
+              未找到该文章
+            </h1>
+            <p className="mt-3 text-sm text-[#6a6560]">
+              该链接可能已失效，或文章尚未发布。
+            </p>
             <div className="mt-8 flex items-center gap-3">
               <Link
                 href="/blog/surface"
@@ -56,7 +62,15 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
     );
   }
 
-  const rendered = sanitizeHtml(marked.parse(post.body) as string);
+  const { html: rendered, sections } = useMemo(() => {
+    const result = renderBlogMarkdown(post.body);
+    return {
+      html: result.html,
+      sections: result.sections.filter(
+        section => section.level === 2 || section.level === 3
+      ),
+    };
+  }, [post.body]);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#f7f5f0] text-[#3e3c3a]">
@@ -82,7 +96,11 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
 
               <header className="mb-16 text-center">
                 <p className="mb-8 text-[11px] font-mono uppercase tracking-[0.25em] text-[#a19d96]">
-                  {formatDate(post.date)} <span className="mx-3 font-serif text-base italic opacity-50">~</span> {post.category || "Journal"}
+                  {formatDate(post.date)}{" "}
+                  <span className="mx-3 font-serif text-base italic opacity-50">
+                    ~
+                  </span>{" "}
+                  {post.category || "Journal"}
                 </p>
                 <h1 className="font-songti text-4xl font-normal leading-[1.35] tracking-wide text-[#1c1b1a] md:text-5xl lg:text-[46px]">
                   {post.title}
@@ -107,6 +125,7 @@ export default function BlogPostDetail({ slug }: BlogPostDetailProps) {
         </main>
       </DampedScrollView>
 
+      <ProximitySidebar sections={sections} side="right" />
       <Navigation />
       <GrainOverlay />
       <CustomCursor />
