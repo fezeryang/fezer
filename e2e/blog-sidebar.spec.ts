@@ -4,8 +4,8 @@ const BLOG_POST_SLUG = "/blog/deploy-ollama-on-school-ai-platform";
 const SIDEBAR_NAV = 'nav[aria-label="Page sections"]';
 // 11 h2 + 10 h3 headings in this post
 const EXPECTED_HEADING_DASHES = 21;
-// content-weight body dashes appended by BODY_DASH_RATIO (~25%)
-const EXPECTED_BODY_DASHES = 5;
+// content-weight body dashes: target min(max(round(21×0.5)=11, −11), 42) = 11
+const EXPECTED_BODY_DASHES = 11;
 const CLICK_TARGET_INDEX = 6;
 
 const waitForSidebar = (page: import("@playwright/test").Page) =>

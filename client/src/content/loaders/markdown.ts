@@ -13,13 +13,19 @@ export interface RenderedMarkdown {
 }
 
 /**
- * Extra "body dashes" per heading count — the density knob that makes the
- * sidebar minimap reflect content weight, not just outline structure
- * (~25% more dashes, allocated to the longest sections).
+ * Body-dash density knobs. The minimap should reflect content weight and
+ * never look sparse: aim for ~50% of the heading count, but never fewer
+ * than MIN_TOTAL_LINES total dashes when the content supports it.
  */
-export const BODY_DASH_RATIO = 0.25;
-/** A section needs at least this many content blocks to earn a body dash. */
-const BODY_DASH_MIN_BLOCKS = 4;
+export const BODY_DASH_RATIO = 0.5;
+/** Total dashes (headings + body) a post aims for at minimum. */
+export const MIN_TOTAL_LINES = 10;
+/** A section needs at least this many content blocks to earn body dashes. */
+const BODY_DASH_MIN_BLOCKS = 2;
+/** One body dash per N content blocks within a section… */
+const BLOCKS_PER_BODY_DASH = 2;
+/** …but never more than this many stacked under a single section. */
+const MAX_BODY_DASHES_PER_SECTION = 3;
 /** Top-level lexer token types counted as one content block. */
 const BLOCK_TOKEN_TYPES = new Set([
   "paragraph",
@@ -76,14 +82,23 @@ function countBlocksPerSection(tokens: Token[]): number[] {
 
 /**
  * Insert non-interactive body dashes (id: "", level: 4) after the dashes of
- * the content-heaviest sections, so the minimap density tracks content
- * length. Headings keep their own interactive dash regardless.
+ * content-heavy sections, so the minimap density tracks content weight:
+ * heavier sections earn more (stacked) lines, and short posts get lifted to
+ * a comfortable minimum. Headings keep their own interactive dash.
  */
 function augmentWithBodyDashes(
   sections: TocSection[],
   blockCounts: number[]
 ): TocSection[] {
-  const extras = Math.round(sections.length * BODY_DASH_RATIO);
+  const headingCount = sections.length;
+  const target = Math.min(
+    Math.max(
+      Math.round(headingCount * BODY_DASH_RATIO),
+      MIN_TOTAL_LINES - headingCount
+    ),
+    headingCount * 2
+  );
+  if (target <= 0) return sections;
 
   const eligible = sections
     .map((section, index) => ({
@@ -97,19 +112,51 @@ function augmentWithBodyDashes(
     )
     .sort((a, b) => b.blocks - a.blocks || a.index - b.index);
 
-  const chosen = eligible.slice(0, extras);
-  if (!chosen.length) return sections;
+  const chosen = eligible
+    .map(entry => ({
+      ...entry,
+      capacity: Math.min(
+        Math.floor(entry.blocks / BLOCKS_PER_BODY_DASH),
+        MAX_BODY_DASHES_PER_SECTION
+      ),
+    }))
+    .filter(({ capacity }) => capacity > 0);
+
+  // deal one dash at a time to the heaviest sections, cycling, until the
+  // target is met or capacity runs out
+  const allocations = new Map<number, number>();
+  let remaining = target;
+
+  while (remaining > 0) {
+    let dealt = false;
+
+    for (const entry of chosen) {
+      if (remaining <= 0) break;
+
+      const given = allocations.get(entry.index) ?? 0;
+      if (given < entry.capacity) {
+        allocations.set(entry.index, given + 1);
+        remaining -= 1;
+        dealt = true;
+      }
+    }
+
+    if (!dealt) break;
+  }
+
+  if (!allocations.size) return sections;
 
   const augmented = [...sections];
+
   // splice from the back so earlier indices stay valid
-  for (const { section, index } of [...chosen].sort(
-    (a, b) => b.index - a.index
-  )) {
-    augmented.splice(index + 1, 0, {
+  for (const index of [...allocations.keys()].sort((a, b) => b - a)) {
+    const count = allocations.get(index) ?? 0;
+    const dashes: TocSection[] = Array.from({ length: count }, () => ({
       id: "",
-      label: section.label,
+      label: sections[index].label,
       level: 4,
-    });
+    }));
+    augmented.splice(index + 1, 0, ...dashes);
   }
 
   return augmented;

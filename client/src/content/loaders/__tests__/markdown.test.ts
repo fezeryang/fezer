@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  BODY_DASH_RATIO,
   renderBlogMarkdown,
   slugifyHeadingText,
   stripInlineMarkdown,
@@ -131,28 +130,58 @@ describe("body dash augmentation", () => {
   const para = (n: number) =>
     Array.from({ length: n }, (_, i) => `p${i}\n`).join("\n");
 
-  it("adds an inert body dash after content-heavy sections", () => {
+  it("adds inert body dashes after content-heavy sections, stacked by weight", () => {
     const { sections } = renderBlogMarkdown(
       `## Long\n\n${para(5)}## Short\n\none\n`
     );
 
-    // 2 headings → round(2 * 0.25) = 1 extra, given to the longest section
+    // 2 headings → target min(max(round(2×0.5)=1, 10−2=8), 2×2=4) = 4,
+    // but Long only has capacity ⌊5/2⌋=2 and Short (1 block) is ineligible
     expect(sections).toEqual([
       { id: "long", label: "Long", level: 2 },
+      { id: "", label: "Long", level: 4 },
       { id: "", label: "Long", level: 4 },
       { id: "short", label: "Short", level: 2 },
     ]);
   });
 
-  it("caps extras at the ratio of headings and skips thin sections", () => {
+  it("fills up to the density target, heaviest sections first", () => {
     const { sections } = renderBlogMarkdown(
-      `## A\n\n${para(6)}## B\n\n${para(6)}## C\n\n${para(6)}## D\n\n${para(6)}## E\n\n${para(2)}`
+      `## A\n\n${para(6)}## B\n\n${para(6)}## C\n\n${para(6)}## D\n\n${para(6)}## E\n\none\n`
     );
 
-    // 5 headings → round(5 * 0.25) = 1 extra only, despite 4 eligible sections
-    expect(sections.filter(s => s.id === "")).toHaveLength(
-      Math.round(5 * BODY_DASH_RATIO)
+    // 5 headings → target min(max(3, 5), 10) = 5; E has 1 block → never
+    // eligible; round-robin deals A a second dash before anyone's third
+    expect(sections.filter(s => s.id === "")).toHaveLength(5);
+    expect(sections.slice(0, 3)).toEqual([
+      { id: "a", label: "A", level: 2 },
+      { id: "", label: "A", level: 4 },
+      { id: "", label: "A", level: 4 },
+    ]);
+    expect(sections.some(s => s.id === "e")).toBe(true);
+    expect(sections[sections.length - 1]).toEqual({
+      id: "e",
+      label: "E",
+      level: 2,
+    });
+  });
+
+  it("lifts sparse posts toward the minimum total lines", () => {
+    // 3 headings × 8 blocks: target min(max(2, 7), 6) = 6, capacity 3 each
+    const { sections } = renderBlogMarkdown(
+      `## A\n\n${para(8)}## B\n\n${para(8)}## C\n\n${para(8)}`
     );
+
+    expect(sections.filter(s => s.id === "")).toHaveLength(6);
+  });
+
+  it("cannot fake density when the content is too thin", () => {
+    // 4 headings × 1 block: target is 6 but no section has any capacity
+    const { sections } = renderBlogMarkdown(
+      "## A\n\nx\n\n## B\n\nx\n\n## C\n\nx\n\n## D\n\nx\n"
+    );
+
+    expect(sections.filter(s => s.id === "")).toHaveLength(0);
   });
 
   it("never attaches body dashes to the post title (h1)", () => {
