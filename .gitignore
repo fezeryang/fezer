@@ -128,7 +128,10 @@ jianli/asset/
 # AI assistant configs (local only)
 .agent/
 .agents/
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/blog-post/
 .codex/
 .cursor/
 .trellis/
