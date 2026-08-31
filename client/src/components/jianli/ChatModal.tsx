@@ -406,7 +406,7 @@ export function ChatModal({
                         messageContainerRefs.current.set(msg.id, el);
                       }
                     }}
-                    className="prose prose-sm max-w-none font-chill-huofangsong"
+                    className="max-w-none font-chill-huofangsong"
                   >
                     <Streamdown>{msg.content}</Streamdown>
                   </div>

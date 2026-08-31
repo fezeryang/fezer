@@ -120,8 +120,11 @@ const getElementSectionKind = (id: string): SectionKind | undefined => {
  * offsetParent chain. Inside DampedScrollView the scrollbox is translated by
  * -window.scrollY, so this value equals the window.scrollY target — unlike
  * getBoundingClientRect(), which reflects the mid-transition visual position.
+ *
+ * Exported for the mobile reading nav (client/src/components/blog/), which
+ * jumps to the same layout offsets without duplicating the math.
  */
-const getDocumentTop = (element: HTMLElement): number => {
+export const getDocumentTop = (element: HTMLElement): number => {
   let top = 0;
   let node: HTMLElement | null = element;
 
@@ -206,18 +209,29 @@ const Dash = ({
     );
   }
 
+  // t-tt-wrap provides its own display (unlayered recipe CSS wins over
+  // Tailwind utilities), so no flex class here — the button below fills it.
   return (
-    <button
-      ref={buttonRef}
-      type="button"
-      aria-current={active ? "location" : undefined}
-      aria-label={`Go to ${section.label}`}
-      title={section.label}
-      className="group flex h-px w-[110px] items-center border-0 bg-transparent p-0 outline-none"
-      onClick={() => onSelect(section.id)}
-    >
-      {dash}
-    </button>
+    <span className="t-tt-wrap h-px w-[110px]">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-current={active ? "location" : undefined}
+        aria-label={`Go to ${section.label}`}
+        aria-describedby={`dash-tt-${section.id}`}
+        className="t-tt-trigger group flex h-px w-full items-center border-0 bg-transparent p-0 outline-none"
+        onClick={() => onSelect(section.id)}
+      >
+        {dash}
+      </button>
+      <span
+        className="t-tt t-tt--left t-tt--paper"
+        id={`dash-tt-${section.id}`}
+        role="tooltip"
+      >
+        {section.label}
+      </span>
+    </span>
   );
 };
 

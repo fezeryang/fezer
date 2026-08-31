@@ -163,6 +163,33 @@ function augmentWithBodyDashes(
 }
 
 /**
+ * Optional syntax-highlighting hook, injected by the build-time pipeline
+ * (build/blog-markdown.ts). Keeping it as DI means this module never
+ * imports shiki and can never leak it into the client graph, and the
+ * no-inject path stays fully synchronous for existing callers/tests.
+ * Receives the raw fence text and a normalized language id; returns the
+ * complete highlighted `<pre>…</pre>` HTML (already escaped), or null to
+ * fall through to the plain renderer.
+ */
+export type HighlightCodeFn = (
+  code: string,
+  lang: string
+) => string | null;
+
+export interface RenderBlogMarkdownOptions {
+  highlightCode?: HighlightCodeFn;
+}
+
+/** Escape plain code fence text the way marked's default renderer would. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
  * Render a blog post body to sanitized HTML while collecting its headings
  * as TOC sections (augmented with content-weight body dashes). The ids in
  * the HTML and in `sections` come from the same renderer pass, so they can
@@ -171,7 +198,10 @@ function augmentWithBodyDashes(
  * Uses a private Marked instance — the global `marked` singleton is shared
  * with other pages (e.g. About), so heading-id injection must not leak.
  */
-export function renderBlogMarkdown(body: string): RenderedMarkdown {
+export function renderBlogMarkdown(
+  body: string,
+  options: RenderBlogMarkdownOptions = {}
+): RenderedMarkdown {
   const sections: TocSection[] = [];
   const usedIds = new Map<string, number>();
 
@@ -197,10 +227,23 @@ export function renderBlogMarkdown(body: string): RenderedMarkdown {
 
         return `<h${token.depth} id="${id}">${inner}</h${token.depth}>`;
       },
+      code(token: Tokens.Code) {
+        const first = (token.lang ?? "").trim().split(/\s+/)[0] ?? "";
+
+        if (options.highlightCode) {
+          const highlighted = options.highlightCode(token.text, first);
+          if (highlighted !== null) return highlighted;
+        }
+
+        // marked-equivalent plain output (also the no-language fallback)
+        const langClass = first ? ` class="language-${first}"` : "";
+        return `<pre><code${langClass}>${escapeHtml(token.text)}</code></pre>`;
+      },
     },
   });
 
   const html = sanitizeHtml(md.parse(body) as string, {
+    allowedTags: [...sanitizeHtml.defaults.allowedTags, "span"],
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
       h1: ["id"],
@@ -209,6 +252,16 @@ export function renderBlogMarkdown(body: string): RenderedMarkdown {
       h4: ["id"],
       h5: ["id"],
       h6: ["id"],
+      // shiki output: pre.shiki[style tabindex lang], code[class], span[style]
+      span: ["style"],
+      code: ["class", "style"],
+      pre: ["class", "style", "tabindex", "lang"],
+    },
+    allowedStyles: {
+      "*": {
+        color: [/^#[0-9a-fA-F]{3,8}$/],
+        "background-color": [/^#[0-9a-fA-F]{3,8}$/],
+      },
     },
   });
 

@@ -1,0 +1,38 @@
+/* Blog article chrome — code-block surfaces and inline-code chips in the
+   paper palette. Deliberately unlayered so these beat both the base layer
+   and the typography plugin's components-layer `pre`/`code` defaults
+   (which are dark zinc on prose-zinc). Scoped to .blog-article so nothing
+   outside the blog post body is affected. */
+
+/* paper-toned code blocks — covers shiki output AND plain fences */
+.blog-article pre {
+  background: #eceae4;
+  color: #2d2a26;
+  border: 1px solid rgb(28 27 26 / 0.08);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.8;
+  margin: 2.5rem 0;
+}
+.blog-article pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  border-radius: 0;
+}
+
+/* inline code chip + kill the typography plugin's backtick pseudo-elements */
+.blog-article :where(code):not(:where(pre code)) {
+  background: rgb(28 27 26 / 0.05);
+  border-radius: 0.3em;
+  padding: 0.15em 0.4em;
+  font-size: 0.85em;
+  font-weight: 400;
+}
+.blog-article :where(code):not(:where(pre code))::before,
+.blog-article :where(code):not(:where(pre code))::after {
+  content: none;
+}

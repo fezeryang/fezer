@@ -126,6 +126,52 @@ describe("renderBlogMarkdown", () => {
   });
 });
 
+describe("code highlighting", () => {
+  it("passes fenced code through an injected highlighter and keeps its output sanitization-safe", () => {
+    const highlighted =
+      '<pre class="shiki kinetic-paper" style="background-color:#eceae4;color:#2d2a26" tabindex="0" lang="tsx"><code><span style="color:#A3512E">const</span></code></pre>';
+    const { html } = renderBlogMarkdown("```tsx\nconst x = 1;\n```\n", {
+      highlightCode: () => highlighted,
+    });
+
+    expect(html).toContain('class="shiki kinetic-paper"');
+    expect(html).toContain('style="background-color:#eceae4;color:#2d2a26"');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('<span style="color:#A3512E">const</span>');
+  });
+
+  it("renders plain language-tagged fences marked-equivalently without an injector", () => {
+    const { html } = renderBlogMarkdown("```bash\necho <hi>\n```\n");
+
+    expect(html).toContain('<code class="language-bash">');
+    expect(html).toContain("echo &lt;hi&gt;");
+  });
+
+  it("renders unlabeled fences as plain escaped blocks", () => {
+    const { html } = renderBlogMarkdown("```\na & b\n```\n");
+
+    expect(html).toContain("<pre><code>a &amp; b</code></pre>");
+  });
+
+  it("falls through to plain output when the injector declines", () => {
+    const { html } = renderBlogMarkdown("```cobol\nMOVE 1 TO X.\n```\n", {
+      highlightCode: () => null,
+    });
+
+    expect(html).toContain('<code class="language-cobol">');
+  });
+
+  it("still strips images and scripts alongside highlighted code", () => {
+    const { html } = renderBlogMarkdown(
+      '```ts\nconst a = 1;\n```\n\n<img src="x" onerror="alert(1)">\n',
+      { highlightCode: () => '<pre class="shiki"><code>x</code></pre>' }
+    );
+
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("onerror");
+  });
+});
+
 describe("body dash augmentation", () => {
   const para = (n: number) =>
     Array.from({ length: n }, (_, i) => `p${i}\n`).join("\n");

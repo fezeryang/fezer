@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { kineticBlogRender } from "./blog-markdown";
 import { execSync } from "node:child_process";
 
 // Get earliest commit timestamp as milliseconds for uptime display
@@ -187,6 +188,7 @@ function jsxLocPluginFiltered(): Plugin {
 }
 
 const plugins = [
+  kineticBlogRender(),
   react(),
   tailwindcss(),
   jsxLocPluginFiltered(),

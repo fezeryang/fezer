@@ -63,7 +63,7 @@ export default function DampedScrollView({ children }: DampedScrollViewProps) {
       document.documentElement.style.scrollBehavior = "auto";
       document.body.style.scrollBehavior = "auto";
       scrollbox.style.willChange = "transform";
-      scrollbox.style.transition = ".3s ease-out";
+      scrollbox.style.transition = "transform 300ms var(--ease-smooth-out)";
 
       updateBodyHeight();
       syncScroll();

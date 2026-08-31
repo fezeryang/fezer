@@ -3,7 +3,10 @@
 @import url("https://fontsapi.zeoseven.com/446/main/result.css");
 @import url("https://fontsapi.zeoseven.com/438/main/result.css");
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 @import "tw-animate-css";
+@import "./styles/blog.css";
+@import "./styles/transitions.css";
 
 @font-face {
   font-family: "ZSFT-hs";
@@ -320,7 +323,7 @@
     position: relative;
     padding-bottom: 0.5rem;
     overflow: hidden;
-    transition: color 0.3s ease;
+    transition: color 250ms ease;
   }
   
   .nav-link::after {
@@ -334,7 +337,7 @@
     opacity: 0;
     transform: scaleX(0);
     transform-origin: left center;
-    transition: transform 0.28s var(--transition-ease), opacity 0.22s ease;
+    transition: transform 250ms var(--transition-ease), opacity 250ms ease;
   }
   
   .nav-link:hover::after {

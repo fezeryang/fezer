@@ -4,7 +4,10 @@ import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
-import { loadPosts } from "@/content/loaders";
+// Submodule import (not the @/content/loaders barrel): the barrel
+// re-exports renderBlogMarkdown, which would pull marked + sanitize-html
+// into this page's client graph for nothing.
+import { loadPosts } from "@/content/loaders/posts";
 
 declare global {
   interface Window {
@@ -438,14 +441,56 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
       return;
     }
 
-    const id = window.setTimeout(() => {
-      contentSectionRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
-      const nextProgress = window.innerHeight > 0 ? clamp01(window.scrollY / window.innerHeight) : 0;
-      progressRef.current = nextProgress;
-      applyTransitionStyles(nextProgress);
-    }, 0);
+    // scrollIntoView() scrolls DampedScrollView's overflow-hidden viewbox
+    // instead of the window (same mis-land ProximitySidebar documents), so
+    // scroll the window to the element's untransformed layout offset.
+    // Retried every frame until it sticks (bounded, ~2s): the document is
+    // not scrollable until DampedScrollView publishes the body height, and
+    // scrollTo transiently no-ops while the route reveal transition runs
+    // (~1.6s). Only fights the user during that entry window.
+    let rafId = 0;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 120;
 
-    return () => window.clearTimeout(id);
+    const tryScroll = () => {
+      attempts += 1;
+      const element = contentSectionRef.current;
+
+      if (element) {
+        let top = 0;
+        let node: HTMLElement | null = element;
+        while (node) {
+          top += node.offsetTop;
+          node = node.offsetParent as HTMLElement | null;
+        }
+
+        const maxScroll =
+          document.documentElement.scrollHeight - window.innerHeight;
+        const canReach = maxScroll >= top - 1;
+        const target = Math.min(top, Math.max(0, maxScroll));
+
+        if (
+          attempts >= MAX_ATTEMPTS ||
+          (canReach && Math.abs(window.scrollY - target) < 2)
+        ) {
+          const nextProgress =
+            window.innerHeight > 0 ? clamp01(window.scrollY / window.innerHeight) : 0;
+          progressRef.current = nextProgress;
+          applyTransitionStyles(nextProgress);
+          return;
+        }
+
+        if (canReach) {
+          window.scrollTo({ top: target, behavior: "auto" });
+        }
+      }
+
+      rafId = window.requestAnimationFrame(tryScroll);
+    };
+
+    rafId = window.requestAnimationFrame(tryScroll);
+
+    return () => window.cancelAnimationFrame(rafId);
   }, [applyTransitionStyles, initialSection]);
 
   useEffect(() => {
@@ -538,22 +583,24 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
                   <Link
                     key={post.slug}
                     href={`/blog/${post.slug}`}
-                    className={`group block w-full rounded-[28px] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff] ${
+                    className={`group block w-full rounded-[28px] transition-[opacity,translate,scale] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
                       isVisible
                         ? "translate-y-0 scale-100 opacity-100"
-                        : "translate-y-4 scale-[0.99] opacity-0"
+                        : "translate-y-3 scale-[0.99] opacity-0"
                     }`}
+                    // One-shot reveal delay (IntersectionObserver only ever
+                    // flips isVisible to true), so the cascade never affects
+                    // anything else — hover lives on the inner card below.
+                    style={{
+                      transitionDelay: `${Math.min(index, 3) * 60}ms`,
+                    }}
                   >
                     <div
                       ref={(el) => {
                         surfaceEntryRefs.current[index] = el;
                       }}
                       data-entry-index={index}
-                      className="relative grid w-full items-center gap-4 rounded-[28px] bg-[#f9f8f6] p-4 ring-1 ring-black/[0.03] sm:grid-cols-[120px_minmax(0,1fr)_auto] sm:gap-6 sm:p-6"
-                      style={{
-                        boxShadow:
-                          "12px 12px 24px #d1cdc7, -12px -12px 24px #ffffff, inset 0 0 0 1px rgba(255,255,255,0.55)",
-                      }}
+                      className="relative grid w-full items-center gap-4 rounded-[28px] bg-[#f9f8f6] p-4 shadow-[12px_12px_24px_#d1cdc7,-12px_-12px_24px_#ffffff,inset_0_0_0_1px_rgba(255,255,255,0.55)] ring-1 ring-black/[0.03] transition-[translate,box-shadow] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none group-hover:-translate-y-1 group-hover:shadow-[20px_20px_40px_#d1cdc7,-20px_-20px_40px_#ffffff,inset_0_0_0_1px_rgba(255,255,255,0.55)] sm:grid-cols-[120px_minmax(0,1fr)_auto] sm:gap-6 sm:p-6"
                     >
                       <BlogSurfaceThumbnail type={kineticType} />
 
@@ -570,7 +617,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
                       </div>
 
                       <span
-                        className="hidden h-12 w-12 items-center justify-center rounded-full text-[#2a2a2a] transition-all duration-300 group-hover:bg-[#2a2a2a] group-hover:text-white md:flex"
+                        className="hidden h-12 w-12 items-center justify-center rounded-full text-[#2a2a2a] transition-[background-color,color] duration-[250ms] group-hover:bg-[#2a2a2a] group-hover:text-white md:flex"
                         style={{
                           boxShadow:
                             "3px 3px 6px #d1cdc7, -3px -3px 6px #ffffff",
@@ -590,8 +637,10 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
             {posts.map((post, index) => (
               <div
                 key={`dot-${post.slug}`}
-                className={`w-1.5 rounded-full transition-all duration-300 ${
-                  activeDotIndex === index ? "h-6 bg-[#2a2a2a]" : "h-1.5 bg-[#d1cdc7]"
+                className={`h-6 w-1.5 origin-top rounded-full transition-[scale,background-color] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+                  activeDotIndex === index
+                    ? "scale-y-100 bg-[#2a2a2a]"
+                    : "scale-y-[0.25] bg-[#d1cdc7]"
                 }`}
               />
             ))}
