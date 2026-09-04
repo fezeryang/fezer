@@ -121,6 +121,7 @@ temp/
 *.png
 !client/public/models/Textures/*.png
 !client/public/studioimage/*.png
+!client/public/works/*.png
 
 # Local assets (do not commit)
 jianli/asset/
