@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Box, ChevronDown } from "lucide-react";
+import { Box, ChevronDown, Sparkles, type LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
@@ -14,13 +14,101 @@ declare global {
   }
 }
 
+function WorksCollapsibleSection({
+  title,
+  icon: Icon,
+  works,
+  expanded,
+  onToggle,
+}: {
+  title: string;
+  icon: LucideIcon;
+  works: ReturnType<typeof loadWorks>;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  if (works.length === 0) return null;
+
+  return (
+    <div className="max-w-4xl mt-12">
+      <motion.div
+        className="rounded-3xl border border-slate-900/10 bg-slate-50/72 backdrop-blur-md shadow-[0_18px_60px_rgba(15,23,42,0.12)] overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <button
+          onClick={onToggle}
+          className="flex items-center justify-between w-full p-6 hover:bg-slate-100/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Icon className="h-5 w-5 text-slate-700" />
+            <h3 className="text-xl font-bold text-text-main">{title}</h3>
+            <span className="text-sm text-slate-500">({works.length})</span>
+          </div>
+          <ChevronDown
+            className={`transition-transform duration-300 text-slate-500 ${expanded ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="px-6 pb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {works.map(work => (
+                    <a
+                      key={work.slug}
+                      href={work.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <motion.div
+                        className="rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{
+                          type: "spring",
+                          damping: 1.0,
+                          stiffness: 100,
+                        }}
+                      >
+                        <h4 className="text-sm font-bold text-text-main mb-2 line-clamp-2">
+                          {work.title}
+                        </h4>
+                        <p className="text-xs text-slate-600 line-clamp-3">
+                          {work.description}
+                        </p>
+                      </motion.div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const [isModelsExpanded, setIsModelsExpanded] = useState(false);
+  const [isGenerativeExpanded, setIsGenerativeExpanded] = useState(false);
   const works = loadWorks();
 
-  // Separate 3D models from regular works
+  // Separate 3D models and generative art from regular works
   const modelWorks = works.filter(w => w.link?.includes("3d-models"));
-  const regularWorks = works.filter(w => !w.link?.includes("3d-models"));
+  const generativeWorks = works.filter(w => w.link?.includes("generative-art"));
+  const regularWorks = works.filter(
+    w => !w.link?.includes("3d-models") && !w.link?.includes("generative-art")
+  );
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.p5) return;
@@ -397,82 +485,23 @@ export default function Portfolio() {
               )}
             </div>
 
+            {/* Generative Art Section */}
+            <WorksCollapsibleSection
+              title="生成艺术作品"
+              icon={Sparkles}
+              works={generativeWorks}
+              expanded={isGenerativeExpanded}
+              onToggle={() => setIsGenerativeExpanded(!isGenerativeExpanded)}
+            />
+
             {/* 3D Models Section */}
-            {modelWorks.length > 0 && (
-              <div className="max-w-4xl mt-12">
-                <motion.div
-                  className="rounded-3xl border border-slate-900/10 bg-slate-50/72 backdrop-blur-md shadow-[0_18px_60px_rgba(15,23,42,0.12)] overflow-hidden"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <button
-                    onClick={() => setIsModelsExpanded(!isModelsExpanded)}
-                    className="flex items-center justify-between w-full p-6 hover:bg-slate-100/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Box className="h-5 w-5 text-slate-700" />
-                      <h3 className="text-xl font-bold text-text-main">
-                        3D 模型作品
-                      </h3>
-                      <span className="text-sm text-slate-500">
-                        ({modelWorks.length})
-                      </span>
-                    </div>
-                    <ChevronDown
-                      className={`transition-transform duration-300 text-slate-500 ${isModelsExpanded ? "rotate-180" : ""}`}
-                    />
-                  </button>
-
-                  <AnimatePresence>
-                    {isModelsExpanded && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-6 pb-6">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {modelWorks.map(model => {
-                              const modelLink = model.link;
-
-                              return (
-                                <a
-                                  key={model.slug}
-                                  href={modelLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <motion.div
-                                    className="rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    transition={{
-                                      type: "spring",
-                                      damping: 1.0,
-                                      stiffness: 100,
-                                    }}
-                                  >
-                                    <h4 className="text-sm font-bold text-text-main mb-2 line-clamp-2">
-                                      {model.title}
-                                    </h4>
-                                    <p className="text-xs text-slate-600 line-clamp-3">
-                                      {model.description}
-                                    </p>
-                                  </motion.div>
-                                </a>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              </div>
-            )}
+            <WorksCollapsibleSection
+              title="3D 模型作品"
+              icon={Box}
+              works={modelWorks}
+              expanded={isModelsExpanded}
+              onToggle={() => setIsModelsExpanded(!isModelsExpanded)}
+            />
           </div>
         </div>
       </DampedScrollView>
