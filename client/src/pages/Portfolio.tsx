@@ -19,8 +19,8 @@ export default function Portfolio() {
   const works = loadWorks();
 
   // Separate 3D models from regular works
-  const modelWorks = works.filter(w => w.link?.includes('3d-models'));
-  const regularWorks = works.filter(w => !w.link?.includes('3d-models'));
+  const modelWorks = works.filter(w => w.link?.includes("3d-models"));
+  const regularWorks = works.filter(w => !w.link?.includes("3d-models"));
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.p5) return;
@@ -354,22 +354,42 @@ export default function Portfolio() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {regularWorks.map(work => {
                     const workLink = work.link || `/${work.slug}`;
+                    const isExternal = /^https?:\/\//.test(workLink);
 
-                    return (
+                    const card = (
+                      <motion.div
+                        className="stat-box rounded-3xl border border-slate-900/10 bg-slate-50/72 backdrop-blur-md shadow-[0_18px_60px_rgba(15,23,42,0.12)] p-6 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.97]"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        transition={{
+                          type: "spring",
+                          damping: 1.0,
+                          stiffness: 100,
+                        }}
+                      >
+                        <h3 className="text-xl font-bold mb-3 text-text-main">
+                          {work.title}
+                        </h3>
+                        <p className="text-sm text-text-secondary leading-relaxed">
+                          {work.description || "内容待补充"}
+                        </p>
+                      </motion.div>
+                    );
+
+                    // wouter Link intercepts clicks and calls history.pushState,
+                    // which throws on cross-origin URLs — use a plain anchor for external links
+                    return isExternal ? (
+                      <a
+                        key={work.slug}
+                        href={workLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {card}
+                      </a>
+                    ) : (
                       <Link key={work.slug} href={workLink}>
-                        <motion.div
-                          className="stat-box rounded-3xl border border-slate-900/10 bg-slate-50/72 backdrop-blur-md shadow-[0_18px_60px_rgba(15,23,42,0.12)] p-6 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.97]"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.97 }}
-                          transition={{ type: "spring", damping: 1.0, stiffness: 100 }}
-                        >
-                          <h3 className="text-xl font-bold mb-3 text-text-main">
-                            {work.title}
-                          </h3>
-                          <p className="text-sm text-text-secondary leading-relaxed">
-                            {work.description || "内容待补充"}
-                          </p>
-                        </motion.div>
+                        {card}
                       </Link>
                     );
                   })}
@@ -392,17 +412,23 @@ export default function Portfolio() {
                   >
                     <div className="flex items-center gap-3">
                       <Box className="h-5 w-5 text-slate-700" />
-                      <h3 className="text-xl font-bold text-text-main">3D 模型作品</h3>
-                      <span className="text-sm text-slate-500">({modelWorks.length})</span>
+                      <h3 className="text-xl font-bold text-text-main">
+                        3D 模型作品
+                      </h3>
+                      <span className="text-sm text-slate-500">
+                        ({modelWorks.length})
+                      </span>
                     </div>
-                    <ChevronDown className={`transition-transform duration-300 text-slate-500 ${isModelsExpanded ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`transition-transform duration-300 text-slate-500 ${isModelsExpanded ? "rotate-180" : ""}`}
+                    />
                   </button>
 
                   <AnimatePresence>
                     {isModelsExpanded && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
+                        animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                         className="overflow-hidden"
@@ -423,7 +449,11 @@ export default function Portfolio() {
                                     className="rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 p-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
-                                    transition={{ type: "spring", damping: 1.0, stiffness: 100 }}
+                                    transition={{
+                                      type: "spring",
+                                      damping: 1.0,
+                                      stiffness: 100,
+                                    }}
                                   >
                                     <h4 className="text-sm font-bold text-text-main mb-2 line-clamp-2">
                                       {model.title}
