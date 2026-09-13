@@ -2,6 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 
+/**
+ * `traceable(fn, config)` 的第二个参数形状。
+ *
+ * mock 必须声明完整签名，否则 `mock.calls[0]` 是长度 1 的元组，测试读不到 config。
+ */
+interface TraceableConfig {
+  name: string;
+  project_name: string;
+  run_type: string;
+  tags: string[];
+  metadata: Record<string, unknown>;
+}
+
+function createTraceableMock() {
+  return vi.fn(
+    (fn: () => Promise<unknown>, _config: TraceableConfig) => fn
+  );
+}
+
 describe("langsmith observability helper", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -37,7 +56,7 @@ describe("langsmith observability helper", () => {
   });
 
   it("uses traceable wrapper when tracing is enabled", async () => {
-    const traceableMock = vi.fn((fn: () => Promise<unknown>) => fn);
+    const traceableMock = createTraceableMock();
     vi.doMock("langsmith/traceable", () => ({
       traceable: traceableMock,
     }));
@@ -61,7 +80,7 @@ describe("langsmith observability helper", () => {
   });
 
   it("propagates prompt metadata and tags from trace context", async () => {
-    const traceableMock = vi.fn((fn: () => Promise<unknown>) => fn);
+    const traceableMock = createTraceableMock();
     vi.doMock("langsmith/traceable", () => ({
       traceable: traceableMock,
     }));

@@ -42,6 +42,14 @@ function createRes(): MockResponse {
   return res;
 }
 
+/**
+ * 编排图返回的是 LangGraph 完整 state，而用例只提供关心的几个字段。
+ * cast 集中在这一处，不让每个用例各写一遍。
+ */
+function mockOrchestratorResult(result: Record<string, unknown>): void {
+  vi.mocked(orchestratorGraph.invoke).mockResolvedValueOnce(result as never);
+}
+
 describe("Agent API routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,7 +76,7 @@ describe("Agent API routes", () => {
     });
 
     it("maps orchestrator result to frontend response", async () => {
-      vi.mocked(orchestratorGraph.invoke).mockResolvedValueOnce({
+      mockOrchestratorResult({
         answer: "你好，我是 Builder Fezer。",
         uiAction: {
           panel: "character",
@@ -118,7 +126,7 @@ describe("Agent API routes", () => {
 
   describe("POST /api/guide", () => {
     it("uses default guide prompt when request body is empty", async () => {
-      vi.mocked(orchestratorGraph.invoke).mockResolvedValueOnce({
+      mockOrchestratorResult({
         answer: "欢迎来到 Fezer 的作品空间。",
         uiAction: {
           suggestedQuestions: ["我该先看哪里？"],
@@ -164,7 +172,7 @@ describe("Agent API routes", () => {
     });
 
     it("returns agent response for character interaction", async () => {
-      vi.mocked(orchestratorGraph.invoke).mockResolvedValueOnce({
+      mockOrchestratorResult({
         answer: "你好，我是 Visual Fezer。",
         uiAction: { highlightCharacterId: "visual" },
         currentPrimaryAgent: "visual",
@@ -199,7 +207,7 @@ describe("Agent API routes", () => {
     });
 
     it("agent id 形式的 characterId 直接作为高亮目标", async () => {
-      vi.mocked(orchestratorGraph.invoke).mockResolvedValueOnce({
+      mockOrchestratorResult({
         answer: "你好，我是 Builder Fezer。",
         uiAction: { highlightCharacterId: "core" },
         currentPrimaryAgent: "core",

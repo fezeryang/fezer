@@ -30,6 +30,9 @@ jobs:
       - name: Type check
         run: pnpm run check
 
+      - name: Type check tests
+        run: pnpm run check:tests
+
       - name: Unit and integration tests
         run: pnpm run test
 
