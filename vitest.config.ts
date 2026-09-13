@@ -19,8 +19,10 @@ export default defineConfig({
     include: [
       "server/**/*.test.ts",
       "server/**/*.spec.ts",
+      "shared/**/*.test.ts",
       "client/src/content/loaders/__tests__/*.test.ts",
       "client/src/hooks/__tests__/*.test.ts",
+      "client/src/lib/*.test.ts",
       "client/src/components/__tests__/*.test.tsx",
     ],
   },
