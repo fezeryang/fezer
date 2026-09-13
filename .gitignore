@@ -136,3 +136,9 @@ jianli/asset/
 .codex/
 .cursor/
 .trellis/
+
+# 私人简历原件（仓库是公开的，禁止入库）
+*.pdf
+
+# 本地私密事实清单：只存在于本机，不进公开仓库
+server/agents/tools/private-facts.local.json

@@ -1,29 +1,70 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildProfileKnowledge } from "./profile-knowledge";
 import { getProfileTool } from "./profile.tool";
 import { getProjectsTool } from "./projects.tool";
 import { getSkillsTool } from "./skills.tool";
 
-const FORBIDDEN_PUBLIC_FACTS = [
-  "懈小阳",
-  "13551659971",
-  "xxyzycj@163.com",
-  "北京青云智慧科技发展有限公司",
-  "杭州酸果科技有限公司",
-  "Masterland",
-  "某科技公司",
-  "fezer@example.com",
-  "性能 40%",
-  "企业级前端应用",
-];
+/**
+ * 公开资料里唯一允许出现的邮箱。
+ */
+const PUBLIC_EMAIL = "cookfezer@gmail.com";
+
+/**
+ * 本机私密事实清单（名字、手机号、私人邮箱、公司名）。
+ *
+ * ⚠️ 为什么不写在这个文件里：仓库是公开的。曾经把真实姓名 / 手机号 / 私人邮箱
+ * 直接写成字面量放在这里——守卫本身是对的，但把要保护的东西发表了。
+ * 清单因此移到 `private-facts.local.json`（已在 .gitignore 中），本机存在就会被加载。
+ *
+ * 没有这个文件时（CI、别人的机器）仍有下面 `expectNoStructuralLeaks` 的
+ * 结构化拦截兜底：任何手机号 / 身份证号 / 非公开邮箱都会失败，
+ * 不依赖是否知道具体值。
+ */
+function loadLocalFacts(): string[] {
+  const file = path.resolve(
+    "server/agents/tools/private-facts.local.json"
+  );
+  if (!fs.existsSync(file)) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+const LOCAL_PRIVATE_FACTS = loadLocalFacts();
 
 function stringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function expectNoForbiddenFacts(value: unknown) {
+/** 结构化 PII 拦截：始终生效，不依赖任何字面量清单。 */
+function expectNoStructuralLeaks(value: unknown): void {
   const text = stringify(value);
-  for (const forbidden of FORBIDDEN_PUBLIC_FACTS) {
+
+  expect(text).not.toMatch(/\b1[3-9]\d{9}\b/);
+  expect(text).not.toMatch(/\b\d{17}[\dXx]\b/);
+
+  const emails = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? [];
+  expect(emails.filter(email => email !== PUBLIC_EMAIL)).toEqual([]);
+}
+
+function expectNoForbiddenFacts(value: unknown): void {
+  expectNoStructuralLeaks(value);
+
+  const text = stringify(value);
+  for (const forbidden of LOCAL_PRIVATE_FACTS) {
     expect(text).not.toContain(forbidden);
   }
 }
@@ -33,7 +74,7 @@ describe("profile knowledge", () => {
     const profile = buildProfileKnowledge();
 
     expect(profile.name).toBe("Fezer");
-    expect(profile.email).toBe("cookfezer@gmail.com");
+    expect(profile.email).toBe(PUBLIC_EMAIL);
     expect(profile.title).toContain("AI 产品");
     expect(profile.identity.join("\n")).toContain("Agent 工作流实践者");
     expect(profile.education.join("\n")).toContain("中央财经大学保险专业硕士");
