@@ -1,9 +1,13 @@
 /**
- * 知识库 - 网站内容
- * 用于 RAG 检索的结构化内容
- */
-
-/**
+ * 知识库 - 网站内容（结构化，早期 RAG 用）
+ *
+ * ⚠️ 当前项目内无引用。2026-09 起站内检索改读真实 markdown：
+ * `server/agents/rag/content-index.ts` → `server/content/`。
+ * 原先消费它的 `rag/retriever.ts` 里的三个工具从未进入任何 agent 白名单，已删除。
+ *
+ * 保留这份手写内容仅供以后复用（FAQ / 导览文案）；若要重新接线，
+ * 先核对它是否已与 markdown 内容不一致，避免把过时事实喂回模型。
+ *
  * 网站页面内容
  */
 export const WEBSITE_CONTENT = [

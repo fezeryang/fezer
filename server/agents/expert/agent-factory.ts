@@ -55,8 +55,11 @@ export interface AgentResponse {
 
 /**
  * 专家 Agent 工具配置
+ *
+ * 导出是为了让测试能校验「注册的工具集」与「白名单」双向一致；
+ * 运行时只应通过 getLLMToolsByNames 消费它。
  */
-const AGENT_TOOL_CONFIGS: Record<
+export const AGENT_TOOL_CONFIGS: Record<
   AgentId,
   { tools: string[]; canConsult: AgentId[] }
 > = {

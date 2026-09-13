@@ -52,40 +52,6 @@ export const getSkillsTool = tool(
 );
 
 /**
- * hasSkill Tool
- * 检查是否具备某项技能
- */
-export const hasSkillTool = tool(
-  async ({ skill }) => {
-    const profile = buildProfileKnowledge();
-    const skillLower = skill.toLowerCase();
-    const matches: string[] = [];
-
-    for (const group of profile.skills) {
-      for (const item of group.items) {
-        if (item.toLowerCase().includes(skillLower)) {
-          matches.push(`${group.category}: ${item}`);
-        }
-      }
-    }
-
-    return {
-      skill,
-      hasSkill: matches.length > 0,
-      matches,
-      count: matches.length,
-    };
-  },
-  {
-    name: "has_skill",
-    description: "检查 Fezer 是否具备某项特定技能。支持模糊匹配。",
-    schema: z.object({
-      skill: z.string().describe("要检查的技能名称"),
-    }),
-  }
-);
-
-/**
  * getInterests Tool
  * 获取兴趣爱好
  */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildProfileKnowledge } from "./profile-knowledge";
-import { getContactInfoTool, getProfileTool } from "./profile.tool";
+import { getProfileTool } from "./profile.tool";
 import { getProjectsTool } from "./projects.tool";
 import { getSkillsTool } from "./skills.tool";
 
@@ -45,15 +45,12 @@ describe("profile knowledge", () => {
     expectNoForbiddenFacts(profile);
   });
 
-  it("profile and contact tools expose only public identity data", async () => {
+  it("profile tool exposes only public identity data", async () => {
     const profile = await getProfileTool.invoke({ includeDetails: true });
-    const contact = await getContactInfoTool.invoke({});
 
     expect(profile.name).toBe("Fezer");
-    expect(contact.email).toBe("cookfezer@gmail.com");
     expect(stringify(profile)).toContain("中央财经大学保险专业硕士");
     expectNoForbiddenFacts(profile);
-    expectNoForbiddenFacts(contact);
   });
 
   it("skills and projects tools read from the structured public profile", async () => {

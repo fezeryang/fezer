@@ -54,25 +54,3 @@ export const getProfileTool = tool(
     }),
   }
 );
-
-/**
- * getContactInfo Tool
- * 获取联系方式
- */
-export const getContactInfoTool = tool(
-  async () => {
-    const profile = buildProfileKnowledge();
-
-    return {
-      email: profile.email,
-      name: profile.name,
-      title: profile.title,
-      location: profile.location,
-    };
-  },
-  {
-    name: "get_contact_info",
-    description: "获取 Fezer 的联系方式（邮箱等）",
-    schema: z.object({}),
-  }
-);

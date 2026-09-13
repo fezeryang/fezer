@@ -1,24 +1,22 @@
 /**
  * Tools registry - single executable source for all agent tools.
  * Keep runtime registration centralized here to avoid drift.
+ *
+ * 注册 ≠ 可用：模型只能调用 `AGENT_TOOL_CONFIGS` 白名单里的工具
+ * （见 expert/agent-factory.ts）。注册但不在任何白名单里的工具是死代码。
  */
 
 import { z } from "zod";
 import type { Tool as LLMTool } from "../../_core/llm";
-import { getProfileTool, getContactInfoTool } from "./profile.tool";
-import { getProjectsTool, getProjectByIndexTool } from "./projects.tool";
-import { getSkillsTool, hasSkillTool, getInterestsTool } from "./skills.tool";
+import { getProfileTool } from "./profile.tool";
+import { getProjectsTool } from "./projects.tool";
+import { getSkillsTool, getInterestsTool } from "./skills.tool";
 import {
   askOtherAgentTool,
   askMultipleAgentsTool,
   setAgentInvoker,
   type AgentId,
 } from "./agent.tool";
-import {
-  knowledgeSearchTool,
-  getProjectDetailsTool,
-  getFAQTool,
-} from "../rag/retriever";
 import {
   searchContentTool,
   getBlogPostsTool,
@@ -37,17 +35,11 @@ export interface ExecutableTool {
 
 const allTools: ExecutableTool[] = [
   getProfileTool,
-  getContactInfoTool,
   getProjectsTool,
-  getProjectByIndexTool,
   getSkillsTool,
-  hasSkillTool,
   getInterestsTool,
   askOtherAgentTool,
   askMultipleAgentsTool,
-  knowledgeSearchTool,
-  getProjectDetailsTool,
-  getFAQTool,
   searchContentTool,
   getBlogPostsTool,
   getWorksDetailTool,
@@ -102,121 +94,5 @@ export function getLLMToolsByNames(names: string[]): LLMTool[] {
   return getExecutableToolsByNames(names).map(toLLMTool);
 }
 
-// ----- compatibility exports (legacy wrappers) -----
 export type { AgentId };
 export { setAgentInvoker };
-export {
-  getProfileTool,
-  getContactInfoTool,
-  getProjectsTool,
-  getProjectByIndexTool,
-  getSkillsTool,
-  hasSkillTool,
-  getInterestsTool,
-  askOtherAgentTool,
-  askMultipleAgentsTool,
-  knowledgeSearchTool,
-  getProjectDetailsTool,
-  getFAQTool,
-  searchContentTool,
-  getBlogPostsTool,
-  getWorksDetailTool,
-  getProfileFullTool,
-};
-
-/**
- * @deprecated Use getLLMToolsByNames/getExecutableToolsByNames instead.
- */
-export async function getAllTools() {
-  return allTools;
-}
-
-/**
- * @deprecated Use agent tool whitelist + getLLMToolsByNames instead.
- */
-export async function getBuilderTools() {
-  return getExecutableToolsByNames([
-    "get_profile",
-    "get_projects",
-    "get_skills",
-    "ask_other_agent",
-  ]);
-}
-
-/**
- * @deprecated Use agent tool whitelist + getLLMToolsByNames instead.
- */
-export async function getAITools() {
-  return getExecutableToolsByNames([
-    "get_profile",
-    "get_projects",
-    "get_skills",
-    "search_knowledge",
-    "get_project_details",
-    "ask_other_agent",
-  ]);
-}
-
-/**
- * @deprecated Use agent tool whitelist + getLLMToolsByNames instead.
- */
-export async function getWriterTools() {
-  return getExecutableToolsByNames([
-    "get_profile",
-    "get_skills",
-    "get_interests",
-    "ask_other_agent",
-  ]);
-}
-
-/**
- * @deprecated Use agent tool whitelist + getLLMToolsByNames instead.
- */
-export async function getReaderTools() {
-  return getExecutableToolsByNames([
-    "get_profile",
-    "get_interests",
-    "search_knowledge",
-    "get_faq",
-    "ask_other_agent",
-  ]);
-}
-
-/**
- * @deprecated Use agent tool whitelist + getLLMToolsByNames instead.
- */
-export async function getVisualTools() {
-  return getExecutableToolsByNames([
-    "get_profile",
-    "get_skills",
-    "get_interests",
-    "ask_other_agent",
-  ]);
-}
-
-/**
- * @deprecated Use agent tool whitelist + getLLMToolsByNames instead.
- */
-export async function getWandererTools() {
-  return getExecutableToolsByNames([
-    "get_profile",
-    "get_interests",
-    "ask_other_agent",
-  ]);
-}
-
-/**
- * @deprecated Use agent tool whitelist + getLLMToolsByNames instead.
- */
-export async function getCoreTools() {
-  return getExecutableToolsByNames([
-    "get_profile",
-    "get_skills",
-    "get_projects",
-    "search_knowledge",
-    "get_project_details",
-    "get_faq",
-    "ask_other_agent",
-    "ask_multiple_agents",
-  ]);
-}

@@ -64,7 +64,7 @@
 | 1 RunEvent 契约 | ✅                | `c10bfe0`；+4 契约测试（含编译期穷尽性）                                                                       |
 | 2 harness 骨架  | ✅                | `f5971c7`；+11 测试（事件顺序/预算/取消/错误映射/ALS 隔离）                                                    |
 | 3 路由迁移      | ✅                | `c7f8d32`；`/api/chat`、`/api/guide`、`/api/character` 均为 harness 适配层，路由测试 9→13                      |
-| 4 删 6 个死工具 | ⏸ 待决策点 5     | **未动**：这些工具带测试，删改属于破坏性改动，需你拍板                                                         |
+| 4 删 6 个死工具 | ✅     | 注册表 16→10：删除 6 个不可达工具及其实现、`rag/retriever.ts`、`expert/` 的 6 个透传包装与死 barrel；新增 registry↔白名单 双向一致性测试                                                         |
 | 5 3D（B4/B3）   | ✅                | `d97d8f5`；帧率无关移动 + 单次克隆 + 去掉空转 shadow map                                                       |
 | 5 3D（B1）      | ⏸ 待决策点 2 / 9 | 前提已勘误（见 B 表下方）；真实杠杆是按需挂载或 18→7 角色                                                      |
 | 6 性能基线      | ✅                | 见 `docs/perf-baseline.md` 与 `scripts/measure-jianli-perf.mjs`：**32 个 glb / 7.12 MiB / 0 失败 / FCP 3.95s** |

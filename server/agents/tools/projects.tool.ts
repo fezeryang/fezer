@@ -59,35 +59,3 @@ export const getProjectsTool = tool(
     }),
   }
 );
-
-/**
- * getProjectByIndex Tool
- * 按索引获取特定项目
- */
-export const getProjectByIndexTool = tool(
-  async ({ index }) => {
-    const profile = buildProfileKnowledge();
-    const idx = parseInt(String(index));
-    if (idx < 0 || idx >= profile.projects.length) {
-      throw new Error(`Invalid index: ${index}. Valid range is 0-${profile.projects.length - 1}`);
-    }
-
-    const project = profile.projects[idx];
-    return {
-      index: idx,
-      name: project.name,
-      period: project.period,
-      summary: project.summary,
-      techStack: project.techStack,
-      categories: project.categories,
-      highlights: project.highlights,
-    };
-  },
-  {
-    name: "get_project_by_index",
-    description: "获取指定索引的项目详情。索引从 0 开始。",
-    schema: z.object({
-      index: z.number().describe("项目索引（0 开始）"),
-    }),
-  }
-);
