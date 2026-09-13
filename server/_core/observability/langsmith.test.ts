@@ -16,9 +16,7 @@ interface TraceableConfig {
 }
 
 function createTraceableMock() {
-  return vi.fn(
-    (fn: () => Promise<unknown>, _config: TraceableConfig) => fn
-  );
+  return vi.fn((fn: () => Promise<unknown>, _config: TraceableConfig) => fn);
 }
 
 describe("langsmith observability helper", () => {
@@ -33,7 +31,9 @@ describe("langsmith observability helper", () => {
     process.env.LANGSMITH_TRACING = "false";
     process.env.LANGSMITH_API_KEY = "lsv2_test";
 
-    const { traceSpan, isLangSmithTracingEnabled } = await import("./langsmith");
+    const { traceSpan, isLangSmithTracingEnabled } = await import(
+      "./langsmith"
+    );
     const value = await traceSpan("disabled-span", async () => 42);
 
     expect(value).toBe(42);
@@ -43,7 +43,9 @@ describe("langsmith observability helper", () => {
   it("propagates trace context values", async () => {
     process.env.LANGSMITH_TRACING = "false";
 
-    const { runWithTraceContext, getTraceContext } = await import("./langsmith");
+    const { runWithTraceContext, getTraceContext } = await import(
+      "./langsmith"
+    );
 
     const ctx = await runWithTraceContext(
       { route: "/api/chat", interactionType: "chat", agentId: "core" },

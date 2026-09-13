@@ -17,7 +17,9 @@ export const getProjectsTool = tool(
     let results = profile.projects;
 
     if (category && category !== "all") {
-      results = results.filter(project => matchesCategory(project.categories, category));
+      results = results.filter(project =>
+        matchesCategory(project.categories, category)
+      );
     }
 
     const limited = results.slice(0, limit);
@@ -51,11 +53,7 @@ export const getProjectsTool = tool(
         .optional()
         .default("all")
         .describe("项目类别"),
-      limit: z
-        .number()
-        .optional()
-        .default(5)
-        .describe("返回的最大项目数量"),
+      limit: z.number().optional().default(5).describe("返回的最大项目数量"),
     }),
   }
 );

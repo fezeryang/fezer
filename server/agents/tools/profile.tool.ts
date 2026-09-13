@@ -21,7 +21,9 @@ export const getProfileTool = tool(
       location: profile.location,
       bio: profile.bio,
       identity: profile.identity,
-      education: includeDetails ? profile.education : profile.education.slice(0, 1),
+      education: includeDetails
+        ? profile.education
+        : profile.education.slice(0, 1),
       privacyRules: profile.privacyRules,
       answerRules: profile.answerRules,
       skills: includeDetails

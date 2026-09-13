@@ -99,9 +99,9 @@ kinetic-portfolio/
 ### Path Aliases (tsconfig.json)
 
 ```typescript
-import { Component } from '@/components/...'   // client/src/
-import { type } from '@shared/...'             // shared/
-import { util } from '@fezer/shared/...'       // shared/src/
+import { Component } from "@/components/..."; // client/src/
+import { type } from "@shared/..."; // shared/
+import { util } from "@fezer/shared/..."; // shared/src/
 ```
 
 ### Agent System Flow
@@ -113,6 +113,7 @@ routes → harness → orchestrator → supervisor → expert → _core
 ```
 
 **Single source of truth**:
+
 - Run entry point: `server/agents/harness/run.ts` (`runAgent`)
 - Run event protocol: `shared/src/schemas/run.ts`
 - Agent resolution: `server/agents/spatial/agent-resolution.ts`
@@ -121,6 +122,7 @@ routes → harness → orchestrator → supervisor → expert → _core
 - LLM client: `server/_core/llm.ts`
 
 **Do NOT**:
+
 - Import from `server/agents/legacy/` (read-only reference)
 - Import `orchestratorGraph` outside `server/agents/harness/` — new routes and
   features call `runAgent()` instead (enforced by `server/agents/structure.test.ts`)
@@ -130,12 +132,14 @@ routes → harness → orchestrator → supervisor → expert → _core
 ### Adding New Features
 
 **New Agent**:
+
 1. Add agent ID in `server/agents/tools/agent.tool.ts` (`AgentId` type)
 2. Configure in `server/agents/expert/agent-factory.ts` (`AGENT_TOOL_CONFIGS`)
 3. Add resolution rules in `server/agents/spatial/agent-resolution.ts`
 4. Add tests
 
 **New Tool**:
+
 1. Implement under `server/agents/tools/` or `server/agents/rag/`
 2. Register in `server/agents/tools/index.ts`
 3. Add to agent whitelist in `AGENT_TOOL_CONFIGS` (a tool absent from every
@@ -143,6 +147,7 @@ routes → harness → orchestrator → supervisor → expert → _core
 4. Add tests
 
 **New Route**:
+
 1. Add handler in `server/routes/`
 2. Set trace context fields (route, interactionType)
 3. Reuse orchestrator/supervisor flow
@@ -193,6 +198,7 @@ LANGSMITH_PROJECT=fezer-agent
 ### Environment Validation
 
 The app uses **two-phase validation**:
+
 1. **Import time**: Safe defaults, no validation (allows tests to run)
 2. **Server startup**: Strict validation via `assertEnvValid()` in `server/_core/index.ts`
 
@@ -257,13 +263,13 @@ Site content is markdown + YAML frontmatter in `client/src/content/`:
 ```typescript
 // WRONG
 function updateUser(user: User, name: string) {
-  user.name = name  // MUTATION!
-  return user
+  user.name = name; // MUTATION!
+  return user;
 }
 
 // CORRECT
 function updateUser(user: User, name: string) {
-  return { ...user, name }
+  return { ...user, name };
 }
 ```
 
@@ -272,16 +278,16 @@ function updateUser(user: User, name: string) {
 ```typescript
 async function loadData() {
   try {
-    return await riskyOperation()
+    return await riskyOperation();
   } catch (error: unknown) {
-    logger.error('Operation failed', error)
-    throw new Error(getErrorMessage(error))
+    logger.error("Operation failed", error);
+    throw new Error(getErrorMessage(error));
   }
 }
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return 'Unexpected error'
+  if (error instanceof Error) return error.message;
+  return "Unexpected error";
 }
 ```
 
@@ -290,15 +296,15 @@ function getErrorMessage(error: unknown): string {
 Use Zod schemas:
 
 ```typescript
-import { z } from 'zod'
+import { z } from "zod";
 
 const schema = z.object({
   email: z.string().email(),
-  age: z.number().int().min(0)
-})
+  age: z.number().int().min(0),
+});
 
-type Input = z.infer<typeof schema>
-const validated = schema.parse(input)
+type Input = z.infer<typeof schema>;
+const validated = schema.parse(input);
 ```
 
 ## Testing Requirements

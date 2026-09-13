@@ -83,7 +83,13 @@ export const PROJECT_DETAILS = [
     name: "AI 驱动的期权交易分析平台",
     description:
       "面向期权投资者的 AI 决策辅助平台，流程是实时新闻、公司公告和行情数据进入 AI 综合分析，再辅助生成期权链模拟买卖建议。",
-    techStack: ["Gemini 2.5 Pro", "Python", "实时金融数据 API", "Agent 工具链", "K 线可视化"],
+    techStack: [
+      "Gemini 2.5 Pro",
+      "Python",
+      "实时金融数据 API",
+      "Agent 工具链",
+      "K 线可视化",
+    ],
     role: "AI 产品与分析",
     highlights: [
       "设计了“100 万虚拟资金 + AI 辅助 / 无 AI 辅助”的对照模块。",
@@ -165,7 +171,8 @@ export const FAQ = [
   {
     id: "faq-4",
     question: "可以联系 Fezer 吗？",
-    answer: "可以通过邮箱联系：cookfezer@gmail.com。也欢迎在 GitHub 上查看开源项目。",
+    answer:
+      "可以通过邮箱联系：cookfezer@gmail.com。也欢迎在 GitHub 上查看开源项目。",
     category: "contact",
     keywords: ["联系", "邮箱", "合作"],
   },

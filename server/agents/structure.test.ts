@@ -51,12 +51,12 @@ describe("agents structure boundary", () => {
   });
 
   it("removes active duplicate orchestrator v1 files", () => {
-    expect(fs.existsSync(path.resolve("server/agents/orchestrator/nodes.ts"))).toBe(
-      false
-    );
-    expect(fs.existsSync(path.resolve("server/agents/orchestrator/state.ts"))).toBe(
-      false
-    );
+    expect(
+      fs.existsSync(path.resolve("server/agents/orchestrator/nodes.ts"))
+    ).toBe(false);
+    expect(
+      fs.existsSync(path.resolve("server/agents/orchestrator/state.ts"))
+    ).toBe(false);
   });
 
   it("does not keep empty character placeholder in active path", () => {
@@ -71,21 +71,23 @@ describe("agents structure boundary", () => {
     for (const file of files) {
       const content = fs.readFileSync(file, "utf8");
       expect(content).not.toMatch(/from\s+["'][^"']*legacy[^"']*["']/);
-      expect(content).not.toMatch(/import\s*\(\s*["'][^"']*legacy[^"']*["']\s*\)/);
+      expect(content).not.toMatch(
+        /import\s*\(\s*["'][^"']*legacy[^"']*["']\s*\)/
+      );
     }
   });
 });
 
 describe("harness is the single entry point", () => {
   it("only the harness imports the orchestrator graph", () => {
-    expect(importersOf(/from\s+["'][^"']*orchestrator\/graph["']/, "harness")).toEqual(
-      []
-    );
+    expect(
+      importersOf(/from\s+["'][^"']*orchestrator\/graph["']/, "harness")
+    ).toEqual([]);
   });
 
   it("only the orchestrator imports the supervisor graph", () => {
-    expect(importersOf(/from\s+["'][^"']*supervisor\/graph["']/, "orchestrator")).toEqual(
-      []
-    );
+    expect(
+      importersOf(/from\s+["'][^"']*supervisor\/graph["']/, "orchestrator")
+    ).toEqual([]);
   });
 });

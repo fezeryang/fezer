@@ -23,9 +23,7 @@ const PUBLIC_EMAIL = "cookfezer@gmail.com";
  * 不依赖是否知道具体值。
  */
 function loadLocalFacts(): string[] {
-  const file = path.resolve(
-    "server/agents/tools/private-facts.local.json"
-  );
+  const file = path.resolve("server/agents/tools/private-facts.local.json");
   if (!fs.existsSync(file)) {
     return [];
   }
@@ -82,7 +80,9 @@ describe("profile knowledge", () => {
     expect(profile.projects.map(project => project.name)).toContain(
       "AI 驱动的期权交易分析平台"
     );
-    expect(profile.experiences.map(exp => exp.title)).toContain("AI 产品实习经历");
+    expect(profile.experiences.map(exp => exp.title)).toContain(
+      "AI 产品实习经历"
+    );
     expectNoForbiddenFacts(profile);
   });
 
