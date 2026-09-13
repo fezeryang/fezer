@@ -373,6 +373,8 @@ A6（计量 + eval harness）+ C8（语音）+ C10（分享导出）+ C11（内�
 | 房间↔内容无数据模型                                                   | C12 方案 A        |
 | 文档漂移（`AGENT_ARCHITECTURE.md` 已与代码不一致：写 loops=4，实际 3） | §11               |
 
+> **已实测（2026-09-13）**：测试文件不在 `tsconfig.json` 内，`pnpm check` 不校验它们。开启校验会暴露 **13 个既存错误**（`langsmith.test.ts` 10 个 mock 元组类型、`agent-routes.test.ts` 3 个 mock 未满足 LangGraph state 类型）。修这 13 个 + 加一个 `tsconfig.test.json` 是独立小任务，不要混进功能提交；在那之前，新增测试文件只能靠编辑器 LSP 把关。
+
 ---
 
 ## 8. 决策点（需确认）
