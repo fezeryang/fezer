@@ -106,7 +106,11 @@ export function Scene({
           receiveShadow
         >
           <planeGeometry args={[130, 118]} />
-          <meshStandardMaterial color="#74879c" roughness={0.92} metalness={0.06} />
+          <meshStandardMaterial
+            color="#74879c"
+            roughness={0.92}
+            metalness={0.06}
+          />
         </mesh>
 
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.44, -10]}>
@@ -114,7 +118,6 @@ export function Scene({
           <meshStandardMaterial color="#d4deea" roughness={1} metalness={0} />
         </mesh>
       </Canvas>
-
     </>
   );
 }

@@ -57,7 +57,15 @@ async function waitForServer(url, timeoutMs = 60_000) {
 function startVite() {
   const child = spawn(
     "pnpm",
-    ["exec", "vite", "--host", "127.0.0.1", "--port", String(PORT), "--strictPort"],
+    [
+      "exec",
+      "vite",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(PORT),
+      "--strictPort",
+    ],
     { stdio: "ignore" }
   );
   return child;
@@ -93,7 +101,8 @@ async function main() {
           models.push({ url, length });
         }
       }
-      if (type === "script" || url.includes("/@vite/")) scripts.push({ url, length });
+      if (type === "script" || url.includes("/@vite/"))
+        scripts.push({ url, length });
     });
 
     await page.goto(`${BASE}/jianli`, { waitUntil: "load" });

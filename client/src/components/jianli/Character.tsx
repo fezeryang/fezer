@@ -1,96 +1,104 @@
-import { useGLTF } from "@react-three/drei"
-import { useFrame } from "@react-three/fiber"
-import { useMemo, useRef, useState } from "react"
-import type { CharacterProps, CharacterState, Vec3 } from "./assets/types"
-import { CHARACTER_MODELS } from "./assets/characterConfig"
+import { useGLTF } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import { useMemo, useRef, useState } from "react";
+import type { CharacterProps, CharacterState, Vec3 } from "./assets/types";
+import { CHARACTER_MODELS } from "./assets/characterConfig";
 
 // Vite base path 用于纹理资源路径修正
-const BASE_URL = import.meta.env.BASE_URL ?? "/"
-const MODEL_RESOURCE_PATH = `${BASE_URL}models/`
+const BASE_URL = import.meta.env.BASE_URL ?? "/";
+const MODEL_RESOURCE_PATH = `${BASE_URL}models/`;
 
 function configureModelLoader(loader: any) {
-  loader.setResourcePath(MODEL_RESOURCE_PATH)
+  loader.setResourcePath(MODEL_RESOURCE_PATH);
 }
 
 // 角色地面Y坐标（根据模型调整）
-const GROUND_Y = 0
+const GROUND_Y = 0;
 
 // 帧间隔上限：切回标签页或掉帧时 delta 会突刺，不夹住角色会瞬间跳过一大段距离
-const MAX_FRAME_DELTA_SECONDS = 0.1
+const MAX_FRAME_DELTA_SECONDS = 0.1;
 
 // 辅助函数：在圆内生成随机点
 function randomPointInCircle(center: Vec3, radius: number): Vec3 {
-  const angle = Math.random() * Math.PI * 2
-  const r = Math.sqrt(Math.random()) * radius
+  const angle = Math.random() * Math.PI * 2;
+  const r = Math.sqrt(Math.random()) * radius;
   return [
     center[0] + Math.cos(angle) * r,
     center[1],
     center[2] + Math.sin(angle) * r,
-  ]
+  ];
 }
 
 // 辅助函数：计算两点距离
 function distance(a: Vec3, b: Vec3): number {
-  return Math.sqrt((a[0] - b[0]) ** 2 + (a[2] - b[2]) ** 2)
+  return Math.sqrt((a[0] - b[0]) ** 2 + (a[2] - b[2]) ** 2);
 }
 
 // 辅助函数：两点向量
 function subtract(a: Vec3, b: Vec3): Vec3 {
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 }
 
 export function Character({ config, onClick }: CharacterProps) {
-  const groupRef = useRef<any>(null)
-  const { scene } = useGLTF(config.model, undefined, undefined, configureModelLoader)
+  const groupRef = useRef<any>(null);
+  const { scene } = useGLTF(
+    config.model,
+    undefined,
+    undefined,
+    configureModelLoader
+  );
 
   // 状态机：idle | walking | waiting
-  const [state, setState] = useState<CharacterState>("idle")
-  const [target, setTarget] = useState<Vec3>(config.position)
-  const [waitEndTime, setWaitEndTime] = useState<number>(0)
+  const [state, setState] = useState<CharacterState>("idle");
+  const [target, setTarget] = useState<Vec3>(config.position);
+  const [waitEndTime, setWaitEndTime] = useState<number>(0);
 
   // 当前位置（可变引用）
-  const currentPosition = useRef<Vec3>([...config.position])
-  const currentRotation = useRef<number>(0)
+  const currentPosition = useRef<Vec3>([...config.position]);
+  const currentRotation = useRef<number>(0);
 
   // 模型克隆只做一次：写在 JSX 里会在每次 re-render 时重建整棵对象树
-  const instance = useMemo(() => scene.clone(), [scene])
+  const instance = useMemo(() => scene.clone(), [scene]);
 
   // 游走逻辑
   useFrame(({ clock }, delta) => {
-    if (!groupRef.current) return
+    if (!groupRef.current) return;
 
-    const now = clock.elapsedTime * 1000 // 转换为毫秒
+    const now = clock.elapsedTime * 1000; // 转换为毫秒
 
     if (state === "idle") {
       // 选择新的随机目标点
-      const newTarget = randomPointInCircle(config.position, config.patrolRadius ?? 1.5)
-      setTarget(newTarget)
-      setState("walking")
+      const newTarget = randomPointInCircle(
+        config.position,
+        config.patrolRadius ?? 1.5
+      );
+      setTarget(newTarget);
+      setState("walking");
     } else if (state === "walking") {
       // 移动向目标
-      const speed = config.walkSpeed ?? 0.3
+      const speed = config.walkSpeed ?? 0.3;
       // 帧率无关：用真实帧间隔（秒），120Hz 与 60Hz 下速度一致
-      const step = Math.min(delta, MAX_FRAME_DELTA_SECONDS)
+      const step = Math.min(delta, MAX_FRAME_DELTA_SECONDS);
 
-      const dir = subtract(target, currentPosition.current)
-      const dist = distance(currentPosition.current, target)
+      const dir = subtract(target, currentPosition.current);
+      const dist = distance(currentPosition.current, target);
 
       if (dist < 0.1) {
         // 到达目标，开始等待
-        setState("waiting")
-        setWaitEndTime(now + (config.waitTime ?? 1500))
+        setState("waiting");
+        setWaitEndTime(now + (config.waitTime ?? 1500));
       } else {
         // 移动
-        const moveDist = Math.min(dist, speed * step)
-        const normDir: Vec3 = [dir[0] / dist, 0, dir[2] / dist]
+        const moveDist = Math.min(dist, speed * step);
+        const normDir: Vec3 = [dir[0] / dist, 0, dir[2] / dist];
         currentPosition.current = [
           currentPosition.current[0] + normDir[0] * moveDist,
           GROUND_Y,
           currentPosition.current[2] + normDir[2] * moveDist,
-        ]
+        ];
 
         // 更新朝向（面向移动方向）
-        currentRotation.current = Math.atan2(normDir[0], normDir[2])
+        currentRotation.current = Math.atan2(normDir[0], normDir[2]);
       }
 
       // 应用位置和旋转
@@ -98,15 +106,15 @@ export function Character({ config, onClick }: CharacterProps) {
         currentPosition.current[0],
         currentPosition.current[1],
         currentPosition.current[2]
-      )
-      groupRef.current.rotation.y = currentRotation.current
+      );
+      groupRef.current.rotation.y = currentRotation.current;
     } else if (state === "waiting") {
       // 等待结束后进入idle状态
       if (now >= waitEndTime) {
-        setState("idle")
+        setState("idle");
       }
     }
-  })
+  });
 
   return (
     <group
@@ -117,12 +125,12 @@ export function Character({ config, onClick }: CharacterProps) {
     >
       <primitive object={instance} />
     </group>
-  )
+  );
 }
 
 // 预加载所有角色模型
 export function preloadCharacters() {
   CHARACTER_MODELS.forEach(model =>
     useGLTF.preload(model, undefined, undefined, configureModelLoader)
-  )
+  );
 }
