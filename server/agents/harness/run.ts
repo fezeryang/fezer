@@ -9,10 +9,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type {
-  ConversationTurn,
-  UiAction,
-} from "@fezer/shared/schemas/agent";
+import type { ConversationTurn, UiAction } from "@fezer/shared/schemas/agent";
 import type {
   RunErrorCode,
   RunEvent,
@@ -81,6 +78,17 @@ export interface RunResult {
 export const DEFAULT_MAX_WALL_CLOCK_MS = 60_000;
 
 /**
+ * 解析墙钟上限。
+ *
+ * 默认**不设限**：A4 之前无法真正中断已在飞行的请求，单方面超时会把「马上就要回来的
+ * 答案」变成失败，同时让那次 LLM 调用继续燃烧 token。所以预算由调用方显式开启，
+ * 等 A4 把 signal 接到 invokeLLM 后再由路由默认打开。
+ */
+export function resolveWallClockLimit(budget?: RunBudget): number | undefined {
+  return budget?.maxWallClockMs;
+}
+
+/**
  * ponytail: 计量目前只填可测的 wallClockMs，token / 工具计数等仍为 0 ——
  * A6（观测与计量）接上 invokeLLM 的 usage 之前，调用方不应把这些 0 当成真实用量。
  */
@@ -99,9 +107,13 @@ const UNMEASURED_USAGE: Omit<RunUsage, "wallClockMs"> = {
  * 需要把 signal 一路传到 invokeLLM）。当前实现下超时后那次请求会自行结束并被丢弃。
  */
 function createStopGuard(
-  maxWallClockMs: number,
+  maxWallClockMs: number | undefined,
   signal?: AbortSignal
-): { promise: Promise<never>; dispose: () => void } {
+): { promise: Promise<never>; dispose: () => void } | null {
+  if (maxWallClockMs === undefined && !signal) {
+    return null;
+  }
+
   let dispose = () => {};
 
   const promise = new Promise<never>((_, reject) => {
@@ -114,8 +126,11 @@ function createStopGuard(
       );
     const onAbort = () => reject(new RunError("cancelled", "本次请求已取消"));
 
-    const timer = setTimeout(onTimeout, maxWallClockMs);
-    if (typeof timer.unref === "function") {
+    const timer =
+      maxWallClockMs === undefined
+        ? undefined
+        : setTimeout(onTimeout, maxWallClockMs);
+    if (timer && typeof timer.unref === "function") {
       timer.unref();
     }
 
@@ -128,7 +143,9 @@ function createStopGuard(
     }
 
     dispose = () => {
-      clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       signal?.removeEventListener("abort", onAbort);
     };
   });
@@ -151,9 +168,10 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
   };
 
   const startedAt = Date.now();
-  const maxWallClockMs =
-    request.budget?.maxWallClockMs ?? DEFAULT_MAX_WALL_CLOCK_MS;
-  const guard = createStopGuard(maxWallClockMs, request.signal);
+  const guard = createStopGuard(
+    resolveWallClockLimit(request.budget),
+    request.signal
+  );
 
   const emitError = (code: RunErrorCode, message: string): void => {
     emitRunEvent({ type: "run.error", runId, code, message });
@@ -166,42 +184,43 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
         interactionType: request.interactionType,
         roomId: request.roomId,
         characterId: request.characterId,
+        env: process.env.NODE_ENV || "development",
       },
       async () => {
         emitRunEvent({ type: "run.started", runId, threadId });
 
         let result: Awaited<ReturnType<typeof orchestratorGraph.invoke>>;
         try {
-          result = await Promise.race([
-            traceSpan("harness.runAgent", () =>
-              orchestratorGraph.invoke({
-                userInput: request.input,
-                roomId: request.roomId,
-                characterId: request.characterId,
-                interactionType: request.interactionType ?? "chat",
-                grounding: request.grounding,
-                conversationHistory: request.conversationHistory ?? [],
-                visitedRooms: request.visitedRooms ?? [],
-                discoveredCharacters: request.discoveredCharacters ?? [],
-                messages: [],
-              })
-            ),
-            guard.promise,
-          ]);
+          const invocation = traceSpan("harness.runAgent", () =>
+            orchestratorGraph.invoke({
+              userInput: request.input,
+              roomId: request.roomId,
+              characterId: request.characterId,
+              interactionType: request.interactionType ?? "chat",
+              grounding: request.grounding,
+              conversationHistory: request.conversationHistory ?? [],
+              visitedRooms: request.visitedRooms ?? [],
+              discoveredCharacters: request.discoveredCharacters ?? [],
+              messages: [],
+            })
+          );
+
+          result = guard
+            ? await Promise.race([invocation, guard.promise])
+            : await invocation;
         } catch (error) {
-          guard.dispose();
+          guard?.dispose();
           const runError = toRunError(error);
           emitError(runError.code, runError.message);
           throw runError;
         }
-        guard.dispose();
+        guard?.dispose();
 
         const usage: RunUsage = {
           ...UNMEASURED_USAGE,
           wallClockMs: Date.now() - startedAt,
         };
-        const speakingAgent = (result.currentPrimaryAgent ??
-          "core") as AgentId;
+        const speakingAgent = (result.currentPrimaryAgent ?? "core") as AgentId;
         const outcome: RunOutcome = { type: "success" };
 
         emitRunEvent({

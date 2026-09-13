@@ -40,12 +40,20 @@ describe("harness event sink", () => {
     await Promise.all([
       runWithEventSink(a.sink, async () => {
         await new Promise(resolve => setTimeout(resolve, 5));
-        emitRunEvent({ type: "agent.start", agentId: "builder", displayName: "B" });
+        emitRunEvent({
+          type: "agent.start",
+          agentId: "builder",
+          displayName: "B",
+        });
         await new Promise(resolve => setTimeout(resolve, 5));
         emitRunEvent({ type: "agent.done", agentId: "builder" });
       }),
       runWithEventSink(b.sink, async () => {
-        emitRunEvent({ type: "agent.start", agentId: "writer", displayName: "W" });
+        emitRunEvent({
+          type: "agent.start",
+          agentId: "writer",
+          displayName: "W",
+        });
         await new Promise(resolve => setTimeout(resolve, 10));
         emitRunEvent({ type: "agent.done", agentId: "writer" });
       }),

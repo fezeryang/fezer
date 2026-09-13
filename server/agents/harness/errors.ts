@@ -24,7 +24,8 @@ export function isRunError(error: unknown): error is RunError {
 
 function isNamedError(error: unknown, name: string): boolean {
   return (
-    error instanceof Error && (error.name === name || error.constructor.name === name)
+    error instanceof Error &&
+    (error.name === name || error.constructor.name === name)
   );
 }
 
@@ -43,7 +44,10 @@ export function toRunError(error: unknown): RunError {
     return new RunError("cancelled", "本次请求已取消", error);
   }
 
-  if (isLLMProviderConfigurationError(error) || isNamedError(error, "TimeoutError")) {
+  if (
+    isLLMProviderConfigurationError(error) ||
+    isNamedError(error, "TimeoutError")
+  ) {
     return new RunError("provider_unavailable", "AI 服务暂时不可用", error);
   }
 

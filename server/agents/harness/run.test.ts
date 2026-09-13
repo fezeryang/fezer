@@ -9,7 +9,7 @@ import { isTerminalRunEvent } from "@fezer/shared/schemas/run";
 import { orchestratorGraph } from "../orchestrator/graph";
 import { LLMProviderConfigurationError } from "../../_core/llm";
 import { RunError } from "./errors";
-import { runAgent } from "./run";
+import { resolveWallClockLimit, runAgent } from "./run";
 
 const invoke = vi.mocked(orchestratorGraph.invoke);
 
@@ -22,7 +22,10 @@ function orchestratorResult(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function captureEvents(): { events: RunEvent[]; onEvent: (e: RunEvent) => void } {
+function captureEvents(): {
+  events: RunEvent[];
+  onEvent: (e: RunEvent) => void;
+} {
   const events: RunEvent[] = [];
   return { events, onEvent: event => events.push(event) };
 }
@@ -35,6 +38,26 @@ describe("runAgent", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("墙钟预算默认不设限，只有调用方显式开启才生效", () => {
+    expect(resolveWallClockLimit(undefined)).toBeUndefined();
+    expect(resolveWallClockLimit({})).toBeUndefined();
+    expect(resolveWallClockLimit({ maxWallClockMs: 1500 })).toBe(1500);
+  });
+
+  it("未设预算时，慢一点的 run 仍正常完成", async () => {
+    invoke.mockImplementation(
+      () =>
+        new Promise(resolve =>
+          setTimeout(() => resolve(orchestratorResult()), 30)
+        ) as never
+    );
+
+    const result = await runAgent({ input: "你好" });
+
+    expect(result.answer).toBe("这是回答");
+    expect(result.events.at(-1)?.type).toBe("run.finished");
   });
 
   it("发出 started → finished，runId 稳定，threadId 缺省等于 runId", async () => {
@@ -147,7 +170,10 @@ describe("runAgent", () => {
     expect(thrown).toBeInstanceOf(RunError);
     expect((thrown as RunError).code).toBe("internal");
     expect((thrown as RunError).message).toBe("数据库连接失败");
-    expect(events.at(-1)).toMatchObject({ type: "run.error", code: "internal" });
+    expect(events.at(-1)).toMatchObject({
+      type: "run.error",
+      code: "internal",
+    });
   });
 
   it("onEvent 收到的事件与 result.events 一致", async () => {

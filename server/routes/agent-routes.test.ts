@@ -9,9 +9,11 @@ vi.mock("../agents/orchestrator/graph", () => ({
 
 import { orchestratorGraph } from "../agents/orchestrator/graph";
 import { LLMProviderConfigurationError } from "../_core/llm";
+import { RunError } from "../agents/harness/errors";
 import { chatHandler } from "./chat";
 import { guideHandler } from "./guide";
 import { characterHandler } from "./character";
+import { sendAgentRouteError } from "./errors";
 
 type MockResponse = {
   statusCode: number;
@@ -130,7 +132,13 @@ describe("Agent API routes", () => {
 
       expect(orchestratorGraph.invoke).toHaveBeenCalledWith({
         userInput: "请为我介绍一下这里",
+        roomId: undefined,
+        characterId: undefined,
         interactionType: "guide",
+        grounding: undefined,
+        conversationHistory: [],
+        visitedRooms: [],
+        discoveredCharacters: [],
         messages: [],
       });
       expect(res.statusCode).toBe(200);
@@ -158,7 +166,7 @@ describe("Agent API routes", () => {
     it("returns agent response for character interaction", async () => {
       vi.mocked(orchestratorGraph.invoke).mockResolvedValueOnce({
         answer: "你好，我是 Visual Fezer。",
-        uiAction: {},
+        uiAction: { highlightCharacterId: "visual" },
         currentPrimaryAgent: "visual",
       });
 
@@ -172,17 +180,83 @@ describe("Agent API routes", () => {
 
       expect(orchestratorGraph.invoke).toHaveBeenCalledWith({
         userInput: "聊聊你的设计理念",
+        roomId: undefined,
         characterId: "c13",
         interactionType: "click",
+        grounding: undefined,
+        conversationHistory: [],
+        visitedRooms: [],
+        discoveredCharacters: [],
         messages: [],
       });
       expect(res.statusCode).toBe(200);
       expect(res.body).toEqual({
         text: "你好，我是 Visual Fezer。",
         panel: "character",
-        highlightCharacterId: "c13",
+        highlightCharacterId: "visual",
         speakingAgentId: "visual",
       });
+    });
+
+    it("agent id 形式的 characterId 直接作为高亮目标", async () => {
+      vi.mocked(orchestratorGraph.invoke).mockResolvedValueOnce({
+        answer: "你好，我是 Builder Fezer。",
+        uiAction: { highlightCharacterId: "core" },
+        currentPrimaryAgent: "core",
+      });
+
+      const req = createReq({ characterId: "builder", userInput: "你好" });
+      const res = createRes();
+
+      await characterHandler(req, res as unknown as Response);
+
+      expect(res.body).toMatchObject({
+        highlightCharacterId: "builder",
+        speakingAgentId: "core",
+      });
+    });
+  });
+
+  describe("run error mapping", () => {
+    it("maps budget_exhausted to 504", () => {
+      const res = createRes();
+
+      sendAgentRouteError(
+        res as unknown as Response,
+        "Chat",
+        new RunError("budget_exhausted", "超过墙钟预算")
+      );
+
+      expect(res.statusCode).toBe(504);
+      expect(res.body).toMatchObject({
+        code: "AGENT_RUN_BUDGET_EXHAUSTED",
+      });
+    });
+
+    it("maps cancelled to 499", () => {
+      const res = createRes();
+
+      sendAgentRouteError(
+        res as unknown as Response,
+        "Chat",
+        new RunError("cancelled", "用户取消")
+      );
+
+      expect(res.statusCode).toBe(499);
+      expect(res.body).toMatchObject({ code: "AGENT_RUN_CANCELLED" });
+    });
+
+    it("maps invalid_input to 400", () => {
+      const res = createRes();
+
+      sendAgentRouteError(
+        res as unknown as Response,
+        "Chat",
+        new RunError("invalid_input", "输入不合法")
+      );
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toMatchObject({ code: "INVALID_INPUT" });
     });
   });
 

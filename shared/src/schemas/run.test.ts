@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  isTerminalRunEvent,
-  type RunEvent,
-  type RunOutcome,
-} from "./run";
+import { isTerminalRunEvent, type RunEvent, type RunOutcome } from "./run";
 
 /**
  * 每种事件一个样本。
