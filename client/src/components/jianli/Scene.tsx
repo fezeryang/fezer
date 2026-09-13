@@ -45,14 +45,13 @@ export function Scene({
     <>
       <Canvas
         camera={{ position: [0, 10, 14], fov: 55 }}
-        shadows
         dpr={[1, 2]}
         gl={{ antialias: true }}
       >
         {/* 光照 */}
         <ambientLight intensity={0.6} />
         <hemisphereLight args={["#f5fbff", "#7f8fa1", 0.35]} />
-        <directionalLight position={[18, 24, 12]} intensity={1.1} castShadow />
+        <directionalLight position={[18, 24, 12]} intensity={1.1} />
         <pointLight position={[-12, 10, -18]} intensity={0.28} />
 
         {/* 相机控制 */}

@@ -1,6 +1,6 @@
 import { useGLTF } from "@react-three/drei"
 import { useFrame } from "@react-three/fiber"
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import type { CharacterProps, CharacterState, Vec3 } from "./assets/types"
 import { CHARACTER_MODELS } from "./assets/characterConfig"
 
@@ -14,6 +14,9 @@ function configureModelLoader(loader: any) {
 
 // 角色地面Y坐标（根据模型调整）
 const GROUND_Y = 0
+
+// 帧间隔上限：切回标签页或掉帧时 delta 会突刺，不夹住角色会瞬间跳过一大段距离
+const MAX_FRAME_DELTA_SECONDS = 0.1
 
 // 辅助函数：在圆内生成随机点
 function randomPointInCircle(center: Vec3, radius: number): Vec3 {
@@ -49,8 +52,11 @@ export function Character({ config, onClick }: CharacterProps) {
   const currentPosition = useRef<Vec3>([...config.position])
   const currentRotation = useRef<number>(0)
 
+  // 模型克隆只做一次：写在 JSX 里会在每次 re-render 时重建整棵对象树
+  const instance = useMemo(() => scene.clone(), [scene])
+
   // 游走逻辑
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (!groupRef.current) return
 
     const now = clock.elapsedTime * 1000 // 转换为毫秒
@@ -63,7 +69,8 @@ export function Character({ config, onClick }: CharacterProps) {
     } else if (state === "walking") {
       // 移动向目标
       const speed = config.walkSpeed ?? 0.3
-      const delta = 0.016 // 约60fps的delta
+      // 帧率无关：用真实帧间隔（秒），120Hz 与 60Hz 下速度一致
+      const step = Math.min(delta, MAX_FRAME_DELTA_SECONDS)
 
       const dir = subtract(target, currentPosition.current)
       const dist = distance(currentPosition.current, target)
@@ -74,7 +81,7 @@ export function Character({ config, onClick }: CharacterProps) {
         setWaitEndTime(now + (config.waitTime ?? 1500))
       } else {
         // 移动
-        const moveDist = Math.min(dist, speed * delta)
+        const moveDist = Math.min(dist, speed * step)
         const normDir: Vec3 = [dir[0] / dist, 0, dir[2] / dist]
         currentPosition.current = [
           currentPosition.current[0] + normDir[0] * moveDist,
@@ -108,7 +115,7 @@ export function Character({ config, onClick }: CharacterProps) {
       scale={config.scale || [0.3, 0.3, 0.3]}
       onClick={() => onClick?.(config.id)}
     >
-      <primitive object={scene.clone()} />
+      <primitive object={instance} />
     </group>
   )
 }

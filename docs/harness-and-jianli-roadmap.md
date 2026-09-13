@@ -211,6 +211,12 @@ export function emitRunEvent(e: Omit<RunEvent, "at"> & { at?: number }): void; /
 | **B8** | 健壮性：WebGL 检测与降级、错误边界、加载进度、`prefers-reduced-motion`、`prefers-reduced-data`                                 | `Jianli.tsx`、`Scene.tsx`                                        | 禁用 WebGL 时不白屏，有可读降级页                  |
 | **B9** | 移动端：布局重排（面板改底部抽屉）、触摸手势、`useIsMobile` 接入                                                               | `Jianli.tsx`、`ChatModal.tsx`                                    | iPhone SE 尺寸可完成"进房间 → 提问 → 跳内容"全流程 |
 
+> **B 表勘误（2026-09-13 实测）**：B1 原写「删模块级全量 preload」的前提是错的。`Scene.tsx` 会把 7 个房间 + 9 条走廊 + 4 个结构 + 18 个角色**同时挂载**，所以 `MAP_PRELOAD_MODELS` / `preloadCharacters()` 预加载的就是场景迟早要渲染的那一批 —— 删掉它们不会省字节，只会把并行预取变成串行瀑布。
+>
+> 真正能降首屏字节的只有一个手段：**按需挂载**（只挂当前房间 + 相邻房间，见 `shared/src/map/rooms.ts` 已有的 `ROOM_ADJACENCY` / `getAdjacentRooms`），代价是切房间时需要过渡（雾/遮罩）掩盖加载。这依赖决策点 2。
+>
+> 另一个更划算且顺带改善产品的选项：**角色从 18 降到 7（每房间 1 个，与 agent 一一对应）** —— 省 11 次模型加载（约 1.2MB）、11 个 `useFrame`、11 次克隆，同时让 3D 地图与 agent 系统对齐（现在 18 个无名 kitty 与 7 个 agent 毫无对应关系），也是 C1 主动导览 / C9 房间内容化的前提。
+
 ### C. 3D 简历产品功能（`参考.md` Phase 2–5 + 新增）
 
 | ID      | 功能                                                                                                                                          | 依赖 harness            | 来源        |
@@ -387,6 +393,7 @@ A6（计量 + eval harness）+ C8（语音）+ C10（分享导出）+ C11（内�
 6. **harness 开关**：`AGENT_HARNESS_ENABLED` 默认 `true`（`false` 时 `/api/chat` 走旧路径），保留一个版本后删旧路径 —— 同意吗？
 7. **房间↔内容映射**：方案 A（frontmatter `rooms:`）还是方案 B（映射表 + admin）？
 8. **C1 主动导览**：确认 v1 用模板、零 LLM 调用？
+9. **3D 角色数量**：18 → 7（每房间 1 个，与 agent 对齐）？这是省首屏字节、同时让地图与 agent 体系一致的最划算一步，但会明显改变场景视觉密度。
 
 ---
 
