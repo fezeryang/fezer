@@ -3,12 +3,12 @@
  */
 
 import type { AgentId } from "../tools/agent.tool";
-import { setAgentInvoker } from "../tools/agent.tool";
+import { setAgentInvoker, runWithAgentToolContext } from "../tools/agent.tool";
+import type { ConversationTurn } from "@fezer/shared/schemas/agent";
 import {
   invokeLLM,
   isLLMProviderConfigurationError,
   type Message,
-  type Role,
 } from "../../_core/llm";
 import {
   buildAgentSystemPrompt,
@@ -18,7 +18,6 @@ import {
   runWithTraceContext,
   traceSpan,
 } from "../../_core/observability/langsmith";
-import { BaseMessage } from "@langchain/core/messages";
 import {
   getLLMToolsByNames,
   getToolExecutionRegistry,
@@ -29,14 +28,15 @@ import {
  * Agent 调用选项
  */
 export interface AgentInvokeOptions {
-  previousContext?: {
-    fromAgent?: string;
-    conversationHistory?: any[];
-  };
+  /**
+   * agent 间协作的嵌套深度（顶层请求为 0/未定义）。
+   * 深度 >= 1 时隐藏通信工具，硬性阻断递归咨询。
+   */
+  consultDepth?: number;
   context?: {
-    messages?: BaseMessage[];
+    /** 多轮会话历史（不含当前输入），按时间升序 */
+    conversationHistory?: ConversationTurn[];
     fromAgent?: string;
-    conversationHistory?: any[];
     grounding?: "public_profile";
   };
 }
@@ -146,11 +146,12 @@ const AGENT_TOOL_CONFIGS: Record<
   },
 };
 
-const MAX_DYNAMIC_TOOL_COUNT = 4;
 const MAX_TOOL_CALL_LOOPS = 3;
-const TOOL_CONTEXT_CHAR_LIMIT = 11000;
+/** 嵌套咨询最大深度（顶层为 0，允许 1 层 agent 互调） */
+const MAX_CONSULT_DEPTH = 1;
+const TOOL_CONTEXT_CHAR_LIMIT = 6000;
 const TOOL_RESULT_CHAR_LIMIT = 1200;
-const PROFILE_TOOL_RESULT_CHAR_LIMIT = 9000;
+const PROFILE_TOOL_RESULT_CHAR_LIMIT = 5000;
 const PUBLIC_PROFILE_GROUNDING_POLICY = [
   "【公开简历事实约束】",
   "你正在回答 /jianli 互动简历中的问题。关于 Fezer 的身份、教育、技能、项目、实习、实践、联系方式和隐私边界，唯一事实来源是服务器预取的 get_profile_full/get_profile/get_skills/get_projects 等工具结果。",
@@ -208,10 +209,6 @@ function dedupeDirectToolRequests(
   return deduped;
 }
 
-function dedupeToolNames(names: string[]): string[] {
-  return Array.from(new Set(names));
-}
-
 function inferProjectCategory(
   text: string
 ): "frontend" | "backend" | "ai" | "fullstack" | "all" {
@@ -233,8 +230,6 @@ function buildDirectToolRequests(
   const add = (name: string, toolInput: Record<string, unknown> = {}) => {
     requests.push({ name, input: toolInput });
   };
-
-  add("get_profile_full", { locale: "zh-CN" });
 
   const wantsProfile = containsAny(text, [
     "你是谁",
@@ -292,6 +287,12 @@ function buildDirectToolRequests(
   ]);
   const wantsContact = containsAny(text, ["联系", "邮箱", "email", "contact"]);
 
+  // 全量结构化简历是重上下文（~5000 字），只在明确涉及个人资料/导览意图时预取；
+  // 其余情况模型可通过常驻检索工具按需获取
+  if (wantsProfile || wantsGuide || agentId === "core") {
+    add("get_profile_full", { locale: "zh-CN" });
+  }
+
   if (wantsProfile || (agentId === "core" && wantsGuide)) {
     add("get_profile", { includeDetails: false });
     add("get_skills", { category: "all" });
@@ -328,74 +329,31 @@ function buildDirectToolRequests(
   return dedupeDirectToolRequests(requests);
 }
 
-function wantsDynamicTools(input: string): boolean {
-  const text = input.toLowerCase();
-  return containsAny(text, [
-    "多视角",
-    "咨询",
-    "其他角色",
-    "问问",
-    "协作",
-    "跨领域",
-    "综合",
-    "复杂",
-    "方案",
-    "比较",
-    "多个",
-    "一起",
-    "工具",
-  ]);
-}
-
-function buildDynamicToolNames(agentId: AgentId, input: string): string[] {
-  if (!wantsDynamicTools(input)) {
-    return [];
-  }
-
-  const text = input.toLowerCase();
-  const candidateNames: string[] = ["get_profile"];
-  const wantsCollaboration = containsAny(text, [
-    "多视角",
-    "咨询",
-    "其他角色",
-    "问问",
-    "协作",
-    "跨领域",
-    "综合",
-    "多个",
-    "一起",
-  ]);
-
-  if (wantsCollaboration) {
-    candidateNames.push("ask_multiple_agents", "ask_other_agent");
-  }
-
-  if (
-    containsAny(text, ["技术", "开发", "ai", "llm", "agent", "项目", "作品"])
-  ) {
-    candidateNames.push("get_skills", "get_projects", "search_content");
-  } else {
-    candidateNames.push("search_content");
-  }
-
-  if (containsAny(text, ["博客", "文章", "写作"])) {
-    candidateNames.push("get_blog_posts");
-  }
-
-  if (containsAny(text, ["作品", "案例", "项目"])) {
-    candidateNames.push("get_works_detail");
-  }
-
+/**
+ * 动态工具集：按 agent 白名单常驻暴露，模型可自主决定何时检索。
+ * 嵌套咨询层（consultDepth >= 1）剔除通信工具，硬性阻断递归。
+ */
+function buildDynamicToolNames(
+  agentId: AgentId,
+  consultDepth: number
+): string[] {
   const allowed = AGENT_TOOL_CONFIGS[agentId].tools;
-  return dedupeToolNames(candidateNames)
-    .filter(name => allowed.includes(name))
-    .slice(0, MAX_DYNAMIC_TOOL_COUNT);
+  return allowed.filter(
+    name =>
+      !(
+        consultDepth >= MAX_CONSULT_DEPTH && AGENT_COMMUNICATION_TOOLS.has(name)
+      )
+  );
 }
 
-function buildAgentToolPlan(agentId: AgentId, input: string): AgentToolPlan {
+function buildAgentToolPlan(
+  agentId: AgentId,
+  input: string,
+  consultDepth: number
+): AgentToolPlan {
   return {
     directToolRequests: buildDirectToolRequests(agentId, input),
-    dynamicToolNames: buildDynamicToolNames(agentId, input),
+    dynamicToolNames: buildDynamicToolNames(agentId, consultDepth),
   };
 }
 
@@ -511,9 +469,12 @@ async function invokeAgentInternal(
     async () =>
       traceSpan("expert.invokeAgent", async () => {
         const systemPrompt = createAgentSystemPrompt(agentId);
-        const contextMessages = options?.context?.messages || [];
+        const consultDepth = options?.consultDepth ?? 0;
+        const conversationHistory = sanitizeConversationHistory(
+          options?.context?.conversationHistory
+        );
         const executableToolRegistry = getToolExecutionRegistry();
-        const toolPlan = buildAgentToolPlan(agentId, input);
+        const toolPlan = buildAgentToolPlan(agentId, input, consultDepth);
         const directToolContext = await buildDirectToolContext(
           executableToolRegistry,
           toolPlan.directToolRequests
@@ -523,7 +484,8 @@ async function invokeAgentInternal(
             ? getLLMToolsByNames(toolPlan.dynamicToolNames)
             : [];
 
-        // 构建消息历史
+        // 消息构建：系统提示 → grounding 约束 → 预取上下文 → 结构化会话历史 → 当前输入（仅一份）
+        // 当前输入不再经由 LangChain messages 通道重复注入
         const messages: Message[] = [
           { role: "system", content: systemPrompt },
           ...(options?.context?.grounding === "public_profile"
@@ -537,7 +499,10 @@ async function invokeAgentInternal(
           ...(directToolContext
             ? [{ role: "system" as const, content: directToolContext }]
             : []),
-          ...contextMessages.slice(-5).map(toLLMMessage),
+          ...conversationHistory.map(turn => ({
+            role: turn.role,
+            content: turn.content,
+          })),
           { role: "user", content: input },
         ];
 
@@ -633,23 +598,32 @@ async function invokeAgentInternal(
 
             const toolResult = await traceSpan(
               `tool.${toolName}`,
-              async () => {
-                try {
-                  const data = await executableTool.invoke(parsedArgs);
-                  return {
-                    success: true,
-                    data,
-                  };
-                } catch (error) {
-                  return {
-                    success: false,
-                    error:
-                      error instanceof Error
-                        ? error.message
-                        : "Unknown tool error",
-                  };
-                }
-              },
+              () =>
+                runWithAgentToolContext(
+                  {
+                    callerAgentId: agentId,
+                    consultDepth,
+                    grounding: options?.context?.grounding,
+                    conversationHistory,
+                  },
+                  async () => {
+                    try {
+                      const data = await executableTool.invoke(parsedArgs);
+                      return {
+                        success: true,
+                        data,
+                      };
+                    } catch (error) {
+                      return {
+                        success: false,
+                        error:
+                          error instanceof Error
+                            ? error.message
+                            : "Unknown tool error",
+                      };
+                    }
+                  }
+                ),
               {
                 runType: "tool",
                 metadata: {
@@ -687,23 +661,33 @@ async function invokeAgentInternal(
   );
 }
 
-function mapRole(type: string): Role {
-  if (type === "human") return "user";
-  if (type === "ai") return "assistant";
-  if (type === "system") return "system";
-  if (type === "tool") return "tool";
-  return "user";
-}
+const MAX_CONVERSATION_TURNS = 8;
+const MAX_CONVERSATION_TURN_CHARS = 4000;
 
-function toLLMMessage(message: BaseMessage): Message {
-  const role = mapRole(message.getType());
-  return {
-    role,
-    content:
-      typeof message.content === "string"
-        ? message.content
-        : JSON.stringify(message.content),
-  };
+/**
+ * 会话历史的信任边界：只接受 user/assistant 轮、截断条数与长度、丢弃空内容。
+ */
+function sanitizeConversationHistory(
+  history: ConversationTurn[] | undefined
+): ConversationTurn[] {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history
+    .filter(
+      turn =>
+        turn != null &&
+        (turn.role === "user" || turn.role === "assistant") &&
+        typeof turn.content === "string" &&
+        turn.content.trim().length > 0
+    )
+    .slice(-MAX_CONVERSATION_TURNS)
+    .map(turn => ({
+      role: turn.role,
+      content: turn.content.slice(0, MAX_CONVERSATION_TURN_CHARS),
+      ...(turn.agentId ? { agentId: turn.agentId } : {}),
+    }));
 }
 
 /**
@@ -783,10 +767,40 @@ export async function invokeMultipleAgents(
 
 /**
  * 初始化 Agent Factory
- * 设置 agent 间通信的回调
+ * 注入 agent 间通信的调用入口，并在代码层强制：
+ * 1. canConsult 白名单（提示词里的协作约束不再只靠模型自觉）
+ * 2. 嵌套深度上限（超过 MAX_CONSULT_DEPTH 直接拒绝，阻断递归）
+ * 3. grounding / 会话历史透传（嵌套 agent 与顶层请求遵守同一事实约束）
  */
 export function initializeAgentFactory() {
-  setAgentInvoker(invokeAgent);
+  setAgentInvoker((targetAgentId, question, options) => {
+    const callerAgentId = options?.context?.callerAgentId;
+    const requestDepth = options?.context?.consultDepth ?? 0;
+
+    if (requestDepth >= MAX_CONSULT_DEPTH + 1) {
+      return Promise.resolve({
+        answer: `已达到 agent 协作嵌套上限（${MAX_CONSULT_DEPTH} 层），本次咨询已被拒绝。请基于已有信息回答。`,
+      });
+    }
+
+    if (
+      callerAgentId &&
+      !AGENT_TOOL_CONFIGS[callerAgentId]?.canConsult.includes(targetAgentId)
+    ) {
+      return Promise.resolve({
+        answer: `[${targetAgentId}] 不在 ${callerAgentId} 的协作白名单内，本次咨询已被拒绝。`,
+      });
+    }
+
+    return invokeAgent(targetAgentId, question, {
+      consultDepth: requestDepth + 1,
+      context: {
+        grounding: options?.context?.grounding,
+        conversationHistory: options?.context?.conversationHistory,
+        fromAgent: callerAgentId,
+      },
+    });
+  });
 }
 
 // 自动初始化

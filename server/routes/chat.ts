@@ -10,6 +10,7 @@ import { orchestratorGraph } from "../agents/orchestrator/graph";
 import type {
   FrontendAgentRequest,
   AgentResponse,
+  ConversationTurn,
 } from "@fezer/shared/schemas/agent";
 import {
   runWithTraceContext,
@@ -21,6 +22,34 @@ import {
   toE2eFezerType,
 } from "./e2e-mock";
 import { sendAgentRouteError } from "./errors";
+
+/** 会话历史的信任边界：最多 8 轮、每轮 4000 字符 */
+const MAX_CONVERSATION_TURNS = 8;
+const MAX_CONVERSATION_TURN_CHARS = 4000;
+
+function sanitizeConversationHistory(history: unknown): ConversationTurn[] {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history
+    .filter(
+      (turn): turn is ConversationTurn =>
+        turn != null &&
+        typeof turn === "object" &&
+        "role" in turn &&
+        (turn.role === "user" || turn.role === "assistant") &&
+        "content" in turn &&
+        typeof turn.content === "string" &&
+        turn.content.trim().length > 0
+    )
+    .slice(-MAX_CONVERSATION_TURNS)
+    .map(turn => ({
+      role: turn.role,
+      content: turn.content.slice(0, MAX_CONVERSATION_TURN_CHARS),
+      ...(turn.agentId ? { agentId: turn.agentId } : {}),
+    }));
+}
 
 /**
  * POST /api/chat
@@ -74,7 +103,10 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
         async () => {
           // 验证请求参数
           if (!userInput || typeof userInput !== "string") {
-            res.status(400).json({ error: "Invalid userInput" });
+            res.status(400).json({
+              error: "Invalid userInput",
+              message: "请输入有效的问题。",
+            });
             return;
           }
 
@@ -92,6 +124,9 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
             visitedRooms,
             discoveredCharacters,
             grounding,
+            conversationHistory: sanitizeConversationHistory(
+              req.body.conversationHistory
+            ),
             messages: [],
           });
 

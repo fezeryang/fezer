@@ -3,18 +3,49 @@
  * 允许一个 agent 咨询其他 agent
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
+import type { ConversationTurn } from "@fezer/shared/schemas/agent";
 
 // 类型定义
-export type AgentId = "core" | "builder" | "ai" | "writer" | "reader" | "visual" | "wanderer";
+export type AgentId =
+  | "core"
+  | "builder"
+  | "ai"
+  | "writer"
+  | "reader"
+  | "visual"
+  | "wanderer";
 
-// 简单的 agent 调用接口（后续会被实际的 expert agent 替换）
-interface AgentInvokeOptions {
-  previousContext?: {
-    fromAgent?: string;
-    conversationHistory?: any[];
-  };
+/**
+ * agent 间通信的调用方上下文。
+ * 由 agent-factory 在工具循环外层通过 AsyncLocalStorage 注入，
+ * 保证并发请求互不串扰，且调用方身份不可被 LLM 伪造。
+ */
+export interface AgentToolCallContext {
+  /** 发起工具调用的 agent */
+  callerAgentId: AgentId;
+  /** 当前嵌套深度（顶层为 0） */
+  consultDepth: number;
+  /** 事实来源约束（从顶层请求透传） */
+  grounding?: "public_profile";
+  /** 多轮会话历史（从顶层请求透传） */
+  conversationHistory?: ConversationTurn[];
+}
+
+const agentToolCallStorage = new AsyncLocalStorage<AgentToolCallContext>();
+
+/** 在指定的调用方上下文中执行（agent-factory 工具循环使用） */
+export function runWithAgentToolContext<T>(
+  context: AgentToolCallContext,
+  callback: () => Promise<T>
+): Promise<T> {
+  return agentToolCallStorage.run(context, callback);
+}
+
+function getAgentToolCallContext(): AgentToolCallContext | undefined {
+  return agentToolCallStorage.getStore();
 }
 
 // Agent 调用函数签名
@@ -23,6 +54,15 @@ type AgentInvoker = (
   question: string,
   options?: AgentInvokeOptions
 ) => Promise<{ answer: string; uiAction?: any }>;
+
+export interface AgentInvokeOptions {
+  context?: {
+    callerAgentId?: AgentId;
+    grounding?: "public_profile";
+    conversationHistory?: ConversationTurn[];
+    consultDepth?: number;
+  };
+}
 
 // 依赖注入：实际的 invoke 函数会在 agent-factory 中设置
 let _invokeAgent: AgentInvoker | null = null;
@@ -50,15 +90,18 @@ async function invokeAgent(
  * 允许当前 agent 咨询其他专家 agent
  */
 export const askOtherAgentTool = tool(
-  async ({ agentId, question, includeContext }) => {
+  async ({ agentId, question }) => {
+    // 调用方身份与透传上下文来自服务端注入的 ALS，而非 LLM 可控的参数
+    const callContext = getAgentToolCallContext();
+
     try {
       const result = await invokeAgent(agentId, question, {
-        previousContext: includeContext
-          ? {
-              fromAgent: includeContext.fromAgent,
-              conversationHistory: includeContext.conversationHistory,
-            }
-          : undefined,
+        context: {
+          callerAgentId: callContext?.callerAgentId,
+          grounding: callContext?.grounding,
+          conversationHistory: callContext?.conversationHistory,
+          consultDepth: callContext?.consultDepth,
+        },
       });
 
       return {
@@ -91,16 +134,17 @@ export const askOtherAgentTool = tool(
 - wanderer: 旅行、观察、生活体验`,
     schema: z.object({
       agentId: z
-        .enum(["core", "builder", "ai", "writer", "reader", "visual", "wanderer"])
+        .enum([
+          "core",
+          "builder",
+          "ai",
+          "writer",
+          "reader",
+          "visual",
+          "wanderer",
+        ])
         .describe("要咨询的 agent ID"),
       question: z.string().describe("要询问的问题"),
-      includeContext: z
-        .object({
-          fromAgent: z.string().optional().describe("当前 agent ID"),
-          conversationHistory: z.array(z.any()).optional().describe("对话历史"),
-        })
-        .optional()
-        .describe("是否包含上下文信息"),
     }),
   }
 );
@@ -111,10 +155,19 @@ export const askOtherAgentTool = tool(
  */
 export const askMultipleAgentsTool = tool(
   async ({ agentIds, question }) => {
+    const callContext = getAgentToolCallContext();
+
     const results = await Promise.all(
       agentIds.map(async id => {
         try {
-          const result = await invokeAgent(id, question);
+          const result = await invokeAgent(id, question, {
+            context: {
+              callerAgentId: callContext?.callerAgentId,
+              grounding: callContext?.grounding,
+              conversationHistory: callContext?.conversationHistory,
+              consultDepth: callContext?.consultDepth,
+            },
+          });
           return {
             agent: id,
             success: true,
@@ -142,13 +195,24 @@ export const askMultipleAgentsTool = tool(
   },
   {
     name: "ask_multiple_agents",
-    description: "并行咨询多个专家 agent 的意见。用于需要多个领域视角的复杂问题。",
+    description:
+      "并行咨询多个专家 agent 的意见。用于需要多个领域视角的复杂问题。",
     schema: z.object({
       agentIds: z
-        .array(z.enum(["core", "builder", "ai", "writer", "reader", "visual", "wanderer"]))
+        .array(
+          z.enum([
+            "core",
+            "builder",
+            "ai",
+            "writer",
+            "reader",
+            "visual",
+            "wanderer",
+          ])
+        )
         .min(1)
-        .max(4)
-        .describe("要咨询的 agent ID 列表，最多 4 个"),
+        .max(3)
+        .describe("要咨询的 agent ID 列表，最多 3 个"),
       question: z.string().describe("要询问的问题"),
     }),
   }

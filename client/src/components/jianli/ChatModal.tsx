@@ -3,12 +3,21 @@
  * 支持拖拽、侧边栏固定模式、房间背景
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { Streamdown } from "streamdown";
 import { useAgentChat } from "../../hooks/useAgentChat";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
-import { resolveFezerTypeFromSpatialContext } from "@fezer/shared/characters";
+import {
+  resolveFezerTypeFromSpatialContext,
+  AGENT_DISPLAY_NAMES,
+} from "@fezer/shared/characters";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { processRoomLinksInDOM } from "./utils/roomLinksDom";
 
@@ -17,6 +26,8 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  /** 该轮回答的 agent（assistant 消息携带，用于历史归因） */
+  agentId?: FezerType;
 }
 
 interface ChatModalProps {
@@ -28,18 +39,7 @@ interface ChatModalProps {
   initialMessage?: string;
 }
 
-// 代理显示名称
-const AGENT_NAMES: Record<FezerType, string> = {
-  core: "Aries · Core",
-  builder: "Gemini · Builder",
-  ai: "Aquarius · AI",
-  writer: "Libra · Writer",
-  reader: "Virgo · Reader",
-  visual: "Pisces · Visual",
-  wanderer: "Sagittarius · Wanderer",
-};
-
-// 代理颜色
+// 代理颜色（仅 UI 层使用的主题色）
 const AGENT_COLORS: Record<FezerType, string> = {
   core: "#f97316",
   builder: "#2563eb",
@@ -96,6 +96,17 @@ type ChatMode = "floating" | "sidebar";
 
 const CHAT_UNAVAILABLE_MESSAGE = "AI 服务暂时不可用，请稍后再试。";
 
+/** 回传给后端的会话历史上限（与服务端信任边界一致） */
+const MAX_HISTORY_TURNS = 8;
+
+function createMessageId(prefix: string): string {
+  const randomId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}-${randomId}`;
+}
+
 export function ChatModal({
   isOpen,
   characterId,
@@ -135,11 +146,14 @@ export function ChatModal({
 
   const { sendMessage, isLoading, thinkingState } = useAgentChat({
     onSuccess: response => {
+      // 弹窗已关闭（或关闭后重开、会话已被重置）时，丢弃属于旧会话的迟到响应
+      if (!isOpenRef.current) return;
       const assistantMessage: ChatMessage = {
-        id: Date.now().toString(),
+        id: createMessageId("assistant"),
         role: "assistant",
         content: response.text,
         timestamp: Date.now(),
+        agentId: response.speakingAgentId,
       };
       setMessages(prev => [...prev, assistantMessage]);
       setCurrentResponse(response);
@@ -155,7 +169,7 @@ export function ChatModal({
   useEffect(() => {
     if (!onRoomSwitch) return;
 
-    messages.forEach((msg) => {
+    messages.forEach(msg => {
       if (msg.role === "assistant") {
         const container = messageContainerRefs.current.get(msg.id);
         if (container) {
@@ -165,14 +179,33 @@ export function ChatModal({
     });
   }, [messages, onRoomSwitch, handleRoomLinkClick]);
 
-  // 打开聊天窗口时重置消息
+  // 仅在弹窗从关闭到打开的转换时重置会话。
+  // 切换房间/角色（例如点击房间链接、选择推荐 agent）不再清空对话，
+  // 保证多轮上下文跨房间连续，后端按内容路由到合适的专家。
+  const wasOpenRef = useRef(false);
+  const handleSendRef = useRef<(content?: string) => Promise<void>>(
+    async () => undefined
+  );
+  // useLayoutEffect 先于所有 useEffect 执行，保证挂载当帧 ref 即指向最新 handleSend
+  useLayoutEffect(() => {
+    handleSendRef.current = handleSend;
+  });
+  const isOpenRef = useRef(isOpen);
   useEffect(() => {
-    if (isOpen) {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
       setMessages([]);
       setCurrentResponse(null);
       setSelectedAgentId(undefined);
+      // 新会话开始时若有初始消息（如进入空间的打招呼语），自动发送一次
+      if (initialMessage?.trim()) {
+        void handleSendRef.current(initialMessage);
+      }
     }
-  }, [characterId, isOpen, roomId]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // 拖拽开始
   const handleDragStart = useCallback(
@@ -233,28 +266,40 @@ export function ChatModal({
     if (!text.trim()) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: createMessageId("user"),
       role: "user",
       content: text,
       timestamp: Date.now(),
     };
+    // 先基于现有消息构建历史（不含即将发送的这条）
+    const conversationHistory = messages
+      .filter(msg => msg.content.trim().length > 0)
+      .slice(-MAX_HISTORY_TURNS)
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        ...(msg.agentId ? { agentId: msg.agentId } : {}),
+      }));
+
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
 
     try {
-      const activeAgentId =
-        selectedAgentId || resolveAgentFromContext(characterId, roomId);
+      // 显式定向（用户点击角色或从推荐里选中了 agent）才发 click；
+      // 纯房间内打字聊天发 chat，让后端按内容路由，房间只做软偏置
+      const explicitAgentId = selectedAgentId || characterId;
       await sendMessage({
         userInput: text,
-        characterId: selectedAgentId || characterId,
+        characterId: explicitAgentId,
         roomId,
-        interactionType: activeAgentId ? "click" : "chat",
+        interactionType: explicitAgentId ? "click" : "chat",
         grounding: "public_profile",
+        conversationHistory,
       });
     } catch (error) {
       console.error("Chat error:", error);
       const assistantMessage: ChatMessage = {
-        id: `${Date.now()}-error`,
+        id: createMessageId("assistant"),
         role: "assistant",
         content: CHAT_UNAVAILABLE_MESSAGE,
         timestamp: Date.now(),
@@ -270,7 +315,7 @@ export function ChatModal({
   const handleSuggestedAgent = (agentId: FezerType) => {
     setSelectedAgentId(agentId);
     setCurrentResponse({
-      text: `你正在与 ${AGENT_NAMES[agentId]} 对话。请问有什么我可以帮助你的？`,
+      text: `你正在与 ${AGENT_DISPLAY_NAMES[agentId]} 对话。请问有什么我可以帮助你的？`,
       panel: "character",
       speakingAgentId: agentId,
       suggestedQuestions: [],
@@ -287,7 +332,7 @@ export function ChatModal({
     ? AGENT_COLORS[currentAgentId]
     : "#f97316";
   const currentAgentName = currentAgentId
-    ? AGENT_NAMES[currentAgentId]
+    ? AGENT_DISPLAY_NAMES[currentAgentId]
     : "Fezer";
 
   const roomBackground = getRoomBackground(roomId);
@@ -401,7 +446,7 @@ export function ChatModal({
               >
                 {msg.role === "assistant" ? (
                   <div
-                    ref={(el) => {
+                    ref={el => {
                       if (el) {
                         messageContainerRefs.current.set(msg.id, el);
                       }
@@ -463,7 +508,7 @@ export function ChatModal({
                       color: AGENT_COLORS[agentId],
                     }}
                   >
-                    {AGENT_NAMES[agentId]}
+                    {AGENT_DISPLAY_NAMES[agentId]}
                   </button>
                 ))}
               </div>

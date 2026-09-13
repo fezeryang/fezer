@@ -15,6 +15,7 @@
 import { StateGraph, START, END, Annotation } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
 import { HumanMessage } from "@langchain/core/messages";
+import type { ConversationTurn } from "@fezer/shared/schemas/agent";
 import { askSupervisor } from "../supervisor/graph";
 import type { AgentId } from "../tools/agent.tool";
 import {
@@ -66,6 +67,11 @@ export function createOrchestratorGraph() {
     grounding: Annotation<"public_profile" | undefined>({
       reducer: (_, current) => current,
       default: () => undefined,
+    }),
+    // 多轮会话历史（结构化，不含当前 userInput）
+    conversationHistory: Annotation<ConversationTurn[]>({
+      reducer: (_, current) => current,
+      default: () => [],
     }),
     // 当前主要 Agent
     currentPrimaryAgent: Annotation<AgentId>({
@@ -173,17 +179,23 @@ export function createOrchestratorGraph() {
         interactionType,
         grounding,
         messages,
+        conversationHistory,
         currentPrimaryAgent,
       } = state;
 
-      // 空间上下文已经在上一节点解析，这里保留原始 characterId，
-      // 并显式传递 preferredAgent，避免 supervisor 被泛化文本重新路由。
-      const preferredAgent = currentPrimaryAgent;
+      // 仅当用户显式定向（点击角色 / 导览）时才硬性锁定 agent；
+      // 普通聊天（chat）交给 supervisor 的意图分类按内容路由，
+      // 房间位置作为软偏置传入，避免"站在哪个房间就只能问哪个领域"。
+      const isExplicitTargeting =
+        interactionType === "click" || interactionType === "guide";
+      const preferredAgent = isExplicitTargeting
+        ? currentPrimaryAgent
+        : undefined;
 
       // 调用 Supervisor 进行智能路由和 Agent 调用
       const result = await runWithTraceContext(
         {
-          agentId: preferredAgent,
+          agentId: currentPrimaryAgent,
           roomId,
           characterId,
         },
@@ -195,21 +207,26 @@ export function createOrchestratorGraph() {
             preferredAgent,
             grounding,
             messages,
+            conversationHistory,
           })
       );
+
+      // 回答 agent 以 supervisor 实际路由结果为准（内容路由可能换人）
+      const answeringAgent =
+        result.speakingAgent ?? preferredAgent ?? currentPrimaryAgent;
 
       // 返回结果，包含回答文本和 UI 操作指令
       return {
         answer: result.answer,
         uiAction: {
           panel: "character",
-          highlightCharacterId: preferredAgent,
+          highlightCharacterId: answeringAgent,
           focusRoomId: roomId,
           suggestedNextCharacterIds: result.uiAction?.suggestedNextCharacterIds,
           suggestedQuestions: result.uiAction?.suggestedQuestions,
           ...result.uiAction,
         },
-        currentPrimaryAgent: preferredAgent,
+        currentPrimaryAgent: answeringAgent,
       };
     });
   }

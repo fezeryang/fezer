@@ -6,6 +6,12 @@
 import type { AgentId } from "../tools/agent.tool";
 import { invokeLLM } from "../../_core/llm";
 import { runWithTraceContext } from "../../_core/observability/langsmith";
+import { resolveAgentByRoomId } from "../spatial/agent-resolution";
+
+/** 房间偏置提示（软性参考，不强制路由） */
+export interface SpatialHint {
+  roomId?: string;
+}
 
 /**
  * 意图分类结果
@@ -89,20 +95,30 @@ function deriveFallbackConsultAgents(
  * 使用 LLM 进行意图分类
  */
 export async function classifyIntent(
-  userInput: string
+  userInput: string,
+  spatialHint?: SpatialHint
 ): Promise<IntentClassification> {
   // 简单关键词预处理（快速路径）
-  const quickResult = quickClassify(userInput);
+  const quickResult = quickClassify(userInput, spatialHint);
   if (quickResult) {
     return quickResult;
   }
+
+  // 房间软偏置：仅影响身份/泛化类模糊问题，不覆盖领域专业问题的内容路由
+  const roomBiasSection = spatialHint?.roomId
+    ? `## 当前空间上下文（软偏置）
+用户当前站在房间「${spatialHint.roomId}」（对应 agent: ${resolveAgentByRoomId(spatialHint.roomId)}）。
+- 身份类问题（"你是谁/你能做什么"）优先路由到该房间的 agent
+- 但如果问题内容明显属于其他领域专长（如技术实现、AI、写作、设计），必须按内容路由，忽略房间
+`
+    : "";
 
   // 使用 LLM 进行精确分类
   const systemPrompt = `# 意图分类器系统指令
 
 你是 Fezer 简历系统的意图分类器（版本: ${INTENT_PROMPT_VERSION}）。
 
-## 核心约束
+${roomBiasSection}## 核心约束
 - 你必须在给定的**闭集枚举**中分类，不得输出枚举外的值
 - 只返回符合 schema 的 JSON，不添加任何额外文本
 - 当输入模糊时，选择最可能的主导意图，而非拒答
@@ -233,15 +249,45 @@ A: {"category":"design","targetAgent":"visual","confidence":0.85,"needsConsultat
 /**
  * 快速关键词分类
  */
-function quickClassify(input: string): IntentClassification | null {
+function quickClassify(
+  input: string,
+  spatialHint?: SpatialHint
+): IntentClassification | null {
   const lower = input.toLowerCase();
+
+  // 身份类问题（必须先于泛化"介绍"判断）：
+  // 有房间上下文时由该房间的 agent 以自己的身份作答，否则交给 core
+  const isIdentityQuestion =
+    lower.includes("你是谁") ||
+    lower.includes("你叫什么") ||
+    lower.includes("你是做什么") ||
+    lower.includes("介绍你自己") ||
+    lower.includes("介绍一下你自己") ||
+    lower.includes("自我介绍") ||
+    lower.includes("你能做什么") ||
+    lower.includes("你会什么");
+
+  if (isIdentityQuestion) {
+    const roomAgent = spatialHint?.roomId
+      ? resolveAgentByRoomId(spatialHint.roomId)
+      : undefined;
+    return {
+      category: roomAgent ? "character" : "guide",
+      targetAgent: roomAgent ?? "core",
+      confidence: 0.9,
+      needsConsultation: false,
+      reasoning: roomAgent
+        ? "身份类问题，由当前房间的 agent 作答"
+        : "身份类问题，交给全局导览 agent",
+    };
+  }
 
   // 明确的导览意图
   if (
-    lower.includes("介绍") ||
     lower.includes("导览") ||
     lower.includes("这是什么") ||
-    lower.includes("如何开始")
+    lower.includes("如何开始") ||
+    lower.includes("怎么逛")
   ) {
     return {
       category: "guide",

@@ -62,7 +62,7 @@ describe("expert agent tool loop", () => {
     await expect(invokeAgent("core", "hello")).rejects.toBe(providerError);
   });
 
-  it("preloads local website context for ordinary visitor questions without exposing tools to the model", async () => {
+  it("preloads profile context for visitor questions and exposes the whitelist to the model", async () => {
     const getProfileFullInvoke = vi.fn(async () => ({
       profile: { name: "Fezer", body: "structured profile" },
     }));
@@ -131,7 +131,13 @@ describe("expert agent tool loop", () => {
       category: "all",
       limit: 3,
     });
-    expect(getLLMToolsByNamesMock).not.toHaveBeenCalled();
+
+    // 白名单工具常驻暴露；mock 返回空集，因此 LLM 请求本身不带 tools
+    expect(getLLMToolsByNamesMock).toHaveBeenCalledTimes(1);
+    const exposedNames = getLLMToolsByNamesMock.mock.calls[0][0];
+    expect(exposedNames).toContain("get_profile_full");
+    expect(exposedNames).toContain("search_content");
+    expect(exposedNames).toContain("ask_other_agent");
 
     const firstCall = invokeLLMMock.mock.calls[0][0];
     expect(firstCall.tools).toBeUndefined();
@@ -145,9 +151,9 @@ describe("expert agent tool loop", () => {
     ).toBe(true);
   });
 
-  it("always preloads the structured public profile before answering", async () => {
+  it("skips the heavy full-profile prefetch for non-profile intents on non-core agents", async () => {
     const getProfileFullInvoke = vi.fn(async () => ({
-      profile: { name: "Fezer", body: "mandatory profile context" },
+      profile: { name: "Fezer", body: "structured profile" },
     }));
 
     getToolExecutionRegistryMock.mockReturnValue(
@@ -169,7 +175,7 @@ describe("expert agent tool loop", () => {
       choices: [
         {
           index: 0,
-          message: { role: "assistant", content: "answer with context" },
+          message: { role: "assistant", content: "answer without context" },
           finish_reason: "stop",
         },
       ],
@@ -178,17 +184,18 @@ describe("expert agent tool loop", () => {
     const { invokeAgent } = await import("./agent-factory");
     const result = await invokeAgent("visual", "你适合什么方向？");
 
-    expect(result.answer).toBe("answer with context");
-    expect(getProfileFullInvoke).toHaveBeenCalledWith({ locale: "zh-CN" });
+    expect(result.answer).toBe("answer without context");
+    // 非资料意图 + 非核心 agent：不再预取全量简历，模型可经检索工具按需获取
+    expect(getProfileFullInvoke).not.toHaveBeenCalled();
 
     const firstCall = invokeLLMMock.mock.calls[0][0];
     expect(
       firstCall.messages.some(
         (msg: any) =>
           msg.role === "system" &&
-          String(msg.content).includes("mandatory profile context")
+          String(msg.content).includes("服务器已预先检索到的真实个人资料")
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("adds strict public profile grounding rules for Jianli chat requests", async () => {
@@ -245,43 +252,37 @@ describe("expert agent tool loop", () => {
     expect(systemText).toContain("cookfezer@gmail.com");
   });
 
-  it("enables a small dynamic tool set only for cross-agent requests", async () => {
-    getLLMToolsByNamesMock.mockReturnValue([
-      {
-        type: "function",
-        function: {
-          name: "ask_multiple_agents",
-          description: "ask agents",
-          parameters: { type: "object", properties: {} },
-        },
-      },
-    ]);
-
-    invokeLLMMock.mockResolvedValueOnce({
+  it("always exposes the agent tool whitelist and hides communication tools when nested", async () => {
+    invokeLLMMock.mockResolvedValue({
       id: "1",
       created: 1,
       model: "deepseek-chat",
       choices: [
         {
           index: 0,
-          message: { role: "assistant", content: "cross-agent answer" },
+          message: { role: "assistant", content: "whitelist answer" },
           finish_reason: "stop",
         },
       ],
     });
 
     const { invokeAgent } = await import("./agent-factory");
-    await invokeAgent("core", "请从技术和 AI 多视角综合分析一下");
 
+    // 顶层：白名单常驻暴露，不再依赖关键词闸门
+    await invokeAgent("core", "你好");
     expect(getLLMToolsByNamesMock).toHaveBeenCalledTimes(1);
-    const enabledNames = getLLMToolsByNamesMock.mock.calls[0][0];
-    expect(enabledNames.length).toBeLessThanOrEqual(4);
-    expect(enabledNames).toContain("ask_multiple_agents");
-    expect(enabledNames).toContain("get_profile");
+    const topLevelNames = getLLMToolsByNamesMock.mock.calls[0][0];
+    expect(topLevelNames).toContain("ask_other_agent");
+    expect(topLevelNames).toContain("ask_multiple_agents");
+    expect(topLevelNames).toContain("search_content");
 
-    const firstCall = invokeLLMMock.mock.calls[0][0];
-    expect(firstCall.tools).toHaveLength(1);
-    expect(firstCall.tool_choice).toBe("auto");
+    // 嵌套层：通信工具被硬性剔除，阻断递归
+    await invokeAgent("core", "你好", { consultDepth: 1 });
+    expect(getLLMToolsByNamesMock).toHaveBeenCalledTimes(2);
+    const nestedNames = getLLMToolsByNamesMock.mock.calls[1][0];
+    expect(nestedNames).not.toContain("ask_other_agent");
+    expect(nestedNames).not.toContain("ask_multiple_agents");
+    expect(nestedNames).toContain("search_content");
   });
 
   it("executes tool call serially and continues with tool message", async () => {
@@ -616,5 +617,139 @@ describe("expert agent tool loop", () => {
 
     expect(result.answer).toContain("工具调用格式异常");
     expect(invokeLLMMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the user input exactly once and threads conversation history", async () => {
+    invokeLLMMock.mockResolvedValueOnce({
+      id: "1",
+      created: 1,
+      model: "deepseek-chat",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "history-aware answer" },
+          finish_reason: "stop",
+        },
+      ],
+    });
+
+    const { invokeAgent } = await import("./agent-factory");
+    await invokeAgent("core", "那第二个项目呢？", {
+      context: {
+        grounding: "public_profile",
+        conversationHistory: [
+          { role: "user", content: "介绍一下你的项目" },
+          { role: "assistant", content: "第一个项目是 TODŌU 3D 工作台" },
+        ],
+      },
+    });
+
+    const firstCall = invokeLLMMock.mock.calls[0][0];
+    // 当前输入只出现一次（历史里的 user 轮属于正常多轮对话，不算重复注入）
+    const currentInputMessages = firstCall.messages.filter(
+      (msg: any) =>
+        msg.role === "user" && msg.content === "那第二个项目呢？"
+    );
+    expect(currentInputMessages).toHaveLength(1);
+    const allUserMessages = firstCall.messages.filter(
+      (msg: any) => msg.role === "user"
+    );
+    expect(allUserMessages).toHaveLength(2); // 1 条历史 + 1 条当前
+
+    // 会话历史完整进入上下文
+    const historyAssistantMessage = firstCall.messages.find(
+      (msg: any) =>
+        msg.role === "assistant" &&
+        msg.content === "第一个项目是 TODŌU 3D 工作台"
+    );
+    expect(historyAssistantMessage).toBeTruthy();
+
+    // 历史会被截断为信任边界内的轮数
+    const oversizedHistory = Array.from({ length: 20 }, (_, index) => ({
+      role: "user" as const,
+      content: `问题 ${index}`,
+    }));
+    invokeLLMMock.mockResolvedValueOnce({
+      id: "2",
+      created: 2,
+      model: "deepseek-chat",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "truncated answer" },
+          finish_reason: "stop",
+        },
+      ],
+    });
+    await invokeAgent("core", "继续", {
+      context: { conversationHistory: oversizedHistory },
+    });
+    const secondCall = invokeLLMMock.mock.calls[1][0];
+    const historyUserMessages = secondCall.messages.filter(
+      (msg: any) => msg.role === "user" && msg.content.startsWith("问题 ")
+    );
+    expect(historyUserMessages.length).toBeLessThanOrEqual(8);
+  });
+
+  it("rejects nested consultation outside the caller canConsult whitelist", async () => {
+    invokeLLMMock.mockResolvedValue({
+      id: "1",
+      created: 1,
+      model: "deepseek-chat",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "direct answer" },
+          finish_reason: "stop",
+        },
+      ],
+    });
+
+    // 单独运行本用例时也必须保证 invoker 已注入（initializeAgentFactory 在模块加载时执行）
+    await import("./agent-factory");
+    const { runWithAgentToolContext, askOtherAgentTool } = await import(
+      "../tools/agent.tool"
+    );
+
+    // builder 的 canConsult 只有 ai/writer，问 wanderer 必须被代码层拒绝
+    const rejected = await runWithAgentToolContext(
+      { callerAgentId: "builder", consultDepth: 0 },
+      () =>
+        askOtherAgentTool.invoke({
+          agentId: "wanderer",
+          question: "旅行有什么收获",
+        }) as Promise<unknown>
+    );
+    expect(JSON.stringify(rejected)).toContain("协作白名单");
+
+    // 白名单内的 ai 正常透传
+    const allowed = await runWithAgentToolContext(
+      { callerAgentId: "builder", consultDepth: 0 },
+      () =>
+        askOtherAgentTool.invoke({
+          agentId: "ai",
+          question: "LangChain 怎么用",
+        }) as Promise<unknown>
+    );
+    expect(JSON.stringify(allowed)).toContain("direct answer");
+    expect(JSON.stringify(allowed)).toContain('"success":true');
+  });
+
+  it("rejects consultation beyond the nesting depth cap", async () => {
+    // 单独运行本用例时也必须保证 invoker 已注入（initializeAgentFactory 在模块加载时执行）
+    await import("./agent-factory");
+    const { runWithAgentToolContext, askOtherAgentTool } = await import(
+      "../tools/agent.tool"
+    );
+
+    const rejected = await runWithAgentToolContext(
+      { callerAgentId: "core", consultDepth: 2 },
+      () =>
+        askOtherAgentTool.invoke({
+          agentId: "builder",
+          question: "递归问题",
+        }) as Promise<unknown>
+    );
+    expect(JSON.stringify(rejected)).toContain("嵌套上限");
   });
 });

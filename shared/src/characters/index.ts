@@ -39,6 +39,7 @@ export {
   resolveFezerTypeByRoomId,
   resolveFezerTypeFromSpatialContext,
 } from "./agent-resolution";
+export { AGENT_DISPLAY_NAMES } from "./display-names";
 
 /**
  * 所有角色配置映射

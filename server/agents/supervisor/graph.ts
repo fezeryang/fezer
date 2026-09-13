@@ -5,6 +5,8 @@
 
 import { StateGraph, END, Annotation } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
+import type { ConversationTurn } from "@fezer/shared/schemas/agent";
+import { AGENT_DISPLAY_NAMES } from "@fezer/shared/characters";
 import { classifyIntent, INTENT_PROMPT_VERSION } from "./intent-classifier";
 import { invokeAgent, invokeMultipleAgents } from "../expert/agent-factory";
 import type { AgentId } from "../tools/agent.tool";
@@ -52,6 +54,12 @@ export const SupervisorState = Annotation.Root({
   preferredAgent: Annotation<AgentId | undefined>({
     reducer: (_, current) => current,
     default: () => undefined,
+  }),
+
+  // 多轮会话历史（结构化，不含当前 userInput）
+  conversationHistory: Annotation<ConversationTurn[]>({
+    reducer: (_, current) => current,
+    default: () => [],
   }),
 
   // 意图分类结果
@@ -104,31 +112,32 @@ export const SupervisorState = Annotation.Root({
   }),
 });
 
+/**
+ * 空间硬覆盖：仅当用户显式定向（点击角色 / hover / 导览）时生效。
+ * 普通聊天不在此处短路，交由 classifyIntent 按内容路由（房间作为软偏置传入）。
+ */
 function resolveContextualTargetAgent(
   state: typeof SupervisorState.State
 ): AgentId | undefined {
+  const isExplicitTargeting =
+    state.interactionType === "click" ||
+    state.interactionType === "hover" ||
+    state.interactionType === "guide";
+
+  if (!isExplicitTargeting) {
+    return undefined;
+  }
+
   if (state.preferredAgent) {
     return state.preferredAgent;
   }
 
-  if (state.characterId) {
-    return resolvePreferredAgent({
-      characterId: state.characterId,
-      roomId: state.roomId,
-      interactionType: "click",
-      fallback: "core",
-    });
-  }
-
-  if (state.roomId) {
-    return resolvePreferredAgent({
-      roomId: state.roomId,
-      interactionType: state.interactionType,
-      fallback: "core",
-    });
-  }
-
-  return undefined;
+  return resolvePreferredAgent({
+    characterId: state.characterId,
+    roomId: state.roomId,
+    interactionType: state.interactionType,
+    fallback: "core",
+  });
 }
 
 /**
@@ -140,7 +149,7 @@ async function classifyIntentNode(
   return traceSpan(
     "supervisor.classifyIntent",
     async () => {
-      const { userInput } = state;
+      const { userInput, roomId } = state;
       const contextualAgent = resolveContextualTargetAgent(state);
 
       if (contextualAgent) {
@@ -153,7 +162,8 @@ async function classifyIntentNode(
         };
       }
 
-      const classification = await classifyIntent(userInput);
+      // 普通聊天：按内容分类，房间仅作软偏置
+      const classification = await classifyIntent(userInput, { roomId });
 
       return {
         intentCategory: classification.category,
@@ -180,7 +190,7 @@ async function executeSingleAgent(
   state: typeof SupervisorState.State
 ): Promise<Partial<typeof SupervisorState.State>> {
   return traceSpan("supervisor.executeSingleAgent", async () => {
-    const { targetAgent, userInput, messages, grounding } = state;
+    const { targetAgent, userInput, grounding, conversationHistory } = state;
 
     const response = await runWithTraceContext(
       {
@@ -188,7 +198,7 @@ async function executeSingleAgent(
       },
       async () =>
         invokeAgent(targetAgent, userInput, {
-          context: { messages, grounding },
+          context: { grounding, conversationHistory },
         })
     );
 
@@ -211,11 +221,11 @@ async function executeParallelAgents(
   state: typeof SupervisorState.State
 ): Promise<Partial<typeof SupervisorState.State>> {
   return traceSpan("supervisor.executeParallelAgents", async () => {
-    const { consultAgents, userInput, messages, grounding } = state;
+    const { consultAgents, userInput, grounding, conversationHistory } = state;
 
     // 并行调用
     const responses = await invokeMultipleAgents(consultAgents, userInput, {
-      context: { messages, grounding },
+      context: { grounding, conversationHistory },
     });
 
     // 转换 Map 为对象
@@ -262,10 +272,12 @@ async function synthesizeResponses(
         return responses[0].answer;
       }
 
-      // 简单综合：按顺序拼接
+      // 分段呈现：用用户可见显示名标注各专家，不泄漏内部英文 agent id
       let synthesized = "";
       for (const response of responses) {
-        synthesized += `**${response.agent}**: ${response.answer}\n\n`;
+        const displayName =
+          AGENT_DISPLAY_NAMES[response.agent] ?? response.agent;
+        synthesized += `**${displayName}**: ${response.answer}\n\n`;
       }
 
       return synthesized.trim();
@@ -353,11 +365,14 @@ export async function askSupervisor(
     preferredAgent?: AgentId;
     grounding?: "public_profile";
     messages?: BaseMessage[];
+    conversationHistory?: ConversationTurn[];
   }
 ): Promise<{
   answer: string;
   uiAction?: any;
   agentResponses?: Partial<Record<AgentId, string>>;
+  /** 实际生成回答的 agent（内容路由可能与 preferredAgent 不同） */
+  speakingAgent?: AgentId;
 }> {
   const result = await supervisorGraph.invoke({
     userInput,
@@ -367,11 +382,13 @@ export async function askSupervisor(
     preferredAgent: context?.preferredAgent,
     grounding: context?.grounding,
     messages: context?.messages || [],
+    conversationHistory: context?.conversationHistory ?? [],
   });
 
   return {
     answer: result.finalAnswer as string,
     uiAction: result.uiAction,
     agentResponses: result.agentResponses,
+    speakingAgent: result.currentAgent as AgentId,
   };
 }

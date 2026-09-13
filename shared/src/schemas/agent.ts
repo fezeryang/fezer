@@ -15,7 +15,7 @@ export interface FrontendAgentRequest {
   roomId?: string;
   /** 点击的角色 ID；推荐角色切换时也可传 FezerType agent id */
   characterId?: string;
-  /** 交互类型 */
+  /** 交互类型：click/hover 表示用户显式选中了某个 agent，chat 表示房间内泛化提问 */
   interactionType?: "click" | "hover" | "chat" | "guide";
   /** 已访问的房间列表 */
   visitedRooms?: string[];
@@ -23,6 +23,21 @@ export interface FrontendAgentRequest {
   discoveredCharacters?: string[];
   /** 回答事实来源约束 */
   grounding?: "public_profile";
+  /**
+   * 多轮会话历史（不含当前这条 userInput），按时间升序。
+   * 服务端会做条数与长度截断，作为信任边界。
+   */
+  conversationHistory?: ConversationTurn[];
+}
+
+/**
+ * 单轮对话记录（多轮记忆的最小单元）
+ */
+export interface ConversationTurn {
+  role: "user" | "assistant";
+  content: string;
+  /** 该轮回答的 agent（仅 assistant 轮携带，用于多 agent 会话归因） */
+  agentId?: FezerType;
 }
 
 /**

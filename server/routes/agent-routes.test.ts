@@ -58,7 +58,10 @@ describe("Agent API routes", () => {
       await chatHandler(req, res as unknown as Response);
 
       expect(res.statusCode).toBe(400);
-      expect(res.body).toEqual({ error: "Invalid userInput" });
+      expect(res.body).toEqual({
+        error: "Invalid userInput",
+        message: "请输入有效的问题。",
+      });
       expect(orchestratorGraph.invoke).not.toHaveBeenCalled();
     });
 
@@ -94,6 +97,8 @@ describe("Agent API routes", () => {
         interactionType: "click",
         visitedRooms: ["r-home"],
         discoveredCharacters: ["c1"],
+        grounding: undefined,
+        conversationHistory: [],
         messages: [],
       });
       expect(res.statusCode).toBe(200);
