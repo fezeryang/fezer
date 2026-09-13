@@ -1,6 +1,8 @@
 # Ops Directory - kinetic-portfolio Backend Deployment
 
-Production deployment files for Aliyun VM with Nginx + PM2 + SSL.
+Production deployment files for the VM with Nginx + PM2 + SSL.
+
+For the current production host, runtime paths, PM2 process, and health checks, see [`VM.md`](./VM.md).
 
 ## Quick Start
 
@@ -44,6 +46,7 @@ pm2 save
 | `deploy.sh` | Full deployment with rollback safety |
 | `ssl-setup.sh` | Let's Encrypt certificate setup |
 | `health-check.sh` | Service health verification |
+| `VM.md` | Current production VM inventory and operational reference |
 
 ## Health Check
 
