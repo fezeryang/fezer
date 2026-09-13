@@ -1,11 +1,11 @@
-import type { AgentId } from "../../agents/tools/agent.tool";
+import type { FezerType } from "@fezer/shared/schemas/character";
 
 export interface IntentFeedbackClassification {
   category: string;
-  targetAgent: AgentId;
+  targetAgent: FezerType;
   confidence: number;
   needsConsultation: boolean;
-  consultAgents?: AgentId[];
+  consultAgents?: FezerType[];
   reasoning: string;
 }
 
@@ -26,9 +26,9 @@ export interface LangSmithDatasetDatapoint {
   };
   outputs: {
     category: string;
-    targetAgent: AgentId;
+    targetAgent: FezerType;
     needsConsultation: boolean;
-    consultAgents: AgentId[];
+    consultAgents: FezerType[];
     reasoning: string;
   };
   metadata: {
@@ -43,10 +43,10 @@ export interface LangSmithDatasetDatapoint {
 }
 
 function normalizeConsultAgents(
-  targetAgent: AgentId,
+  targetAgent: FezerType,
   needsConsultation: boolean,
-  consultAgents?: AgentId[]
-): AgentId[] {
+  consultAgents?: FezerType[]
+): FezerType[] {
   if (!needsConsultation || !Array.isArray(consultAgents)) {
     return [];
   }

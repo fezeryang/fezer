@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RunEvent } from "@fezer/shared/schemas/run";
-import { emitRunEvent, runWithEventSink } from "./events";
+import { emitRunEvent, runWithEventSink } from "./run-events";
 
 function collector(): { events: RunEvent[]; sink: (e: RunEvent) => void } {
   const events: RunEvent[] = [];

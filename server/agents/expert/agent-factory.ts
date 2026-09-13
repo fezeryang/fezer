@@ -11,6 +11,7 @@ import {
   type Message,
 } from "../../_core/llm";
 import {
+  AGENT_DISPLAY_NAMES,
   buildAgentSystemPrompt,
   CHARACTER_PROMPT_FRAMEWORK_VERSION,
 } from "@fezer/shared/characters";
@@ -23,6 +24,7 @@ import {
   getToolExecutionRegistry,
   type ExecutableTool,
 } from "../tools";
+import { emitRunEvent } from "../../_core/run-events";
 
 /**
  * Agent 调用选项
@@ -376,18 +378,30 @@ async function buildDirectToolContext(
       continue;
     }
 
-    const content = await traceSpan(
+    emitRunEvent({
+      type: "tool.call",
+      toolName: request.name,
+      args: request.input,
+    });
+
+    const { ok, content } = await traceSpan(
       `tool.prefetch.${request.name}`,
       async () => {
         try {
           const data = await executableTool.invoke(request.input);
-          return stableStringify({ success: true, data });
+          return {
+            ok: true,
+            content: stableStringify({ success: true, data }),
+          };
         } catch (error) {
-          return stableStringify({
-            success: false,
-            error:
-              error instanceof Error ? error.message : "Unknown tool error",
-          });
+          return {
+            ok: false,
+            content: stableStringify({
+              success: false,
+              error:
+                error instanceof Error ? error.message : "Unknown tool error",
+            }),
+          };
         }
       },
       {
@@ -405,6 +419,14 @@ async function buildDirectToolContext(
       request.name === "get_profile_full"
         ? PROFILE_TOOL_RESULT_CHAR_LIMIT
         : TOOL_RESULT_CHAR_LIMIT;
+
+    emitRunEvent({
+      type: "tool.result",
+      toolName: request.name,
+      ok,
+      truncated: content.length > resultLimit,
+      bytes: content.length,
+    });
 
     blocks.push(`[${request.name}] ${truncateText(content, resultLimit)}`);
   }
@@ -578,6 +600,15 @@ async function invokeAgentInternal(
                 success: false,
                 error: `Tool not allowed or not found: ${toolName}`,
               });
+              // 拒绝也进事件流：模型越权或调用不存在的工具，是排障和展示都要看到的
+              emitRunEvent({ type: "tool.call", toolName, args: {} });
+              emitRunEvent({
+                type: "tool.result",
+                toolName,
+                ok: false,
+                truncated: false,
+                bytes: deniedContent.length,
+              });
               messages.push({
                 role: "tool",
                 name: toolName,
@@ -598,6 +629,12 @@ async function invokeAgentInternal(
             } catch {
               parsedArgs = {};
             }
+
+            emitRunEvent({
+              type: "tool.call",
+              toolName,
+              args: parsedArgs,
+            });
 
             const toolResult = await traceSpan(
               `tool.${toolName}`,
@@ -637,11 +674,23 @@ async function invokeAgentInternal(
               }
             );
 
+            const serialized = stableStringify(toolResult);
+
+            emitRunEvent({
+              type: "tool.result",
+              toolName,
+              ok: toolResult.success === true,
+              // ponytail: 循环内的工具结果目前不截断（只有预取会截断），
+              // 上下文预算归 A6 统一处理；此处如实上报 truncated=false。
+              truncated: false,
+              bytes: serialized.length,
+            });
+
             messages.push({
               role: "tool",
               name: toolName,
               tool_call_id: toolCall.id,
-              content: JSON.stringify(toolResult),
+              content: serialized,
             });
           }
 
@@ -721,6 +770,12 @@ export async function invokeAgent(
   input: string,
   options?: AgentInvokeOptions
 ): Promise<AgentResponse> {
+  emitRunEvent({
+    type: "agent.start",
+    agentId,
+    displayName: AGENT_DISPLAY_NAMES[agentId],
+  });
+
   try {
     return await invokeAgentInternal(agentId, input, options);
   } catch (error) {
@@ -738,6 +793,8 @@ export async function invokeAgent(
       console.error(`Agent ${agentId} stack trace:`, error.stack);
     }
     throw error;
+  } finally {
+    emitRunEvent({ type: "agent.done", agentId });
   }
 }
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 const AGENTS_ROOT = path.resolve("server/agents");
 const LEGACY_ROOT = path.resolve("server/agents/legacy");
 const SERVER_ROOT = path.resolve("server");
+const CORE_ROOT = path.resolve("server/_core");
 
 function listTsFiles(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -89,5 +90,18 @@ describe("harness is the single entry point", () => {
     expect(
       importersOf(/from\s+["'][^"']*supervisor\/graph["']/, "orchestrator")
     ).toEqual([]);
+  });
+});
+
+describe("core layer stays below the agent layer", () => {
+  it("_core 不得 import agents（入口 index.ts 是组装根）", () => {
+    const offenders = listTsFiles(CORE_ROOT)
+      .filter(isProductionSource)
+      .filter(file => path.basename(file) !== "index.ts")
+      .filter(file =>
+        /from\s+["'][^"']*\bagents\//.test(fs.readFileSync(file, "utf8"))
+      );
+
+    expect(offenders).toEqual([]);
   });
 });

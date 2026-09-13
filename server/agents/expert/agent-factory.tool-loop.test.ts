@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { RunEvent } from "@fezer/shared/schemas/run";
 
 const invokeLLMMock = vi.fn();
 const isLLMProviderConfigurationErrorMock = vi.fn();
@@ -751,5 +752,125 @@ describe("expert agent tool loop", () => {
         }) as Promise<unknown>
     );
     expect(JSON.stringify(rejected)).toContain("嵌套上限");
+  });
+});
+
+describe("expert agent run events", () => {
+  function mockedTool(name: string) {
+    return [
+      name,
+      { name, invoke: vi.fn(async () => ({ name: "Fezer" })) },
+    ] as const;
+  }
+
+  function llmToolCall(name: string) {
+    return {
+      id: "1",
+      created: 1,
+      model: "deepseek-chat",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: "calling tool",
+            tool_calls: [
+              {
+                id: "tool_1",
+                type: "function",
+                function: { name, arguments: "{}" },
+              },
+            ],
+          },
+          finish_reason: "tool_calls",
+        },
+      ],
+    };
+  }
+
+  const llmFinalAnswer = {
+    id: "2",
+    created: 2,
+    model: "deepseek-chat",
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content: "final answer" },
+        finish_reason: "stop",
+      },
+    ],
+  };
+
+  it("发出 agent.start → tool.call/result → agent.done", async () => {
+    getLLMToolsByNamesMock.mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "get_profile",
+          description: "get profile",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+    getToolExecutionRegistryMock.mockReturnValue(
+      new Map([mockedTool("get_profile")])
+    );
+    invokeLLMMock
+      .mockResolvedValueOnce(llmToolCall("get_profile"))
+      .mockResolvedValueOnce(llmFinalAnswer);
+
+    const { invokeAgent } = await import("./agent-factory");
+    const { runWithEventSink } = await import("../../_core/run-events");
+    const events: RunEvent[] = [];
+
+    await runWithEventSink(event => events.push(event), () =>
+      invokeAgent("builder", "你好")
+    );
+
+    expect(events.map(event => event.type)).toEqual([
+      "agent.start",
+      "tool.call",
+      "tool.result",
+      "agent.done",
+    ]);
+    expect(events[0]).toMatchObject({ agentId: "builder" });
+    expect(events[1]).toMatchObject({
+      type: "tool.call",
+      toolName: "get_profile",
+    });
+    expect(events[2]).toMatchObject({
+      type: "tool.result",
+      toolName: "get_profile",
+      ok: true,
+      truncated: false,
+    });
+    expect((events[2] as { bytes: number }).bytes).toBeGreaterThan(0);
+
+    for (const event of events) {
+      expect(typeof event.at).toBe("number");
+    }
+  });
+
+  it("工具不在白名单时上报 ok=false（拒绝也进事件流）", async () => {
+    getLLMToolsByNamesMock.mockReturnValue([]);
+    getToolExecutionRegistryMock.mockReturnValue(new Map());
+    invokeLLMMock
+      .mockResolvedValueOnce(llmToolCall("get_blog_posts"))
+      .mockResolvedValueOnce(llmFinalAnswer);
+
+    const { invokeAgent } = await import("./agent-factory");
+    const { runWithEventSink } = await import("../../_core/run-events");
+    const events: RunEvent[] = [];
+
+    await runWithEventSink(event => events.push(event), () =>
+      invokeAgent("builder", "你好")
+    );
+
+    const result = events.find(event => event.type === "tool.result");
+    expect(result).toMatchObject({
+      toolName: "get_blog_posts",
+      ok: false,
+      truncated: false,
+    });
   });
 });
