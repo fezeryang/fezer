@@ -108,17 +108,22 @@ import { util } from '@fezer/shared/...'       // shared/src/
 
 **Critical**: The AI agent system follows a strict dependency chain (see AGENT_ARCHITECTURE.md):
 
-```
-routes → orchestrator → supervisor → expert → _core
+```text
+routes → harness → orchestrator → supervisor → expert → _core
 ```
 
 **Single source of truth**:
+- Run entry point: `server/agents/harness/run.ts` (`runAgent`)
+- Run event protocol: `shared/src/schemas/run.ts`
 - Agent resolution: `server/agents/spatial/agent-resolution.ts`
+- Agent display names: `shared/src/characters/display-names.ts`
 - Tool registration: `server/agents/tools/index.ts`
 - LLM client: `server/_core/llm.ts`
 
 **Do NOT**:
 - Import from `server/agents/legacy/` (read-only reference)
+- Import `orchestratorGraph` outside `server/agents/harness/` — new routes and
+  features call `runAgent()` instead (enforced by `server/agents/structure.test.ts`)
 - Duplicate agent/room mapping logic
 - Create circular dependencies
 
@@ -133,7 +138,8 @@ routes → orchestrator → supervisor → expert → _core
 **New Tool**:
 1. Implement under `server/agents/tools/` or `server/agents/rag/`
 2. Register in `server/agents/tools/index.ts`
-3. Add to agent whitelist in `AGENT_TOOL_CONFIGS`
+3. Add to agent whitelist in `AGENT_TOOL_CONFIGS` (a tool absent from every
+   whitelist is unreachable by the model)
 4. Add tests
 
 **New Route**:

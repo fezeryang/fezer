@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const AGENTS_ROOT = path.resolve("server/agents");
 const LEGACY_ROOT = path.resolve("server/agents/legacy");
+const SERVER_ROOT = path.resolve("server");
 
 function listTsFiles(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -21,6 +22,22 @@ function listTsFiles(dir: string): string[] {
   }
 
   return result;
+}
+
+/** 只检查会被打包进服务的源码：跳过测试与 legacy 参考实现 */
+function isProductionSource(file: string): boolean {
+  return (
+    !file.endsWith(".test.ts") &&
+    !file.endsWith(".spec.ts") &&
+    !file.includes(`${path.sep}legacy${path.sep}`)
+  );
+}
+
+function importersOf(modulePattern: RegExp, excludeDir: string): string[] {
+  return listTsFiles(SERVER_ROOT)
+    .filter(isProductionSource)
+    .filter(file => !file.includes(`${path.sep}${excludeDir}${path.sep}`))
+    .filter(file => modulePattern.test(fs.readFileSync(file, "utf8")));
 }
 
 describe("agents structure boundary", () => {
@@ -56,5 +73,19 @@ describe("agents structure boundary", () => {
       expect(content).not.toMatch(/from\s+["'][^"']*legacy[^"']*["']/);
       expect(content).not.toMatch(/import\s*\(\s*["'][^"']*legacy[^"']*["']\s*\)/);
     }
+  });
+});
+
+describe("harness is the single entry point", () => {
+  it("only the harness imports the orchestrator graph", () => {
+    expect(importersOf(/from\s+["'][^"']*orchestrator\/graph["']/, "harness")).toEqual(
+      []
+    );
+  });
+
+  it("only the orchestrator imports the supervisor graph", () => {
+    expect(importersOf(/from\s+["'][^"']*supervisor\/graph["']/, "orchestrator")).toEqual(
+      []
+    );
   });
 });
