@@ -9,6 +9,10 @@ import { Router, useLocation } from "wouter";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+import { installWorkspaceEmbed } from "./lib/workspace-embed";
+
+const disposeWorkspaceEmbed = installWorkspaceEmbed();
+if (import.meta.hot) import.meta.hot.dispose(disposeWorkspaceEmbed);
 
 const queryClient = new QueryClient();
 const analyticsEndpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT?.trim();

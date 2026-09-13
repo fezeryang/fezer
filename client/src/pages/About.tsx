@@ -7,6 +7,7 @@ import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
 import { getDefaultProfile } from "@/content/loaders";
 import "./About.css";
+import { bindWorkspaceAnimation } from "@/lib/workspace-embed";
 
 declare global {
   interface Window {
@@ -187,8 +188,10 @@ function AboutPrismCanvas() {
     };
 
     const instance = new window.p5(sketch);
+    const disconnectWorkspace = bindWorkspaceAnimation(instance);
 
     return () => {
+      disconnectWorkspace();
       instance.remove();
     };
   }, []);

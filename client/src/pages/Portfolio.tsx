@@ -7,6 +7,7 @@ import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
 import { loadWorks } from "@/content/loaders";
+import { bindWorkspaceAnimation } from "@/lib/workspace-embed";
 
 declare global {
   interface Window {
@@ -398,8 +399,10 @@ export default function Portfolio() {
     };
 
     const instance = new p5(sketch);
+    const disconnectWorkspace = bindWorkspaceAnimation(instance);
 
     return () => {
+      disconnectWorkspace();
       instance.remove();
     };
   }, []);

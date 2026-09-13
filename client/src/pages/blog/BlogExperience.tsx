@@ -8,6 +8,7 @@ import DampedScrollView from "@/components/DampedScrollView";
 // re-exports renderBlogMarkdown, which would pull marked + sanitize-html
 // into this page's client graph for nothing.
 import { loadPosts } from "@/content/loaders/posts";
+import { bindWorkspaceAnimation } from "@/lib/workspace-embed";
 
 declare global {
   interface Window {
@@ -110,6 +111,7 @@ function BlogSurfaceThumbnail({ type }: { type: string }) {
     };
 
     const instance = new p5(sketch);
+    const disconnectWorkspace = bindWorkspaceAnimation(instance);
 
     const handleResize = () => {
       const size = getSize();
@@ -120,6 +122,7 @@ function BlogSurfaceThumbnail({ type }: { type: string }) {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      disconnectWorkspace();
       instance.remove();
     };
   }, [type]);
@@ -333,8 +336,10 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
     };
 
     const instance = new p5(sketch);
+    const disconnectWorkspace = bindWorkspaceAnimation(instance);
 
     return () => {
+      disconnectWorkspace();
       instance.remove();
     };
   }, [applyTransitionStyles]);
@@ -430,8 +435,10 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
     };
 
     const instance = new p5(sketch);
+    const disconnectWorkspace = bindWorkspaceAnimation(instance);
 
     return () => {
+      disconnectWorkspace();
       instance.remove();
     };
   }, []);

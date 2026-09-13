@@ -5,6 +5,7 @@ import GrainOverlay from "@/components/GrainOverlay";
 import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
 import { loadPosts, loadWorks } from "@/content/loaders";
+import { bindWorkspaceAnimation } from "@/lib/workspace-embed";
 
 declare global {
   interface Window {
@@ -151,6 +152,7 @@ function TimePrismSection() {
     let disposed = false;
     let retryId: number | null = null;
     let instance: any = null;
+    let disconnectWorkspace: (() => void) | undefined;
 
     const mountSketch = () => {
       if (disposed || !canvasContainerRef.current) {
@@ -289,6 +291,7 @@ function TimePrismSection() {
       };
 
       instance = new p5(sketch);
+      disconnectWorkspace = bindWorkspaceAnimation(instance);
       p5InstanceRef.current = instance;
     };
 
@@ -299,6 +302,7 @@ function TimePrismSection() {
       if (retryId) {
         window.clearTimeout(retryId);
       }
+      disconnectWorkspace?.();
       instance?.remove();
       p5InstanceRef.current = null;
     };
@@ -440,6 +444,7 @@ export default function Home() {
     let disposed = false;
     let retryId: number | null = null;
     let instance: any = null;
+    let disconnectWorkspace: (() => void) | undefined;
 
     const mountSketch = () => {
       if (disposed) {
@@ -608,6 +613,7 @@ export default function Home() {
     }
 
     instance = new p5(sketch);
+    disconnectWorkspace = bindWorkspaceAnimation(instance);
     p5InstanceRef.current = instance;
     };
 
@@ -618,6 +624,7 @@ export default function Home() {
       if (retryId) {
         window.clearTimeout(retryId);
       }
+      disconnectWorkspace?.();
       instance?.remove();
       p5InstanceRef.current = null;
     };

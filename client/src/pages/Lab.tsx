@@ -5,6 +5,7 @@ import CustomCursor from "@/components/CustomCursor";
 import DampedScrollView from "@/components/DampedScrollView";
 import logoPreviewUrl from "@/data/fezer_logo_square_1024.png";
 import { Link } from "wouter";
+import { bindWorkspaceAnimation } from "@/lib/workspace-embed";
 
 const labImageUrls = Array.from(
   { length: 6 },
@@ -302,9 +303,11 @@ export default function Lab() {
     };
 
     const instance = new p5(sketch);
+    const disconnectWorkspace = bindWorkspaceAnimation(instance);
     p5InstanceRef.current = instance;
 
     return () => {
+      disconnectWorkspace();
       instance.remove();
     };
   }, []);
