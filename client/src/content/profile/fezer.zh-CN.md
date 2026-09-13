@@ -100,7 +100,7 @@ contact: {}
 
 ## 公开联系方式
 
-- 邮箱：cookfezer@gmail.com
+- 邮箱：<cookfezer@gmail.com>
 - 所在地：北京
 
 ## 隐私与公开边界
