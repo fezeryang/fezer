@@ -11,8 +11,9 @@ import {
   useCallback,
 } from "react";
 import { Streamdown } from "streamdown";
+import { useLocation } from "wouter";
 import { useAgentChat } from "../../hooks/useAgentChat";
-import type { AgentResponse } from "@fezer/shared/schemas/agent";
+import type { AgentResponse, ContentCard } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import {
   resolveFezerTypeFromSpatialContext,
@@ -21,7 +22,6 @@ import {
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { processRoomLinksInDOM } from "./utils/roomLinksDom";
 import { toolLabel } from "./utils/toolLabels";
-import type { RunEvent } from "@fezer/shared/schemas/run";
 
 interface ChatMessage {
   id: string;
@@ -30,6 +30,8 @@ interface ChatMessage {
   timestamp: number;
   /** 该轮回答的 agent（assistant 消息携带，用于历史归因） */
   agentId?: FezerType;
+  /** 回答尾部的可点击内容卡片 */
+  cards?: ContentCard[];
 }
 
 interface ChatModalProps {
@@ -130,6 +132,24 @@ export function ChatModal({
   const [liveStep, setLiveStep] = useState<string | null>(null);
   // 流式回答的逐字渲染：text.delta 事件累积
   const [streamingText, setStreamingText] = useState("");
+  const [, setLocation] = useLocation();
+
+  // 内容卡片点击：博客去详情页；作品优先去自己的链接，否则去作品列表
+  const openContentCard = useCallback((card: ContentCard) => {
+    if (card.type === "blog") {
+      setLocation(`/blog/${card.slug}`);
+      return;
+    }
+    if (card.link?.startsWith("/")) {
+      setLocation(card.link);
+      return;
+    }
+    if (card.link) {
+      window.open(card.link, "_blank", "noopener");
+      return;
+    }
+    setLocation("/portfolio");
+  }, [setLocation]);
 
   // 拖拽状态
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -166,6 +186,7 @@ export function ChatModal({
         content: response.text,
         timestamp: Date.now(),
         agentId: response.speakingAgentId,
+        cards: response.cards,
       };
       setMessages(prev => [...prev, assistantMessage]);
       setCurrentResponse(response);
@@ -492,6 +513,30 @@ export function ChatModal({
                     className="max-w-none font-chill-huofangsong"
                   >
                     <Streamdown>{msg.content}</Streamdown>
+                    {msg.cards && msg.cards.length > 0 && (
+                      <div className="mt-2 space-y-1.5">
+                        {msg.cards.map(card => (
+                          <button
+                            key={`${card.type}-${card.slug}`}
+                            type="button"
+                            onClick={() => openContentCard(card)}
+                            className="w-full text-left px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
+                          >
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400">
+                              {card.type === "work" ? "作品" : "博客"}
+                            </span>
+                            <p className="text-sm font-medium text-slate-800 truncate">
+                              {card.title}
+                            </p>
+                            {card.tags && card.tags.length > 0 && (
+                              <p className="text-xs text-slate-500 truncate">
+                                {card.tags.slice(0, 3).join(" · ")}
+                              </p>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm whitespace-pre-wrap">{msg.content}</p>

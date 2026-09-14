@@ -119,6 +119,7 @@ export function useAgentChat(
                 event.uiAction?.suggestedNextCharacterIds,
               suggestedQuestions: event.uiAction?.suggestedQuestions,
               speakingAgentId: event.speakingAgentId ?? "core",
+              cards: event.uiAction?.cards,
             };
           }
 

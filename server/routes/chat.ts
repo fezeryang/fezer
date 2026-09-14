@@ -172,6 +172,7 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
       suggestedNextCharacterIds: result.uiAction?.suggestedNextCharacterIds,
       suggestedQuestions: result.uiAction?.suggestedQuestions,
       speakingAgentId: result.speakingAgent,
+      cards: result.uiAction?.cards,
     };
 
     res.json(response);

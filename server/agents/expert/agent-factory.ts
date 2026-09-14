@@ -30,6 +30,118 @@ import {
 import { emitRunEvent } from "../../_core/run-events";
 import { assertRunNotAborted, getRunControl } from "../../_core/run-control";
 import { randomUUID } from "node:crypto";
+import type { ContentCard } from "@fezer/shared/schemas/agent";
+import { getBlogPostBySlug, getWorkBySlug } from "../../content";
+
+/**
+ * 从成功的检索工具结果确定性派生内容卡片（C5）。
+ *
+ * slug 只来自工具结果；每张卡片必须能在服务端内容索引中查到，
+ * 否则整张丢弃。LLM 从不生成 slug。
+ */
+function deriveContentCards(
+  successfulToolResults: Array<{ toolName: string; data: unknown }>
+): ContentCard[] {
+  const candidates: Array<{ type: "work" | "blog"; slug: string }> = [];
+
+  const pushItem = (type: "work" | "blog", slug: unknown) => {
+    if (typeof slug === "string" && slug.length > 0) {
+      candidates.push({ type, slug });
+    }
+  };
+
+  for (const { toolName, data } of successfulToolResults) {
+    if (!data || typeof data !== "object") continue;
+    const record = data as Record<string, unknown>;
+
+    if (toolName === "get_works_detail") {
+      const work = record.work as { slug?: unknown } | undefined;
+      if (work) {
+        pushItem("work", work.slug);
+      }
+      const works = record.works;
+      if (Array.isArray(works)) {
+        for (const item of works) {
+          pushItem("work", (item as { slug?: unknown } | undefined)?.slug);
+        }
+      }
+    } else if (toolName === "get_blog_posts") {
+      const post = record.post as { slug?: unknown } | undefined;
+      if (post) {
+        pushItem("blog", post.slug);
+      }
+      const posts = record.posts;
+      if (Array.isArray(posts)) {
+        for (const item of posts) {
+          pushItem("blog", (item as { slug?: unknown } | undefined)?.slug);
+        }
+      }
+    } else if (toolName === "search_content") {
+      const matches = record.matches;
+      if (Array.isArray(matches)) {
+        for (const item of matches) {
+          const match = item as { type?: unknown; slug?: unknown } | undefined;
+          if (match && (match.type === "work" || match.type === "blog")) {
+            pushItem(match.type, match.slug);
+          }
+        }
+      }
+    }
+  }
+
+  // 去重 → 索引校验 + 富化（校验不过整张丢弃）→ 上限 3
+  const seen = new Set<string>();
+  const cards: ContentCard[] = [];
+
+  for (const candidate of candidates) {
+    const key = `${candidate.type}:${candidate.slug}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const enriched =
+      candidate.type === "work"
+        ? enrichWorkCard(candidate.slug)
+        : enrichBlogCard(candidate.slug);
+    if (!enriched) continue;
+
+    cards.push(enriched);
+    if (cards.length >= 3) break;
+  }
+
+  return cards;
+}
+
+function enrichWorkCard(slug: string): ContentCard | undefined {
+  const work = getWorkBySlug(slug);
+  if (!work) return undefined;
+  return {
+    type: "work",
+    slug: work.slug,
+    title: work.title,
+    description: work.description,
+    tags: work.tags,
+    link: work.link,
+  };
+}
+
+function enrichBlogCard(slug: string): ContentCard | undefined {
+  const post = getBlogPostBySlug(slug);
+  if (!post) return undefined;
+  return {
+    type: "blog",
+    slug: post.slug,
+    title: post.title,
+    description: post.excerpt,
+    tags: post.tags,
+  };
+}
+
+function deriveCardsUiAction(
+  successfulToolResults: Array<{ toolName: string; data: unknown }>
+): { cards?: ContentCard[] } {
+  const cards = deriveContentCards(successfulToolResults);
+  return cards.length > 0 ? { cards } : {};
+}
 
 /**
  * Agent 调用选项
@@ -57,6 +169,7 @@ export interface AgentResponse {
     panel?: string;
     suggestedQuestions?: string[];
     suggestedNextCharacterIds?: AgentId[];
+    cards?: ContentCard[];
   };
 }
 
@@ -615,6 +728,11 @@ async function invokeAgentInternal(
 
         let lastAssistantAnswer = "抱歉，我暂时无法回答。";
         let loopCount = 0;
+        // 成功的工具调用结果：回答完成后确定性派生内容卡片（C5）
+        const successfulToolResults: Array<{
+          toolName: string;
+          data: unknown;
+        }> = [];
         // 预算里的 maxTurns 覆盖默认循环上限；取消信号在每轮开始前检查
         const maxToolLoops =
           getRunControl().maxToolLoops ?? MAX_TOOL_CALL_LOOPS;
@@ -660,6 +778,7 @@ async function invokeAgentInternal(
                 "抱歉，本次工具调用格式异常，我先给你基于当前信息的回答。",
               uiAction: {
                 suggestedQuestions: extractSuggestedQuestions(agentId),
+                ...deriveCardsUiAction(successfulToolResults),
               },
             };
           }
@@ -676,6 +795,7 @@ async function invokeAgentInternal(
               answer: lastAssistantAnswer,
               uiAction: {
                 suggestedQuestions: extractSuggestedQuestions(agentId),
+                ...deriveCardsUiAction(successfulToolResults),
               },
             };
           }
@@ -767,6 +887,13 @@ async function invokeAgentInternal(
 
             const serialized = stableStringify(toolResult);
 
+            if (toolResult.success === true) {
+              successfulToolResults.push({
+                toolName,
+                data: toolResult.data,
+              });
+            }
+
             emitRunEvent({
               type: "tool.result",
               toolName,
@@ -798,6 +925,7 @@ async function invokeAgentInternal(
               : fallbackAnswer,
           uiAction: {
             suggestedQuestions: extractSuggestedQuestions(agentId),
+            ...deriveCardsUiAction(successfulToolResults),
           },
         };
       })

@@ -60,6 +60,8 @@ export interface AgentResponse {
   suggestedQuestions?: string[];
   /** 当前回答的代理 ID */
   speakingAgentId: FezerType;
+  /** 回答尾部的可点击内容卡片（确定性派生，见 ContentCard） */
+  cards?: ContentCard[];
 }
 
 /**
@@ -91,6 +93,22 @@ export interface Message {
 }
 
 /**
+ * 聊天内嵌内容卡片（C5）
+ *
+ * 确定性派生：slug 来自成功的检索工具结果，并必须在服务端内容索引中
+ * 校验通过才会下发 —— LLM 不生成 slug。
+ */
+export interface ContentCard {
+  type: "work" | "blog";
+  slug: string;
+  title: string;
+  description?: string;
+  tags?: string[];
+  /** 作品的内部/外部链接；缺失时客户端回退到列表页 */
+  link?: string;
+}
+
+/**
  * UI 操作指令
  */
 export interface UiAction {
@@ -104,4 +122,6 @@ export interface UiAction {
   suggestedNextCharacterIds?: FezerType[];
   /** 建议的问题 */
   suggestedQuestions?: string[];
+  /** 回答尾部的可点击内容卡片（最多 3 张） */
+  cards?: ContentCard[];
 }

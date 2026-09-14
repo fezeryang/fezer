@@ -961,4 +961,78 @@ describe("expert agent run events", () => {
     );
     expect(ids.size).toBe(1);
   });
+
+  it("从成功的作品检索派生可点击卡片，slug 必须过内容索引校验", async () => {
+    getLLMToolsByNamesMock.mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "get_works_detail",
+          description: "d",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+    getToolExecutionRegistryMock.mockReturnValue(
+      new Map([
+        [
+          "get_works_detail",
+          {
+            name: "get_works_detail",
+            invoke: vi.fn(async () => ({ work: { slug: "jianli" } })),
+          },
+        ],
+      ])
+    );
+    invokeLLMMock
+      .mockResolvedValueOnce(llmToolCall("get_works_detail"))
+      .mockResolvedValueOnce(llmFinalAnswer);
+
+    const { invokeAgent } = await import("./agent-factory");
+
+    const result = await invokeAgent("core", "展示你的作品");
+
+    expect(result.uiAction?.cards).toBeDefined();
+    expect(result.uiAction?.cards?.[0]).toMatchObject({
+      type: "work",
+      slug: "jianli",
+      title: "3D 互动简历",
+      link: "/jianli",
+    });
+  });
+
+  it("索引里不存在的 slug 整张丢弃，不发给前端", async () => {
+    getLLMToolsByNamesMock.mockReturnValue([
+      {
+        type: "function",
+        function: {
+          name: "get_works_detail",
+          description: "d",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+    getToolExecutionRegistryMock.mockReturnValue(
+      new Map([
+        [
+          "get_works_detail",
+          {
+            name: "get_works_detail",
+            invoke: vi.fn(async () => ({
+              work: { slug: "not-a-real-slug" },
+            })),
+          },
+        ],
+      ])
+    );
+    invokeLLMMock
+      .mockResolvedValueOnce(llmToolCall("get_works_detail"))
+      .mockResolvedValueOnce(llmFinalAnswer);
+
+    const { invokeAgent } = await import("./agent-factory");
+
+    const result = await invokeAgent("core", "展示你的作品");
+
+    expect(result.uiAction?.cards ?? []).toEqual([]);
+  });
 });
