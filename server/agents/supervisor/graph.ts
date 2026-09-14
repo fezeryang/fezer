@@ -14,7 +14,25 @@ import {
   runWithTraceContext,
   traceSpan,
 } from "../../_core/observability/langsmith";
+import { invokeLLM } from "../../_core/llm";
 import { resolvePreferredAgent } from "../spatial/agent-resolution";
+
+/**
+ * 多专家综合提示词。
+ *
+ * 护栏：只融合不创造。失败时调用方会降级为原始分段呈现，
+ * 所以这里宁可短，也不要引入输入中没有的事实。
+ */
+const SYNTHESIS_SYSTEM_PROMPT = `你是多专家回答的综合者。
+
+输入：一个用户问题 + 多位专家各自的回答。
+任务：把它们融合成一个连贯、不重复的回答。
+
+规则：
+- 保留各方给出的关键事实与判断，不要丢信息
+- 不要写“某专家说”之类的罗列句式，直接融合叙述
+- 不要新增输入中没有的事实
+- 用中文回答，篇幅不超过各专家回答总和的七成`;
 
 /**
  * Supervisor 状态定义
@@ -272,15 +290,49 @@ async function synthesizeResponses(
         return responses[0].answer;
       }
 
-      // 分段呈现：用用户可见显示名标注各专家，不泄漏内部英文 agent id
-      let synthesized = "";
-      for (const response of responses) {
-        const displayName =
-          AGENT_DISPLAY_NAMES[response.agent] ?? response.agent;
-        synthesized += `**${displayName}**: ${response.answer}\n\n`;
-      }
+      // 分段呈现：不泄漏内部英文 agent id，也是综合失败时的降级形态
+      const segmented = () =>
+        responses
+          .map(
+            response =>
+              `**${AGENT_DISPLAY_NAMES[response.agent] ?? response.agent}**: ${response.answer}`
+          )
+          .join("\n\n")
+          .trim();
 
-      return synthesized.trim();
+      // 真实综合：多一次 LLM 调用（仅在 needsConsultation 的并行路径发生）。
+      // 护栏：独立 span（上方 traceSpan）、失败降级为分段呈现、绝不改写各专家原文。
+      try {
+        const result = await invokeLLM({
+          messages: [
+            { role: "system", content: SYNTHESIS_SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: [
+                `用户问题：${originalQuestion}`,
+                "",
+                ...responses.map(
+                  response =>
+                    `【${AGENT_DISPLAY_NAMES[response.agent] ?? response.agent}】\n${response.answer}`
+                ),
+              ].join("\n\n"),
+            },
+          ],
+        });
+
+        const content = result.choices[0]?.message?.content;
+        const synthesized = typeof content === "string" ? content.trim() : "";
+        if (synthesized.length === 0) {
+          throw new Error("综合回答为空");
+        }
+        return synthesized;
+      } catch (error) {
+        console.error(
+          "[supervisor] 综合失败，降级为分段呈现:",
+          error instanceof Error ? error.message : error
+        );
+        return segmented();
+      }
     },
     {
       metadata: {
@@ -297,7 +349,7 @@ async function synthesizeResponses(
 async function assembleFinalOutput(
   state: typeof SupervisorState.State
 ): Promise<Partial<typeof SupervisorState.State>> {
-  const { currentAgent, uiAction, finalAnswer } = state;
+  const { currentAgent, uiAction } = state;
 
   return {
     uiAction: {

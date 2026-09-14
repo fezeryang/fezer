@@ -132,6 +132,10 @@ export function ChatModal({
   const [liveStep, setLiveStep] = useState<string | null>(null);
   // 流式回答的逐字渲染：text.delta 事件累积
   const [streamingText, setStreamingText] = useState("");
+  // 多专家协作时间线（C4）：agent.start / agent.done 事件驱动
+  const [collaborators, setCollaborators] = useState<
+    Array<{ agentId: FezerType; displayName: string; done: boolean }>
+  >([]);
   const [, setLocation] = useLocation();
 
   // 内容卡片点击：博客去详情页；作品优先去自己的链接，否则去作品列表
@@ -343,6 +347,24 @@ export function ChatModal({
           setLiveStep(toolLabel(event.toolName));
         } else if (event.type === "agent.start") {
           setLiveStep(`${event.displayName} 正在思考...`);
+          setCollaborators(prev =>
+            prev.some(item => item.agentId === event.agentId)
+              ? prev
+              : [
+                  ...prev,
+                  {
+                    agentId: event.agentId,
+                    displayName: event.displayName,
+                    done: false,
+                  },
+                ]
+          );
+        } else if (event.type === "agent.done") {
+          setCollaborators(prev =>
+            prev.map(item =>
+              item.agentId === event.agentId ? { ...item, done: true } : item
+            )
+          );
         } else if (event.type === "text.delta") {
           setStreamingText(prev => prev + event.delta);
         }
@@ -547,6 +569,35 @@ export function ChatModal({
               </div>
             </div>
           ))}
+          {isLoading && collaborators.length > 1 && (
+            <div className="flex justify-start">
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/90 px-3 py-2 shadow-sm">
+                <span className="text-xs text-slate-500">多专家协作</span>
+                {collaborators.map(item => (
+                  <span
+                    key={item.agentId}
+                    className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                  >
+                    <img
+                      src={getAvatarUrl(item.agentId)}
+                      alt=""
+                      className="h-4 w-4 rounded-full object-cover"
+                    />
+                    <span className="text-slate-700">
+                      {item.displayName.split(" · ")[1] ?? item.displayName}
+                    </span>
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        item.done
+                          ? "bg-emerald-500"
+                          : "bg-amber-400 animate-pulse"
+                      }`}
+                    />
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {isLoading && streamingText && (
             <div className="flex justify-start">
               <div className="max-w-[85%] px-4 py-2 rounded-2xl bg-white text-gray-800 rounded-bl-md shadow-sm">

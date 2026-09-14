@@ -15,6 +15,7 @@ import { loadPosts, loadWorks } from "@/content/loaders";
 import { Minimap } from "@/components/jianli/Minimap";
 import {
   loadVisitorProgress,
+  markCharacterDiscovered,
   markRoomVisited,
 } from "@/lib/visitor-progress";
 
@@ -113,6 +114,10 @@ export default function Jianli() {
     characterId?: string;
     roomId?: string;
   }) => {
+    // 访客进度（C6）：点过的角色计入已发现
+    if (context.characterId) {
+      markCharacterDiscovered(context.characterId);
+    }
     setChatContext({
       characterId: context.characterId,
       roomId: context.roomId ?? activeRoomId,
