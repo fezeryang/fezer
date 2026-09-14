@@ -42,10 +42,12 @@ describe("useRoomScopedCharacterId", () => {
     const { result, rerender } = renderHook(
       ({ roomId, characterId }: { roomId: string; characterId?: string }) =>
         useRoomScopedCharacterId(roomId, characterId),
-      { initialProps: { roomId: "central", characterId: "fezer-01" } as {
-        roomId: string;
-        characterId?: string;
-      } }
+      {
+        initialProps: { roomId: "central", characterId: "fezer-01" } as {
+          roomId: string;
+          characterId?: string;
+        },
+      }
     );
 
     rerender({ roomId: "central", characterId: "fezer-02" });
