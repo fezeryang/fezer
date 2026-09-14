@@ -12,11 +12,16 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
-import { Mic, Square } from "lucide-react";
+import { Download, Mic, Square } from "lucide-react";
 import {
   canRecordAudio,
   transcribeAudioBlob,
 } from "@/lib/audio-recording";
+import {
+  buildConversationMarkdown,
+  downloadMarkdown,
+} from "@/lib/conversation-export";
+import { ROOMS } from "./assets/roomsConfig";
 import { fetchThreadHistory, useAgentChat } from "../../hooks/useAgentChat";
 import { getThreadId } from "@/lib/chat-thread";
 import type { AgentResponse, ContentCard } from "@fezer/shared/schemas/agent";
@@ -203,6 +208,25 @@ export function ChatModal({
       setVoiceError("无法访问麦克风，请检查浏览器权限。");
     }
   }, [isRecording]);
+
+  // C10：导出当前对话为 Markdown（求职场景下访客想留存/转发）
+  const handleExportConversation = useCallback(() => {
+    const roomName = roomId ? ROOMS[roomId]?.name : undefined;
+    const markdown = buildConversationMarkdown(
+      messages.map(message => ({
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp,
+        ...(message.agentId ? { agentId: message.agentId } : {}),
+      })),
+      { ...(roomName ? { roomName } : {}) }
+    );
+
+    downloadMarkdown(
+      `fezer-chat-${new Date().toISOString().slice(0, 10)}.md`,
+      markdown
+    );
+  }, [messages, roomId]);
 
   const [, setLocation] = useLocation();
 
@@ -588,6 +612,17 @@ export function ChatModal({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={handleExportConversation}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 transition hover:bg-white/30"
+                title="导出对话（Markdown）"
+                aria-label="导出对话"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            )}
             {/* 侧边栏切换按钮 */}
             <button
               onClick={toggleSidebarMode}
