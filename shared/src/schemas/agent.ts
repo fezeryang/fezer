@@ -23,6 +23,8 @@ export interface FrontendAgentRequest {
   discoveredCharacters?: string[];
   /** 回答事实来源约束 */
   grounding?: "public_profile";
+  /** 以 SSE 流式接收运行事件（RunEvent，见 run.ts）；缺省走一次性 JSON */
+  stream?: boolean;
   /**
    * 多轮会话历史（不含当前这条 userInput），按时间升序。
    * 服务端会做条数与长度截断，作为信任边界。

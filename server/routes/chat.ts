@@ -14,6 +14,7 @@ import type {
   AgentResponse,
   ConversationTurn,
 } from "@fezer/shared/schemas/agent";
+import type { RunEvent } from "@fezer/shared/schemas/run";
 import { runAgent } from "../agents/harness/run";
 import { sendAgentRouteError } from "./errors";
 
@@ -56,7 +57,74 @@ function sanitizeConversationHistory(history: unknown): ConversationTurn[] {
  *   -d '{"userInput":"你好"}'
  * ```
  */
+/**
+ * SSE 帧格式：`event: <type>` + `data: <完整事件 JSON>`，
+ * 与 shared/src/schemas/run.ts 的 RunEvent 一一对应。
+ */
+function writeSseEvent(res: Response, event: RunEvent): void {
+  res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+}
+
+async function chatStreamHandler(req: Request, res: Response): Promise<void> {
+  const {
+    userInput,
+    roomId,
+    characterId,
+    interactionType = "chat",
+    visitedRooms = [],
+    discoveredCharacters = [],
+    grounding,
+  } = req.body as FrontendAgentRequest;
+
+  // 客户端断开即真取消（A4）：信号一路传到 invokeLLM 的 fetch
+  const controller = new AbortController();
+  req.on("close", () => {
+    if (!res.writableEnded) {
+      controller.abort();
+    }
+  });
+
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache, no-transform",
+    connection: "keep-alive",
+    // nginx 反向代理下禁止缓冲，否则事件会被攒住
+    "x-accel-buffering": "no",
+  });
+
+  try {
+    await runAgent({
+      input: userInput,
+      roomId,
+      characterId,
+      interactionType: interactionType as "click" | "hover" | "chat" | "guide",
+      grounding,
+      visitedRooms,
+      discoveredCharacters,
+      conversationHistory: sanitizeConversationHistory(
+        req.body.conversationHistory
+      ),
+      caller: { kind: "route", id: "/api/chat" },
+      signal: controller.signal,
+      onEvent: event => writeSseEvent(res, event),
+    });
+  } catch (error) {
+    // 头已发出，无法再回 HTTP 错误；错误已经以 run.error 事件写出。
+    // 这里只保证日志可查（客户端断开导致的 cancelled 不算错误）。
+    if (!controller.signal.aborted) {
+      console.error("Chat stream error:", {
+        errorType: error instanceof Error ? error.name : typeof error,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  } finally {
+    res.end();
+  }
+}
+
 export async function chatHandler(req: Request, res: Response): Promise<void> {
+  const wantsStream = (req.body as { stream?: boolean }).stream === true;
+
   try {
     const {
       userInput,
@@ -73,6 +141,11 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
         error: "Invalid userInput",
         message: "请输入有效的问题。",
       });
+      return;
+    }
+
+    if (wantsStream) {
+      await chatStreamHandler(req, res);
       return;
     }
 

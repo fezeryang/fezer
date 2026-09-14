@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EventEmitter } from "node:events";
 import type { Request, Response } from "express";
 
 vi.mock("../agents/orchestrator/graph", () => ({
@@ -17,9 +18,16 @@ import { sendAgentRouteError } from "./errors";
 
 type MockResponse = {
   statusCode: number;
+  headers: Record<string, unknown>;
   body: unknown;
+  chunks: string[];
+  ended: boolean;
+  readonly writableEnded: boolean;
   status: (code: number) => MockResponse;
   json: (payload: unknown) => MockResponse;
+  writeHead: (code: number, headers?: Record<string, unknown>) => MockResponse;
+  write: (chunk: string) => MockResponse;
+  end: () => MockResponse;
 };
 
 function createReq(body: unknown): Request {
@@ -29,7 +37,13 @@ function createReq(body: unknown): Request {
 function createRes(): MockResponse {
   const res: MockResponse = {
     statusCode: 200,
+    headers: {},
     body: undefined,
+    chunks: [],
+    ended: false,
+    get writableEnded() {
+      return this.ended;
+    },
     status(code: number) {
       this.statusCode = code;
       return this;
@@ -38,8 +52,44 @@ function createRes(): MockResponse {
       this.body = payload;
       return this;
     },
+    writeHead(code: number, headers: Record<string, unknown> = {}) {
+      this.statusCode = code;
+      this.headers = { ...this.headers, ...headers };
+      return this;
+    },
+    write(chunk: string) {
+      this.chunks.push(chunk);
+      return this;
+    },
+    end() {
+      this.ended = true;
+      return this;
+    },
   };
   return res;
+}
+
+/** SSE 流式用：req 需要能触发 close（客户端断开） */
+function createStreamReq(
+  body: unknown
+): { req: Request; emitter: EventEmitter } {
+  const emitter = new EventEmitter();
+  const req = Object.assign(emitter, { body }) as unknown as Request;
+  return { req, emitter };
+}
+
+/** 把逐帧写入的 SSE 文本解析回 RunEvent 列表 */
+function parseSseChunks(chunks: string[]): Array<Record<string, unknown>> {
+  return chunks
+    .join("")
+    .split("\n\n")
+    .filter(Boolean)
+    .map(frame => {
+      const dataLine = frame
+        .split("\n")
+        .find(line => line.startsWith("data: "));
+      return JSON.parse(dataLine!.slice("data: ".length));
+    });
 }
 
 /**
@@ -121,6 +171,62 @@ describe("Agent API routes", () => {
         suggestedQuestions: ["你最擅长什么技术？"],
         speakingAgentId: "builder",
       });
+    });
+  });
+
+  describe("POST /api/chat（SSE 流式）", () => {
+    it("stream: true 时以 SSE 逐帧输出 RunEvent", async () => {
+      mockOrchestratorResult({
+        answer: "流式回答",
+        currentPrimaryAgent: "core",
+      });
+      const res = createRes();
+      const { req } = createStreamReq({ userInput: "你好", stream: true });
+
+      await chatHandler(req, res as unknown as Response);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toBe("text/event-stream");
+      expect(res.headers["x-accel-buffering"]).toBe("no");
+      expect(res.ended).toBe(true);
+
+      // 帧格式：event: <type>\ndata: <json>\n\n
+      expect(res.chunks[0].startsWith("event: run.started\ndata: ")).toBe(
+        true
+      );
+
+      const frames = parseSseChunks(res.chunks);
+      expect(frames[0]).toMatchObject({ type: "run.started" });
+      expect(frames.at(-1)).toMatchObject({
+        type: "run.finished",
+        answer: "流式回答",
+      });
+    });
+
+    it("客户端断开时中止运行并以 cancelled 帧收尾", async () => {
+      vi.mocked(orchestratorGraph.invoke).mockImplementation(
+        () => new Promise(() => {}) as never
+      );
+      const res = createRes();
+      const { req, emitter } = createStreamReq({
+        userInput: "你好",
+        stream: true,
+      });
+
+      const pending = chatHandler(req, res as unknown as Response);
+      const timer = setTimeout(() => emitter.emit("close"), 10);
+      try {
+        await pending;
+      } finally {
+        clearTimeout(timer);
+      }
+
+      const frames = parseSseChunks(res.chunks);
+      expect(frames.at(-1)).toMatchObject({
+        type: "run.error",
+        code: "cancelled",
+      });
+      expect(res.ended).toBe(true);
     });
   });
 
