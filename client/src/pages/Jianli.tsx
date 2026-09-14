@@ -13,6 +13,7 @@ import {
 } from "@fezer/shared/resume";
 import { loadPosts, loadWorks } from "@/content/loaders";
 import { Minimap } from "@/components/jianli/Minimap";
+import { useIsMobile } from "@/hooks/useMobile";
 import {
   loadVisitorProgress,
   markCharacterDiscovered,
@@ -87,6 +88,7 @@ export default function Jianli() {
   const [activeRoomId, setActiveRoomId] = useState("central");
   const [isRoomPanelCollapsed, setIsRoomPanelCollapsed] = useState(false);
   const [isGuidePanelCollapsed, setIsGuidePanelCollapsed] = useState(false);
+  const isMobile = useIsMobile();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatContext, setChatContext] = useState<{
     characterId?: string;
@@ -128,6 +130,14 @@ export default function Jianli() {
   const handleCurrentRoomChat = () => {
     handleChatRequest({ roomId: activeRoomId });
   };
+
+  // 移动端：房间面板默认收起为底部抽屉，避免盖住 3D 场景
+  useEffect(() => {
+    if (isMobile) {
+      setIsRoomPanelCollapsed(true);
+      setIsGuidePanelCollapsed(true);
+    }
+  }, [isMobile]);
 
   // 进入房间即记入访客进度（写入 localStorage，供 minimap 与后续个性化使用）
   useEffect(() => {
@@ -180,7 +190,11 @@ export default function Jianli() {
         <div className="flex flex-1 items-start justify-between gap-6 px-6 py-6">
           <aside
             className={`pointer-events-auto rounded-3xl border border-slate-900/10 bg-slate-50/72 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all ${
-              isRoomPanelCollapsed ? "w-14 p-3" : "max-w-sm p-5"
+              isMobile
+                ? "fixed right-0 bottom-0 left-0 max-h-[70vh] overflow-y-auto rounded-t-3xl rounded-b-none p-5"
+                : isRoomPanelCollapsed
+                  ? "w-14 p-3"
+                  : "max-w-sm p-5"
             }`}
           >
             <div
@@ -297,7 +311,7 @@ export default function Jianli() {
 
           <aside
             className={`pointer-events-auto rounded-3xl border border-slate-900/10 bg-slate-50/72 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all ${
-              isGuidePanelCollapsed ? "w-14 p-3" : "max-w-xs p-5"
+              isMobile ? "hidden" : isGuidePanelCollapsed ? "w-14 p-3" : "max-w-xs p-5"
             }`}
           >
             <div
@@ -368,6 +382,17 @@ export default function Jianli() {
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-3">
+              {isMobile && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl border-slate-400/60 bg-slate-100/70 px-3 text-xs text-slate-900 hover:bg-slate-200"
+                  onClick={() => setShowResumeModal(true)}
+                >
+                  简历摘要
+                </Button>
+              )}
               <Button
                 type="button"
                 size="sm"
