@@ -196,6 +196,11 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
     runController
   );
 
+  // 守卫的拒绝要在创建时就挂上处理：到 race 之间还有 await（会话读取、事件汇初始化），
+  // 那一窗口内发生 abort（例如连接关闭）会让 rejection 变成 unhandledRejection
+  // 并直接杀掉进程（2026-09-14 真实崩溃）。
+  guard?.promise.catch(() => undefined);
+
   const emitError = (code: RunErrorCode, message: string): void => {
     emitRunEvent({ type: "run.error", runId, code, message });
   };

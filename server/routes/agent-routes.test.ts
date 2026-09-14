@@ -40,6 +40,9 @@ type MockResponse = {
   writeHead: (code: number, headers?: Record<string, unknown>) => MockResponse;
   write: (chunk: string) => MockResponse;
   end: () => MockResponse;
+  /** 模拟 response 的事件（close = 连接关闭） */
+  on: (event: string, handler: () => void) => MockResponse;
+  emit: (event: string) => void;
 };
 
 function createReq(body: unknown): Request {
@@ -47,6 +50,8 @@ function createReq(body: unknown): Request {
 }
 
 function createRes(): MockResponse {
+  const emitter = new EventEmitter();
+
   const res: MockResponse = {
     statusCode: 200,
     headers: {},
@@ -77,7 +82,15 @@ function createRes(): MockResponse {
       this.ended = true;
       return this;
     },
+    on(event: string, handler: () => void) {
+      emitter.on(event, handler);
+      return this;
+    },
+    emit(event: string) {
+      emitter.emit(event);
+    },
   };
+
   return res;
 }
 
@@ -214,18 +227,18 @@ describe("Agent API routes", () => {
       });
     });
 
-    it("客户端断开时中止运行并以 cancelled 帧收尾", async () => {
+    it("客户端断开（response close）时中止运行并以 cancelled 帧收尾", async () => {
       vi.mocked(orchestratorGraph.invoke).mockImplementation(
         () => new Promise(() => {}) as never
       );
       const res = createRes();
-      const { req, emitter } = createStreamReq({
+      const { req } = createStreamReq({
         userInput: "你好",
         stream: true,
       });
 
       const pending = chatHandler(req, res as unknown as Response);
-      const timer = setTimeout(() => emitter.emit("close"), 10);
+      const timer = setTimeout(() => res.emit("close"), 10);
       try {
         await pending;
       } finally {
@@ -236,6 +249,30 @@ describe("Agent API routes", () => {
       expect(frames.at(-1)).toMatchObject({
         type: "run.error",
         code: "cancelled",
+      });
+      expect(res.ended).toBe(true);
+    });
+
+    it("请求体读完（req close）不应取消运行（真实浏览器就是这样）", async () => {
+      mockOrchestratorResult({
+        answer: "正常回答",
+        currentPrimaryAgent: "core",
+      });
+      const res = createRes();
+      const { req, emitter } = createStreamReq({
+        userInput: "你好",
+        stream: true,
+      });
+
+      const pending = chatHandler(req, res as unknown as Response);
+      // Express 解析完请求体就会 emit req 'close'；过去这会把自己的运行取消掉
+      emitter.emit("close");
+      await pending;
+
+      const frames = parseSseChunks(res.chunks);
+      expect(frames.at(-1)).toMatchObject({
+        type: "run.finished",
+        answer: "正常回答",
       });
       expect(res.ended).toBe(true);
     });

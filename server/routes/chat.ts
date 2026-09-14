@@ -101,9 +101,11 @@ async function chatStreamHandler(req: Request, res: Response): Promise<void> {
     threadId,
   } = req.body as FrontendAgentRequest;
 
-  // 客户端断开即真取消（A4）：信号一路传到 invokeLLM 的 fetch
+  // 客户端断开即真取消（A4）：监听 response 的 close —— 只有连接被提前关闭时才 abort。
+  // 不能用 req.on("close")：Express 解析完请求体后 IncomingMessage 就会 emit close，
+  // 那会在请求刚发出时就把自己的运行取消掉（真事，2026-09-14）。
   const controller = new AbortController();
-  req.on("close", () => {
+  res.on("close", () => {
     if (!res.writableEnded) {
       controller.abort();
     }
