@@ -8,6 +8,9 @@ tags:
   - "Finance"
   - "Research"
 category: "Product Engineering"
+rooms:
+  - "ai"
+  - "builder"
 ---
 
 NUX 现在已经不是一个“问 AI 股票怎么看”的页面。

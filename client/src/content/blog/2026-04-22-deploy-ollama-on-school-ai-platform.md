@@ -8,6 +8,8 @@ tags:
   - "AI Platform"
   - "VSCode"
 category: "DevOps"
+rooms:
+  - "ai"
 ---
 
 最近我在学校 AI 平台上创建了一个 **Ollama 实例**，目标很明确：

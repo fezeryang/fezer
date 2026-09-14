@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "东方建筑", "宝塔", "传统文化"]
 technologies: "WebGL, JavaScript, PBR Materials"
 link: "3d-models/pagoda-temple.html"
+rooms:
+  - "visual"
 ---
 
 # Supreme 宝塔

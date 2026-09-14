@@ -7,6 +7,9 @@ tags:
   - "AI"
   - "求职测评"
 category: "Projects"
+rooms:
+  - "builder"
+  - "ai"
 ---
 
 这周一到今天，五天时间，我上线了一个完整的求职测评练习平台：[上岸测评](https://shangan-cyan.vercel.app)。这篇文章简单记录一下它是什么、怎么做出来的。

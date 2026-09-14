@@ -30,6 +30,8 @@ function normalizeWork(raw: string, filePath: string): Work {
 
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
 
+  const rooms = Array.isArray(data.rooms) ? data.rooms.map(String) : [];
+
   const date = typeof data.date === "string" && data.date ? data.date : undefined;
 
   return {
@@ -38,6 +40,7 @@ function normalizeWork(raw: string, filePath: string): Work {
     description,
     date,
     tags,
+    rooms: rooms.length > 0 ? rooms : undefined,
     technologies: typeof data.technologies === "string" ? data.technologies : undefined,
     link: typeof data.link === "string" ? data.link : undefined,
     imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,

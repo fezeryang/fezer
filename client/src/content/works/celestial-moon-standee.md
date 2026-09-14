@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "立牌", "梦幻", "装饰"]
 technologies: "WebGL, JavaScript"
 link: "3d-models/celestial-moon-standee.html"
+rooms:
+  - "visual"
 ---
 
 # 天月立牌

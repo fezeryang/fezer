@@ -5,6 +5,9 @@ date: "2026-09-04"
 tags: ["生成艺术", "Canvas", "交互设计", "创意编程"]
 technologies: "Canvas 2D, JavaScript, L-system / 空间殖民 / 流场 / fBm 噪声, 零依赖单文件"
 link: "generative-art/form-field-botanical-studio.html"
+rooms:
+  - "visual"
+  - "ai"
 ---
 
 # Form / Field 生成艺术工作室

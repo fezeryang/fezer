@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "艺术", "文化", "面具"]
 technologies: "WebGL, JavaScript, Three.js"
 link: "3d-models/venetian-mask.html"
+rooms:
+  - "visual"
 ---
 
 # 威尼斯面具

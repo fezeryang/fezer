@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "笔记本", "水晶材质", "产品设计"]
 technologies: "WebGL, JavaScript, Crystal Rendering"
 link: "3d-models/rose-quartz-laptop.html"
+rooms:
+  - "visual"
 ---
 
 # 玫瑰水晶笔记本电脑

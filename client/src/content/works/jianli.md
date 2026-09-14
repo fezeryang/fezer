@@ -6,6 +6,8 @@ date: 2026-04-18
 tags: [resume, threejs, interactive]
 technologies: React, Three.js, React Three Fiber
 link: /jianli
+rooms:
+  - "core"
 ---
 
 Explore Fezer's resume through an interactive 3D archive with guided rooms and project context.

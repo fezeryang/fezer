@@ -6,6 +6,9 @@ tags: ["React", "AI", "求职测评", "题库"]
 technologies: "React 19, TypeScript, Vite, Tailwind CSS v4, Express, Vercel Serverless, 多模型 AI"
 link: "https://shangan-cyan.vercel.app"
 imageUrl: "/works/shangan-cover.png"
+rooms:
+  - "builder"
+  - "ai"
 ---
 
 # 上岸测评

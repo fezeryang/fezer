@@ -5,6 +5,9 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "交通工具", "传统工艺"]
 technologies: "WebGL, JavaScript, Interactive 3D"
 link: "3d-models/wooden-ox-cart.html"
+rooms:
+  - "visual"
+  - "wanderer"
 ---
 
 # 木质牛车

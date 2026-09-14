@@ -21,6 +21,8 @@ export interface Post {
   tags: string[];
   /** Optional primary category */
   category?: string;
+  /** 3D 简历房间归属（roomId 列表，供房间内容化 C9 使用） */
+  rooms?: string[];
   /** Markdown body content */
   body: string;
 }
@@ -37,6 +39,7 @@ export interface PostFrontmatter {
   tags?: string[];
   category?: string;
   slug?: string;
+  rooms?: string[];
   [key: string]: unknown;
 }
 
@@ -60,6 +63,8 @@ export interface Work {
   link?: string;
   /** Path to project thumbnail */
   imageUrl?: string;
+  /** 3D 简历房间归属（roomId 列表，供房间内容化 C9 使用） */
+  rooms?: string[];
   /** Markdown body content */
   body: string;
 }
@@ -77,6 +82,7 @@ export interface WorkFrontmatter {
   link?: string;
   imageUrl?: string;
   slug?: string;
+  rooms?: string[];
   [key: string]: unknown;
 }
 

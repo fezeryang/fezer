@@ -7,6 +7,9 @@ tags:
   - "React"
   - "framer-motion"
 category: "Product Engineering"
+rooms:
+  - "builder"
+  - "visual"
 ---
 
 博客详情页一直缺一个像样的目录导航。长文读到一半想跳回某一节，只能靠肉眼滚。这周终于把这件事解决了：右侧加了一条 Vercel 文档风格的目录侧边栏——不是常见的文字链接列表，而是一列细横线（dash），鼠标靠近时弹性伸长，滚动时自动高亮当前章节，点击平滑跳转。

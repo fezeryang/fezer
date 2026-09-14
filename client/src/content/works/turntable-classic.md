@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "音响设备", "复古设计"]
 technologies: "WebGL, JavaScript"
 link: "3d-models/turntable-classic.html"
+rooms:
+  - "visual"
 ---
 
 # 经典唱片机

@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "建筑", "历史", "PBR"]
 technologies: "WebGL, JavaScript, PBR Materials"
 link: "3d-models/colosseum.html"
+rooms:
+  - "visual"
 ---
 
 # 罗马斗兽场

@@ -30,12 +30,15 @@ function normalizePost(raw: string, filePath: string): Post {
 
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
 
+  const rooms = Array.isArray(data.rooms) ? data.rooms.map(String) : [];
+
   return {
     slug,
     title,
     date,
     excerpt,
     tags,
+    rooms: rooms.length > 0 ? rooms : undefined,
     category: typeof data.category === "string" ? data.category : undefined,
     body: content,
   };

@@ -7,6 +7,8 @@ tags: [photography, travel, tibet]
 technologies: React, Framer Motion
 imageUrl: https://i.mji.rip/2026/04/14/aae387f395530eb12f80ad2ae27b68a0.jpeg
 link: /xizang
+rooms:
+  - "wanderer"
 ---
 
 Experience the beauty of Tibet through an interactive reverse-scrolling photo gallery.

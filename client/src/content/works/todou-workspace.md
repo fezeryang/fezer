@@ -5,6 +5,8 @@ date: "2026-09-12"
 tags: ["3D", "WebGL", "Three.js", "Interactive Workspace", "设备生态"]
 technologies: "TypeScript, Three.js, Vite, WebGL, Canvas UI"
 link: "https://todou-six.vercel.app"
+rooms:
+  - "builder"
 ---
 
 # TODŌU 个人 3D 设备工作区

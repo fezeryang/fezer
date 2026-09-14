@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "音响设备", "机械结构"]
 technologies: "WebGL, JavaScript, Interactive 3D"
 link: "3d-models/turntable-v2.html"
+rooms:
+  - "visual"
 ---
 
 # 唱片机 V2

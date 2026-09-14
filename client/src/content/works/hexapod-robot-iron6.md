@@ -5,6 +5,8 @@ date: "2025-07-25"
 tags: ["3D", "WebGL", "Three.js", "机器人", "交互"]
 technologies: "WebGL, JavaScript, PBR Materials"
 link: "3d-models/hexapod-robot-iron6.html"
+rooms:
+  - "builder"
 ---
 
 # IRON-6 六足机器人
