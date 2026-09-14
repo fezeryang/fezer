@@ -57,6 +57,28 @@ If `pm2` is not on the default SSH path, load the user npm global bin first:
 export PATH="$HOME/.npm-global/bin:$PATH"
 ```
 
+## Deploy Steps (non-interactive SSH)
+
+The VM's pnpm (10.x) blocks native build scripts and prompts before
+reinstalling a `node_modules` created by an older pnpm — both kill a
+piped `pnpm install`. Deploy as:
+
+```bash
+sudo -iu openclawed bash -lc '
+  set -e; export PATH="$HOME/.npm-global/bin:$PATH"
+  cd /var/www/fezer
+  git pull --ff-only
+  rm -rf node_modules && pnpm install --frozen-lockfile   # 避开交互确认
+  pnpm rebuild esbuild @tailwindcss/oxide                 # pnpm10 默认禁止原生脚本
+  pnpm build
+  pm2 reload fezer-api --update-env
+'
+```
+
+(From WSL: `ssh -i ~/.ssh/azureuserfoez.pem azureuser@4.188.113.194` — the
+`my-azure-vm` / `openclawed` aliases in `ops/VM.md` live in the Windows-side
+SSH config, not WSL's.)
+
 ## Health Checks
 
 Internal VM check:
