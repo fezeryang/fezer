@@ -71,15 +71,17 @@
 
 ### P1 进度（流式与可视化，进行中）
 
-| 项                      | 状态      | 说明                                                                                                                                            |
-| ----------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| A3 工具/agent 事件      | ✅        | `ddad524`：事件汇下移到 `_core/run-events.ts`（同时修掉 expert→harness 的向上依赖）；预取与工具循环都发 `tool.call/result`，含拒绝路径；+3 测试 |
-| A4 真取消               | ⏳ 下一步 | signal 目前只到 harness 的停止守卫，还没接到 `invokeLLM` 的 fetch                                                                               |
-| C2 流式文本             | ⏳        | 事件源已就绪；还需 SSE 路由 + 前端消费                                                                                                          |
-| C3 思考可视化           | ⏳        | 事件源已就绪；还需工具名→中文标签 + 时间线 UI                                                                                                   |
-| e2e mock 下移到 harness | ⏳        | 否则新调用方拿不到 e2e 覆盖                                                                                                                     |
-| B5 相机 / B6 交互反馈   | ⏳        | 与 agent 线独立，可并行                                                                                                                         |
+| 项 | 状态 | 说明 |
+| --- | --- | --- |
+| A3 工具/agent 事件 | ✅ | `ddad524`：事件汇下移到 `_core/run-events.ts`（同时修掉 expert→harness 的向上依赖）；预取与工具循环都发 `tool.call/result`，含拒绝路径 |
+| A4 真取消 | ✅ | `5384b98`：`_core/run-control.ts` ALS；llm.ts 用 `AbortSignal.any` 合并信号、取消时不换 provider 重试；专家循环逐轮检查中止；harness 用自有 controller 分类 cancelled/budget_exhausted |
+| C2 流式传输 | ✅ | `1ced80b`：/api/chat 接受 `stream: true`，RunEvent 逐帧 SSE；客户端断开即真取消；nginx 禁缓冲 |
+| C3 思考可视化 | ✅ | `9e05173`：SSE 解析器（跨 chunk 分帧、坏帧丢弃）+ 流式 hook（失败降级、取消不重发）+ ChatModal 实时步骤与取消按钮；`run.finished` 补 `speakingAgentId` |
+| e2e mock 下移到 harness | ✅ | `de7fd86`：mock 在 run 入口接管，JSON/SSE/任何调用方自动获得 |
+| C2 令牌级流式（invokeLLMStream + text.delta） | ⏳ 下一步 | 当前 run.finished 整段到达；逐字输出还需 llm.ts 流式通道 |
+| B5 相机 / B6 交互反馈 | ⏳ | 与 agent 线独立，可并行 |
 
+仍未开始：A5 会话存储、A6 计量（原计划属 P3/P4）。
 仍未开始：A5 会话存储、A6 计量（原计划属 P3/P4）。
 
 ---
