@@ -69,18 +69,19 @@
 | 5 3D（B1）      | ⏸ 待决策点 2 / 9 | 前提已勘误（见 B 表下方）；真实杠杆是按需挂载或 18→7 角色                                                                                 |
 | 6 性能基线      | ✅                | 见 `docs/perf-baseline.md` 与 `scripts/measure-jianli-perf.mjs`：**32 个 glb / 7.12 MiB / 0 失败 / FCP 3.95s**                            |
 
-### P1 进度（流式与可视化，进行中）
+### P1 进度（✅ 全部完成）
 
-| 项 | 状态 | 说明 |
+| 项 | 状态 | commit |
 | --- | --- | --- |
-| A3 工具/agent 事件 | ✅ | `ddad524`：事件汇下移到 `_core/run-events.ts`（同时修掉 expert→harness 的向上依赖）；预取与工具循环都发 `tool.call/result`，含拒绝路径 |
-| A4 真取消 | ✅ | `5384b98`：`_core/run-control.ts` ALS；llm.ts 用 `AbortSignal.any` 合并信号、取消时不换 provider 重试；专家循环逐轮检查中止；harness 用自有 controller 分类 cancelled/budget_exhausted |
-| C2 流式传输 | ✅ | `1ced80b`：/api/chat 接受 `stream: true`，RunEvent 逐帧 SSE；客户端断开即真取消；nginx 禁缓冲 |
-| C3 思考可视化 | ✅ | `9e05173`：SSE 解析器（跨 chunk 分帧、坏帧丢弃）+ 流式 hook（失败降级、取消不重发）+ ChatModal 实时步骤与取消按钮；`run.finished` 补 `speakingAgentId` |
-| e2e mock 下移到 harness | ✅ | `de7fd86`：mock 在 run 入口接管，JSON/SSE/任何调用方自动获得 |
-| C2 令牌级流式（invokeLLMStream + text.delta） | ⏳ 下一步 | 当前 run.finished 整段到达；逐字输出还需 llm.ts 流式通道 |
-| B5 相机 / B6 交互反馈 | ⏳ | 与 agent 线独立，可并行 |
+| A3 工具/agent 事件 | ✅ | `ddad524` |
+| A4 真取消 | ✅ | `5384b98` |
+| C2 流式传输（SSE 路由） | ✅ | `1ced80b` |
+| C3 思考可视化（客户端） | ✅ | `9e05173` |
+| e2e mock 下移到 harness | ✅ | `de7fd86` |
+| C2 令牌级流式（invokeLLMStream + text.delta） | ✅ | `7fe4e41` + 客户端逐字渲染 |
+| B5 相机 / B6 交互反馈 | ✅ | 悬停手型光标、点击优先级、标签层叠与距离缩放修复、单一视角源 + 重置视角按钮 + 移动端镜头约束 |
 
+仍未开始：A5 会话存储、A6 计量（原计划属 P3/P4）。
 仍未开始：A5 会话存储、A6 计量（原计划属 P3/P4）。
 仍未开始：A5 会话存储、A6 计量（原计划属 P3/P4）。
 
