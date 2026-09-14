@@ -15,6 +15,8 @@ type SceneProps = {
   activeRoomId: string;
   onRoomSelect: (roomId: string) => void;
   onChatRequest: (context: { characterId?: string; roomId?: string }) => void;
+  /** 递增一次即重置相机到当前房间（重置视角按钮） */
+  cameraResetToken?: number;
 };
 
 function LoadingFallback() {
@@ -30,6 +32,7 @@ export function Scene({
   activeRoomId,
   onRoomSelect,
   onChatRequest,
+  cameraResetToken,
 }: SceneProps) {
   // 预加载角色模型
   useEffect(() => {
@@ -55,7 +58,10 @@ export function Scene({
         <pointLight position={[-12, 10, -18]} intensity={0.28} />
 
         {/* 相机控制 */}
-        <CameraController activeRoomId={activeRoomId} />
+        <CameraController
+          activeRoomId={activeRoomId}
+          resetToken={cameraResetToken}
+        />
 
         {/* 房间与结构模块 */}
         <Suspense fallback={<LoadingFallback />}>
@@ -65,6 +71,11 @@ export function Scene({
               <Html
                 position={[roomConfig.position[0], 3.4, roomConfig.position[2]]}
                 center
+                // 随距离缩放，远景标签不遮挡画面
+                distanceFactor={14}
+                // drei 默认 zIndexRange 高达 16777271，会盖在聊天弹窗（z-50）之上；
+                // 收到 20 以下，所有 3D 标签都压在 UI 层下面
+                zIndexRange={[20, 0]}
               >
                 <button
                   type="button"

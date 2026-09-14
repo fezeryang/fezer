@@ -1,5 +1,5 @@
-import { useGLTF } from "@react-three/drei";
-import { useEffect, useRef } from "react";
+import { useCursor, useGLTF } from "@react-three/drei";
+import { useEffect, useRef, useState } from "react";
 import { MAP_PRELOAD_MODELS } from "./assets/modelPaths";
 import type { ModelInstanceProps, RoomProps } from "./assets/types";
 
@@ -12,7 +12,7 @@ function configureModelLoader(loader: any) {
   loader.setResourcePath(MODEL_RESOURCE_PATH);
 }
 
-export function ModelInstance({ config, onClick }: ModelInstanceProps) {
+export function ModelInstance({ config, onClick, onHoverChange }: ModelInstanceProps) {
   const groupRef = useRef<any>(null);
   const { scene } = useGLTF(
     config.model,
@@ -35,13 +35,33 @@ export function ModelInstance({ config, onClick }: ModelInstanceProps) {
       position={config.position}
       rotation={config.rotation || [0, 0, 0]}
       scale={config.scale || [1, 1, 1]}
-      onClick={() => onClick?.(config.id)}
+      onPointerOver={event => {
+        // 停止冒泡：悬停在房间上时，不触发后方角色的交互
+        event.stopPropagation();
+        onHoverChange?.(true);
+      }}
+      onPointerOut={() => onHoverChange?.(false)}
+      onClick={event => {
+        // 点击命中优先级：房间 > 后方角色
+        event.stopPropagation();
+        onClick?.(config.id);
+      }}
     />
   );
 }
 
 export function Room({ config, onClick }: RoomProps) {
-  return <ModelInstance config={config} onClick={onClick} />;
+  const [hovered, setHovered] = useState(false);
+  // 悬停房间时把光标切为手型，告诉访客这里可交互
+  useCursor(hovered);
+
+  return (
+    <ModelInstance
+      config={config}
+      onClick={onClick}
+      onHoverChange={setHovered}
+    />
+  );
 }
 
 // 预加载地图常用模型

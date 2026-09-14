@@ -33,6 +33,8 @@ export interface SceneModuleConfig extends TransformConfig {
 export interface ModelInstanceProps {
   config: TransformConfig;
   onClick?: (id: string) => void;
+  /** 指针悬停状态回调（房间用：悬停时切换光标为手型） */
+  onHoverChange?: (hovered: boolean) => void;
 }
 
 export interface RoomProps {

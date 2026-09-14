@@ -44,6 +44,8 @@ export default function Jianli() {
     characterId?: string
     roomId?: string
   }>({ roomId: "central" })
+  // 递增即重置相机视角到当前房间
+  const [cameraResetToken, setCameraResetToken] = useState(0)
   const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId])
 
   const handleChatRequest = (context: {
@@ -75,6 +77,7 @@ export default function Jianli() {
           activeRoomId={activeRoomId}
           onRoomSelect={setActiveRoomId}
           onChatRequest={handleChatRequest}
+          cameraResetToken={cameraResetToken}
         />
       </Suspense>
 
@@ -247,6 +250,13 @@ export default function Jianli() {
               <span className="text-xs text-slate-500">
                 已聚焦：{activeRoom.name}
               </span>
+              <button
+                type="button"
+                onClick={() => setCameraResetToken(prev => prev + 1)}
+                className="rounded-lg border border-slate-300/70 bg-white/80 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100"
+              >
+                重置视角
+              </button>
             </div>
           </div>
         </footer>

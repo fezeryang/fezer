@@ -1,19 +1,23 @@
 import { CameraControls } from "@react-three/drei";
 import { useEffect, useRef } from "react";
+import { useIsMobile } from "@/hooks/useMobile";
 import { ROOMS } from "./assets/roomsConfig";
 
 type CameraControllerProps = {
   activeRoomId?: string;
+  /** 递增一次即回到当前房间视角（重置视角按钮） */
+  resetToken?: number;
 };
 
-export function CameraController({ activeRoomId }: CameraControllerProps) {
+export function CameraController({
+  activeRoomId,
+  resetToken,
+}: CameraControllerProps) {
   const controlsRef = useRef<CameraControls>(null);
+  const isMobile = useIsMobile();
 
-  useEffect(() => {
-    // 初始视角：更贴近地图，俯视中央大厅
-    controlsRef.current?.setLookAt(0, 10, 14, 0, 0, -8, true);
-  }, []);
-
+  // 唯一视角来源：房间切换与重置都走这里。
+  // 挂载时 activeRoomId 已是初始房间，不再需要单独的初始视角 effect。
   useEffect(() => {
     if (!activeRoomId) {
       return;
@@ -26,7 +30,7 @@ export function CameraController({ activeRoomId }: CameraControllerProps) {
 
     const [x, y, z] = room.position;
     controlsRef.current?.setLookAt(x, y + 8, z + 10, x, y + 1.6, z, true);
-  }, [activeRoomId]);
+  }, [activeRoomId, resetToken]);
 
   return (
     <CameraControls
@@ -34,8 +38,9 @@ export function CameraController({ activeRoomId }: CameraControllerProps) {
       makeDefault
       minPolarAngle={Math.PI / 10}
       maxPolarAngle={Math.PI / 2.05}
-      minDistance={6}
-      maxDistance={45}
+      // 移动端视口小，收紧镜头范围避免迷路
+      minDistance={isMobile ? 9 : 6}
+      maxDistance={isMobile ? 34 : 45}
       smoothTime={0.5}
     />
   );
