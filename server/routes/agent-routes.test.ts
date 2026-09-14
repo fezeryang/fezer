@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import type { Request, Response } from "express";
 
@@ -11,7 +11,11 @@ vi.mock("../agents/orchestrator/graph", () => ({
 import { orchestratorGraph } from "../agents/orchestrator/graph";
 import { LLMProviderConfigurationError } from "../_core/llm";
 import { RunError } from "../agents/harness/errors";
-import { chatHandler } from "./chat";
+import {
+  appendThreadTurns,
+  resetMemoryThreads,
+} from "../agents/harness/session";
+import { chatHandler, chatThreadHandler } from "./chat";
 import { guideHandler } from "./guide";
 import { characterHandler } from "./character";
 import { sendAgentRouteError } from "./errors";
@@ -371,6 +375,56 @@ describe("Agent API routes", () => {
 
       expect(res.statusCode).toBe(400);
       expect(res.body).toMatchObject({ code: "INVALID_INPUT" });
+    });
+  });
+
+  describe("GET /api/chat/thread/:threadId", () => {
+    const ORIGINAL_DATABASE_URL = process.env.DATABASE_URL;
+
+    beforeEach(() => {
+      // 会话测试固定走内存回退，不碰 .env 里的真实数据库
+      delete process.env.DATABASE_URL;
+      resetMemoryThreads();
+    });
+
+    afterAll(() => {
+      if (ORIGINAL_DATABASE_URL === undefined) {
+        delete process.env.DATABASE_URL;
+      } else {
+        process.env.DATABASE_URL = ORIGINAL_DATABASE_URL;
+      }
+    });
+
+    it("返回该线程的历史轮次（C7 恢复用）", async () => {
+      await appendThreadTurns("t-1", "route", [
+        { role: "user", content: "Q" },
+        { role: "assistant", content: "A", agentId: "core" },
+      ]);
+
+      const res = createRes();
+      await chatThreadHandler(
+        { params: { threadId: "t-1" } } as unknown as Request,
+        res as unknown as Response
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({
+        threadId: "t-1",
+        turns: [
+          { role: "user", content: "Q" },
+          { role: "assistant", content: "A", agentId: "core" },
+        ],
+      });
+    });
+
+    it("超过 64 字符的 threadId 直接 400", async () => {
+      const res = createRes();
+      await chatThreadHandler(
+        { params: { threadId: "x".repeat(65) } } as unknown as Request,
+        res as unknown as Response
+      );
+
+      expect(res.statusCode).toBe(400);
     });
   });
 

@@ -9,7 +9,9 @@ import type {
   AgentResponse,
 } from "@fezer/shared/schemas/agent";
 import type { RunEvent } from "@fezer/shared/schemas/run";
+import type { FezerType } from "@fezer/shared/schemas/character";
 import { consumeSseResponse } from "@/lib/sse";
+import { getOrCreateThreadId } from "@/lib/chat-thread";
 
 // API 基础 URL，开发环境使用本地，生产环境由 VITE_API_URL 指向后端
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -64,6 +66,29 @@ export interface UseAgentChatReturn {
 }
 
 /**
+ * 读取某个会话线程的历史（C7：打开聊天时恢复上次对话）
+ */
+export async function fetchThreadHistory(threadId: string): Promise<
+  Array<{ role: "user" | "assistant"; content: string; agentId?: FezerType }>
+> {
+  const response = await fetch(
+    `${API_BASE}/api/chat/thread/${encodeURIComponent(threadId)}`
+  );
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = (await response.json()) as {
+    turns?: Array<{
+      role: "user" | "assistant";
+      content: string;
+      agentId?: FezerType;
+    }>;
+  };
+  return data.turns ?? [];
+}
+
+/**
  * Agent 对话 Hook
  */
 export function useAgentChat(
@@ -96,7 +121,11 @@ export function useAgentChat(
         const response = await fetch(`${API_BASE}/api/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...request, stream: true }),
+          body: JSON.stringify({
+            ...request,
+            stream: true,
+            threadId: request.threadId ?? getOrCreateThreadId(),
+          }),
           signal: controller.signal,
         });
 
@@ -159,7 +188,10 @@ export function useAgentChat(
         const response = await fetch(`${API_BASE}/api/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(request),
+          body: JSON.stringify({
+            ...request,
+            threadId: request.threadId ?? getOrCreateThreadId(),
+          }),
         });
 
         // 更新思考状态

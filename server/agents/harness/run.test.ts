@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../orchestrator/graph", () => ({
   orchestratorGraph: { invoke: vi.fn() },
@@ -12,6 +12,9 @@ import { RunError } from "./errors";
 import { resolveWallClockLimit, runAgent } from "./run";
 
 const invoke = vi.mocked(orchestratorGraph.invoke);
+
+// 会话存储测试固定走内存回退路径（否则会真连 .env 里的 DATABASE_URL）
+const ORIGINAL_DATABASE_URL = process.env.DATABASE_URL;
 
 function orchestratorResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -33,11 +36,20 @@ function captureEvents(): {
 describe("runAgent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.DATABASE_URL;
     invoke.mockResolvedValue(orchestratorResult() as never);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    if (ORIGINAL_DATABASE_URL === undefined) {
+      delete process.env.DATABASE_URL;
+    } else {
+      process.env.DATABASE_URL = ORIGINAL_DATABASE_URL;
+    }
   });
 
   it("墙钟预算默认不设限，只有调用方显式开启才生效", () => {
@@ -202,6 +214,24 @@ describe("runAgent", () => {
 
     expect(events).toEqual(result.events);
     expect(events).toHaveLength(2);
+  });
+
+  it("同一 threadId 的第二次 run 会带上服务端会话历史（A5）", async () => {
+    const threadId = "thread-round-trip";
+
+    await runAgent({ input: "第一个问题", threadId });
+
+    invoke.mockClear();
+    await runAgent({ input: "第二个问题", threadId });
+
+    const secondCall = invoke.mock.calls[0]?.[0] as {
+      conversationHistory: Array<{ role: string; content: string }>;
+    };
+
+    expect(secondCall.conversationHistory).toEqual([
+      { role: "user", content: "第一个问题" },
+      { role: "assistant", content: "这是回答", agentId: "builder" },
+    ]);
   });
 
   it("E2E_MOCK_AGENT_API=true 时返回完整形状的 mock 结果，不触编排", async () => {

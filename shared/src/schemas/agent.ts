@@ -28,8 +28,14 @@ export interface FrontendAgentRequest {
   /**
    * 多轮会话历史（不含当前这条 userInput），按时间升序。
    * 服务端会做条数与长度截断，作为信任边界。
+   * 有 threadId 时服务端历史优先，这份作为回退。
    */
   conversationHistory?: ConversationTurn[];
+  /**
+   * 会话线程 id（A5）：客户端在 localStorage 生成并复用。
+   * 传入后服务端会读取并续写该线程的历史；缺省时本次 run 自成一个 thread。
+   */
+  threadId?: string;
 }
 
 /**

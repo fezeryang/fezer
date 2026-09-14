@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { chatHandler } from "../routes/chat";
+import { chatHandler, chatThreadHandler } from "../routes/chat";
 import { guideHandler } from "../routes/guide";
 import { characterHandler } from "../routes/character";
 import { assertEnvValid } from "./env";
@@ -60,6 +60,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Agent API routes
   app.post("/api/chat", chatHandler);
+  // 会话历史读取（C7 继续上次对话）
+  app.get("/api/chat/thread/:threadId", chatThreadHandler);
   app.post("/api/guide", guideHandler);
   app.post("/api/character", characterHandler);
   // tRPC API

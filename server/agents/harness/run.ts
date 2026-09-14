@@ -23,6 +23,7 @@ import {
   traceSpan,
 } from "../../_core/observability/langsmith";
 import { RunError, toRunError } from "./errors";
+import { appendThreadTurns, loadThreadTurns } from "./session";
 import { runWithRunControl } from "../../_core/run-control";
 import { buildE2eMockRunResult, shouldUseE2eAgentMock } from "./e2e-mock";
 import {
@@ -207,6 +208,12 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
     emitRunEvent({ type: "run.error", runId, code, message });
   };
 
+  // 会话历史（A5）：服务端 thread 优先 —— 那是助手真实说过的内容；
+  // 客户端上送的历史作为回退（无 thread 或读取失败时）
+  const storedTurns = await loadThreadTurns(threadId).catch(() => []);
+  const conversationHistory =
+    storedTurns.length > 0 ? storedTurns : (request.conversationHistory ?? []);
+
   return runWithEventSink(sink, () =>
     runWithTraceContext(
       {
@@ -235,7 +242,7 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
                   characterId: request.characterId,
                   interactionType: request.interactionType ?? "chat",
                   grounding: request.grounding,
-                  conversationHistory: request.conversationHistory ?? [],
+                  conversationHistory,
                   visitedRooms: request.visitedRooms ?? [],
                   discoveredCharacters: request.discoveredCharacters ?? [],
                   messages: [],
@@ -276,6 +283,16 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
           answer: result.answer,
           uiAction: result.uiAction,
         });
+
+        // 落库本轮（A5）：尽力而为 —— 会话存储失败只丢记忆，不影响回答
+        await appendThreadTurns(threadId, request.caller?.kind ?? "feature", [
+          { role: "user", content: request.input },
+          {
+            role: "assistant",
+            content: result.answer,
+            agentId: speakingAgent,
+          },
+        ]);
 
         return {
           runId,

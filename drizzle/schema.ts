@@ -125,3 +125,39 @@ export const contentAssetRelations = mysqlTable("content_asset_relations", {
 
 export type ContentAssetRelation = typeof contentAssetRelations.$inferSelect;
 export type InsertContentAssetRelation = typeof contentAssetRelations.$inferInsert;
+/**
+ * Agent 会话线程（A5）
+ *
+ * 匿名访客用 localStorage 生成 threadId 作为 subject，不含 PII；
+ * summary 是 compaction 摘要（有损文本，不作为恢复依据）。
+ */
+export const threads = mysqlTable("threads", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  kind: varchar("kind", { length: 32 }).notNull(),
+  subject: varchar("subject", { length: 128 }),
+  summary: text("summary"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+});
+
+export type Thread = typeof threads.$inferSelect;
+export type InsertThread = typeof threads.$inferInsert;
+
+export const threadTurns = mysqlTable(
+  "thread_turns",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    threadId: varchar("threadId", { length: 64 }).notNull(),
+    seq: int("seq").notNull(),
+    role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+    agentId: varchar("agentId", { length: 32 }),
+    content: text("content").notNull(),
+    runId: varchar("runId", { length: 64 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("thread_turns_thread_seq").on(table.threadId, table.seq)]
+);
+
+export type ThreadTurn = typeof threadTurns.$inferSelect;
+export type InsertThreadTurn = typeof threadTurns.$inferInsert;

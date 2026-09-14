@@ -16,6 +16,7 @@ import type {
 } from "@fezer/shared/schemas/agent";
 import type { RunEvent } from "@fezer/shared/schemas/run";
 import { runAgent } from "../agents/harness/run";
+import { loadThreadTurns } from "../agents/harness/session";
 import { sendAgentRouteError } from "./errors";
 
 /** 会话历史的信任边界：最多 8 轮、每轮 4000 字符 */
@@ -74,6 +75,7 @@ async function chatStreamHandler(req: Request, res: Response): Promise<void> {
     visitedRooms = [],
     discoveredCharacters = [],
     grounding,
+    threadId,
   } = req.body as FrontendAgentRequest;
 
   // 客户端断开即真取消（A4）：信号一路传到 invokeLLM 的 fetch
@@ -104,6 +106,7 @@ async function chatStreamHandler(req: Request, res: Response): Promise<void> {
       conversationHistory: sanitizeConversationHistory(
         req.body.conversationHistory
       ),
+      threadId,
       caller: { kind: "route", id: "/api/chat" },
       signal: controller.signal,
       stream: true,
@@ -123,6 +126,29 @@ async function chatStreamHandler(req: Request, res: Response): Promise<void> {
   }
 }
 
+/**
+ * GET /api/chat/thread/:threadId
+ * 读取某个会话线程的历史（C7：“继续上次对话”时恢复消息列表）。
+ */
+export async function chatThreadHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const threadId = req.params.threadId;
+
+  if (!threadId || typeof threadId !== "string" || threadId.length > 64) {
+    res.status(400).json({ error: "Invalid threadId" });
+    return;
+  }
+
+  try {
+    const turns = await loadThreadTurns(threadId);
+    res.json({ threadId, turns });
+  } catch (error) {
+    sendAgentRouteError(res, "ChatThread", error);
+  }
+}
+
 export async function chatHandler(req: Request, res: Response): Promise<void> {
   const wantsStream = (req.body as { stream?: boolean }).stream === true;
 
@@ -135,6 +161,7 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
       visitedRooms = [],
       discoveredCharacters = [],
       grounding,
+      threadId,
     } = req.body as FrontendAgentRequest;
 
     if (!userInput || typeof userInput !== "string") {
@@ -161,6 +188,7 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
       conversationHistory: sanitizeConversationHistory(
         req.body.conversationHistory
       ),
+      threadId,
       caller: { kind: "route", id: "/api/chat" },
     });
 

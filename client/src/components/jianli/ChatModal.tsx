@@ -12,7 +12,8 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
-import { useAgentChat } from "../../hooks/useAgentChat";
+import { fetchThreadHistory, useAgentChat } from "../../hooks/useAgentChat";
+import { getThreadId } from "@/lib/chat-thread";
 import type { AgentResponse, ContentCard } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import {
@@ -132,6 +133,8 @@ export function ChatModal({
   const [liveStep, setLiveStep] = useState<string | null>(null);
   // 流式回答的逐字渲染：text.delta 事件累积
   const [streamingText, setStreamingText] = useState("");
+  // C7：本次打开是否恢复了上次会话
+  const [resumedThread, setResumedThread] = useState(false);
   // 多专家协作时间线（C4）：agent.start / agent.done 事件驱动
   const [collaborators, setCollaborators] = useState<
     Array<{ agentId: FezerType; displayName: string; done: boolean }>
@@ -234,18 +237,51 @@ export function ChatModal({
   useEffect(() => {
     isOpenRef.current = isOpen;
   }, [isOpen]);
+
+  // C7：恢复上次会话的消息列表；线程为空则退回打招呼
+  const restoreThread = useCallback(
+    async (threadId: string) => {
+      const turns = await fetchThreadHistory(threadId);
+      if (!isOpenRef.current) return;
+
+      if (turns.length === 0) {
+        if (initialMessage?.trim()) {
+          void handleSendRef.current(initialMessage);
+        }
+        return;
+      }
+
+      setMessages(
+        turns.map(turn => ({
+          id: createMessageId(turn.role),
+          role: turn.role,
+          content: turn.content,
+          timestamp: Date.now(),
+          ...(turn.agentId ? { agentId: turn.agentId } : {}),
+        }))
+      );
+      setResumedThread(true);
+    },
+    [initialMessage]
+  );
+
   useEffect(() => {
     if (isOpen && !wasOpenRef.current) {
       setMessages([]);
       setCurrentResponse(null);
       setSelectedAgentId(undefined);
-      // 新会话开始时若有初始消息（如进入空间的打招呼语），自动发送一次
-      if (initialMessage?.trim()) {
+      setResumedThread(false);
+
+      const threadId = getThreadId();
+      if (threadId) {
+        void restoreThread(threadId);
+      } else if (initialMessage?.trim()) {
+        // 新会话开始时若有初始消息（如进入空间的打招呼语），自动发送一次
         void handleSendRef.current(initialMessage);
       }
     }
     wasOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, initialMessage, restoreThread]);
 
   // 拖拽开始
   const handleDragStart = useCallback(
@@ -511,6 +547,11 @@ export function ChatModal({
             backgroundImage: `url(${roomBackground})`,
           }}
         >
+          {resumedThread && (
+            <div className="mb-2 rounded-xl bg-slate-100/80 px-3 py-2 text-center text-xs text-slate-500">
+              已恢复上次的对话记忆 · 可直接接着问
+            </div>
+          )}
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full text-gray-600">
               <p>输入消息开始与 {currentAgentName} 对话...</p>
