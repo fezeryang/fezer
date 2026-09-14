@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { Link } from "wouter";
@@ -12,6 +12,11 @@ import {
   INTERESTS,
 } from "@fezer/shared/resume";
 import { loadPosts, loadWorks } from "@/content/loaders";
+import { Minimap } from "@/components/jianli/Minimap";
+import {
+  loadVisitorProgress,
+  markRoomVisited,
+} from "@/lib/visitor-progress";
 
 const SKILL_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
   { label: "AI 与应用", items: SKILLS.ai },
@@ -87,12 +92,15 @@ export default function Jianli() {
     roomId?: string;
   }>({ roomId: "central" });
   // 递增即重置相机视角到当前房间
-  const [cameraResetToken, setCameraResetToken] = useState(0);
+  const [cameraResetToken, setCameraResetToken] = useState(0)
+  // 已访问房间（B7 minimap 状态 + C6 访客进度，纯客户端）
+  const [visitedRoomIds, setVisitedRoomIds] = useState<string[]>(() =>
+    loadVisitorProgress().visitedRooms
+  );
   const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId]);
 
   // 房间内容化（C9）：来自 frontmatter 的 rooms 标注，见 content/works|blog
-  const roomContent = useMemo(() => {
-    const works = loadWorks().filter(work =>
+  const roomContent = useMemo(() => {    const works = loadWorks().filter(work =>
       work.rooms?.includes(activeRoomId)
     );
     const posts = loadPosts().filter(post =>
@@ -116,6 +124,11 @@ export default function Jianli() {
     handleChatRequest({ roomId: activeRoomId });
   };
 
+  // 进入房间即记入访客进度（写入 localStorage，供 minimap 与后续个性化使用）
+  useEffect(() => {
+    setVisitedRoomIds(markRoomVisited(activeRoomId).visitedRooms);
+  }, [activeRoomId]);
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-200">
       {/* 3D 场景 */}
@@ -136,6 +149,11 @@ export default function Jianli() {
 
       {/* UI 层 */}
       <div className="pointer-events-none absolute inset-0 flex flex-col">
+        <Minimap
+          activeRoomId={activeRoomId}
+          visitedRoomIds={visitedRoomIds}
+          onRoomSelect={setActiveRoomId}
+        />
         {/* 顶部导航栏 */}
         <header className="pointer-events-auto flex items-center justify-between border-b border-slate-800/10 bg-slate-100/60 px-6 py-4 backdrop-blur-md">
           <div className="flex items-center gap-4">
