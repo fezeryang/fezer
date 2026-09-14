@@ -51,16 +51,19 @@ function normalizeConsultAgents(
     return [];
   }
 
-  return Array.from(new Set(consultAgents)).filter(agent => agent !== targetAgent);
+  return Array.from(new Set(consultAgents)).filter(
+    agent => agent !== targetAgent
+  );
 }
 
 function buildExpectedOutput(
   record: IntentFeedbackRecord
 ): LangSmithDatasetDatapoint["outputs"] {
   const base = record.modelOutput;
-  const corrected = record.feedbackType === "correction" && record.correction
-    ? { ...base, ...record.correction }
-    : base;
+  const corrected =
+    record.feedbackType === "correction" && record.correction
+      ? { ...base, ...record.correction }
+      : base;
 
   const targetAgent = corrected.targetAgent ?? base.targetAgent;
   const needsConsultation = Boolean(corrected.needsConsultation);
@@ -97,4 +100,3 @@ export function buildIntentFeedbackDatapoint(
     },
   };
 }
-

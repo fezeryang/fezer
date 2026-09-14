@@ -648,8 +648,7 @@ describe("expert agent tool loop", () => {
     const firstCall = invokeLLMMock.mock.calls[0][0];
     // 当前输入只出现一次（历史里的 user 轮属于正常多轮对话，不算重复注入）
     const currentInputMessages = firstCall.messages.filter(
-      (msg: any) =>
-        msg.role === "user" && msg.content === "那第二个项目呢？"
+      (msg: any) => msg.role === "user" && msg.content === "那第二个项目呢？"
     );
     expect(currentInputMessages).toHaveLength(1);
     const allUserMessages = firstCall.messages.filter(
@@ -823,8 +822,9 @@ describe("expert agent run events", () => {
     const { runWithEventSink } = await import("../../_core/run-events");
     const events: RunEvent[] = [];
 
-    await runWithEventSink(event => events.push(event), () =>
-      invokeAgent("builder", "你好")
+    await runWithEventSink(
+      event => events.push(event),
+      () => invokeAgent("builder", "你好")
     );
 
     expect(events.map(event => event.type)).toEqual([
@@ -862,8 +862,9 @@ describe("expert agent run events", () => {
     const { runWithEventSink } = await import("../../_core/run-events");
     const events: RunEvent[] = [];
 
-    await runWithEventSink(event => events.push(event), () =>
-      invokeAgent("builder", "你好")
+    await runWithEventSink(
+      event => events.push(event),
+      () => invokeAgent("builder", "你好")
     );
 
     const result = events.find(event => event.type === "tool.result");
