@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { CameraController } from "./CameraController";
 import { ModelInstance, Room } from "./Room";
 import { Character, preloadCharacters } from "./Character";
+import type { SceneBubble } from "@/lib/scene-bubbles";
 import { Html } from "@react-three/drei";
 import {
   CORRIDOR_MODULES,
@@ -17,6 +18,10 @@ type SceneProps = {
   onChatRequest: (context: { characterId?: string; roomId?: string }) => void;
   /** 递增一次即重置相机到当前房间（重置视角按钮） */
   cameraResetToken?: number;
+  /** 角色 → 气泡（D1）：由页面层合并好（agent 活动 > 招呼 > 闲聊） */
+  bubbleByCharacter: Record<string, SceneBubble>;
+  /** 招呼气泡的操作按钮（透传给 greeting 气泡） */
+  greetingActions?: { onChat?: () => void; onDismiss?: () => void };
 };
 
 function LoadingFallback() {
@@ -33,6 +38,8 @@ export function Scene({
   onRoomSelect,
   onChatRequest,
   cameraResetToken,
+  bubbleByCharacter,
+  greetingActions,
 }: SceneProps) {
   // 预加载角色模型
   useEffect(() => {
@@ -106,6 +113,8 @@ export function Scene({
               key={characterConfig.id}
               config={characterConfig}
               onClick={handleCharacterClick}
+              bubble={bubbleByCharacter[characterConfig.id]}
+              bubbleActions={greetingActions}
             />
           ))}
         </Suspense>

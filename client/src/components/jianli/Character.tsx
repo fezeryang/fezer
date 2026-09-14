@@ -1,8 +1,9 @@
-import { useGLTF } from "@react-three/drei";
+import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import type { CharacterProps, CharacterState, Vec3 } from "./assets/types";
 import { CHARACTER_MODELS } from "./assets/characterConfig";
+import { SpeechBubble } from "./SpeechBubble";
 
 // Vite base path 用于纹理资源路径修正
 const BASE_URL = import.meta.env.BASE_URL ?? "/";
@@ -14,6 +15,9 @@ function configureModelLoader(loader: any) {
 
 // 角色地面Y坐标（根据模型调整）
 const GROUND_Y = 0;
+
+// 气泡世界坐标高度：挂在外层未缩放的移动 group 上，不随 0.3 缩放
+const BUBBLE_Y = 1.6;
 
 // 帧间隔上限：切回标签页或掉帧时 delta 会突刺，不夹住角色会瞬间跳过一大段距离
 const MAX_FRAME_DELTA_SECONDS = 0.1;
@@ -39,7 +43,12 @@ function subtract(a: Vec3, b: Vec3): Vec3 {
   return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 }
 
-export function Character({ config, onClick }: CharacterProps) {
+export function Character({
+  config,
+  onClick,
+  bubble,
+  bubbleActions,
+}: CharacterProps) {
   const groupRef = useRef<any>(null);
   const { scene } = useGLTF(
     config.model,
@@ -117,13 +126,32 @@ export function Character({ config, onClick }: CharacterProps) {
   });
 
   return (
+    // 外层：移动与旋转（世界坐标尺度）；气泡 Html 也挂在这里，随角色移动
     <group
       ref={groupRef}
       position={config.position}
-      scale={config.scale || [0.3, 0.3, 0.3]}
       onClick={() => onClick?.(config.id)}
     >
-      <primitive object={instance} />
+      {/* 内层：模型缩放。分两层是为了让气泡高度用世界坐标表达 */}
+      <group scale={config.scale || [0.3, 0.3, 0.3]}>
+        <primitive object={instance} />
+      </group>
+      {/* 无气泡时不渲染 Html，零每帧 DOM 同步成本 */}
+      {bubble && (
+        <Html
+          position={[0, BUBBLE_Y, 0]}
+          center
+          distanceFactor={12}
+          // 与房间标签同样压在 UI 层（z-50 聊天弹窗）之下
+          zIndexRange={[20, 0]}
+        >
+          <SpeechBubble
+            bubble={bubble}
+            onChat={bubbleActions?.onChat}
+            onDismiss={bubbleActions?.onDismiss}
+          />
+        </Html>
+      )}
     </group>
   );
 }

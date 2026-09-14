@@ -1,3 +1,5 @@
+import type { SceneBubble } from "@/lib/scene-bubbles";
+
 export type FezerType =
   | "core"
   | "builder"
@@ -24,6 +26,8 @@ export interface RoomConfig extends TransformConfig {
   accent: string;
   summary: string;
   highlights: string[];
+  /** 环境闲聊对话池：[A 台词, B 台词]，房间内两个角色轮流说（纯客户端，零 LLM） */
+  chatter: Array<[string, string]>;
 }
 
 export interface SceneModuleConfig extends TransformConfig {
@@ -59,4 +63,8 @@ export interface CharacterConfig {
 export interface CharacterProps {
   config: CharacterConfig;
   onClick?: (id: string) => void;
+  /** 头顶气泡（D1）；缺省时不渲染 Html，零 DOM 成本 */
+  bubble?: SceneBubble;
+  /** 仅 greeting 气泡使用的操作回调 */
+  bubbleActions?: { onChat?: () => void; onDismiss?: () => void };
 }

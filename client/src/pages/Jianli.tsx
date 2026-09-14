@@ -1,4 +1,12 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { Link } from "wouter";
@@ -23,6 +31,14 @@ import {
   setGreetingEnabled,
   shouldShowGreeting,
 } from "@/lib/room-greeting";
+import {
+  clipStreamText,
+  mergeSceneBubbles,
+  roomOfAgent,
+  type AgentSceneEvent,
+  type SceneBubble,
+} from "@/lib/scene-bubbles";
+import { useAmbientChatter } from "@/hooks/useAmbientChatter";
 
 const Scene = lazy(() =>
   import("@/components/jianli/Scene").then(module => ({
@@ -89,8 +105,14 @@ export default function Jianli() {
   const [visitedRoomIds, setVisitedRoomIds] = useState<string[]>(
     () => loadVisitorProgress().visitedRooms
   );
-  // C1 主动招呼：模板拼接，零 LLM
+  // C1 主动招呼：模板拼接，零 LLM（D2 起挂在房间首席角色头顶，不再是左下角卡片）
   const [roomGreeting, setRoomGreeting] = useState<string | null>(null);
+  // D3：agent 活动气泡，按房间索引（agent.start/agent.done/text.delta 驱动）
+  const [agentBubbles, setAgentBubbles] = useState<Record<string, SceneBubble>>(
+    {}
+  );
+  // 空场清理的代际号：新一轮 run-settled 使旧定时器失效
+  const runSeqRef = useRef(0);
   // B8：拿不到 WebGL 时降级为文字版，而不是白屏
   const [webglAvailable] = useState(() => isWebGLAvailable());
   const isChatOpenRef = useRef(isChatOpen);
@@ -173,6 +195,89 @@ export default function Jianli() {
     return () => clearTimeout(timer);
   }, [roomGreeting]);
 
+  // D3：ChatModal 转发的 agent 活动 → 对应房间首席角色的气泡（跨房间咨询 = 多房间同时亮气泡）
+  const handleAgentActivity = useCallback((event: AgentSceneEvent) => {
+    if (event.type === "agent-start") {
+      const roomId = roomOfAgent(event.agentId);
+      if (!roomId) return;
+      setAgentBubbles(prev => ({
+        ...prev,
+        [roomId]: {
+          kind: "thinking",
+          speaker: event.displayName,
+          text: "正在思考…",
+        },
+      }));
+    } else if (event.type === "agent-done") {
+      const roomId = roomOfAgent(event.agentId);
+      if (!roomId) return;
+      setAgentBubbles(prev =>
+        prev[roomId]
+          ? {
+              ...prev,
+              [roomId]: { ...prev[roomId], kind: "done", text: "已回应" },
+            }
+          : prev
+      );
+    } else if (event.type === "text-delta") {
+      if (!event.agentId) return;
+      const roomId = roomOfAgent(event.agentId);
+      if (!roomId) return;
+      setAgentBubbles(prev => {
+        const current = prev[roomId];
+        return {
+          ...prev,
+          [roomId]: {
+            kind: "speaking",
+            speaker: current?.speaker,
+            text: clipStreamText(
+              current?.kind === "speaking" ? current.text : "",
+              event.delta
+            ),
+          },
+        };
+      });
+    } else if (event.type === "run-settled") {
+      const seq = ++runSeqRef.current;
+      setTimeout(() => {
+        if (runSeqRef.current === seq) setAgentBubbles({});
+      }, 1600);
+    }
+  }, []);
+
+  // D1：合并三类气泡到「角色 → 气泡」（agent 活动 > 招呼 > 闲聊）
+  const agentBubbleActive = Object.keys(agentBubbles).length > 0;
+  const chatter = useAmbientChatter(
+    activeRoomId,
+    Boolean(roomGreeting) || agentBubbleActive
+  );
+  const bubbleByCharacter = useMemo(
+    () =>
+      mergeSceneBubbles({
+        agentBubbles,
+        greeting: roomGreeting
+          ? { roomId: activeRoomId, text: roomGreeting }
+          : undefined,
+        chatter: chatter ?? undefined,
+      }),
+    [agentBubbles, roomGreeting, activeRoomId, chatter]
+  );
+
+  // 招呼气泡的操作按钮：依赖 activeRoomId（聊聊必须路由到“当前”房间，而非首次渲染时的房间）
+  const greetingActions = useMemo(
+    () => ({
+      onChat: () => {
+        setRoomGreeting(null);
+        handleCurrentRoomChat();
+      },
+      onDismiss: () => {
+        setGreetingEnabled(false);
+        setRoomGreeting(null);
+      },
+    }),
+    [activeRoomId]
+  );
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-200">
       {/* 3D 场景（B8：无 WebGL 时降级为文字版） */}
@@ -183,6 +288,8 @@ export default function Jianli() {
             onRoomSelect={setActiveRoomId}
             onChatRequest={handleChatRequest}
             cameraResetToken={cameraResetToken}
+            bubbleByCharacter={bubbleByCharacter}
+            greetingActions={greetingActions}
           />
         </Suspense>
       ) : (
@@ -195,41 +302,9 @@ export default function Jianli() {
           activeRoomId={activeRoomId}
           visitedRoomIds={visitedRoomIds}
           onRoomSelect={setActiveRoomId}
+          collaboratingRoomIds={Object.keys(agentBubbles)}
         />
 
-        {/* C1 房间招呼（模板拼接，零 LLM） */}
-        {roomGreeting && (
-          <div className="pointer-events-auto absolute bottom-24 left-4 max-w-xs rounded-2xl border border-slate-900/10 bg-slate-50/95 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur-md">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-              {activeRoom.name}
-            </p>
-            <p className="mt-1 text-sm leading-6 text-slate-700">
-              {roomGreeting}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setRoomGreeting(null);
-                  handleCurrentRoomChat();
-                }}
-                className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white hover:bg-slate-800"
-              >
-                聊聊这个房间
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setGreetingEnabled(false);
-                  setRoomGreeting(null);
-                }}
-                className="text-xs text-slate-500 hover:text-slate-800"
-              >
-                不再自动出现
-              </button>
-            </div>
-          </div>
-        )}
         {/* 顶部导航栏 */}
         <header className="pointer-events-auto flex items-center justify-between border-b border-slate-800/10 bg-slate-100/60 px-6 py-4 backdrop-blur-md">
           <div className="flex items-center gap-4">
@@ -489,6 +564,7 @@ export default function Jianli() {
         onClose={() => setIsChatOpen(false)}
         onRoomSwitch={setActiveRoomId}
         initialMessage="你好！"
+        onAgentActivity={handleAgentActivity}
       />
 
       {/* 简历模态框 */}

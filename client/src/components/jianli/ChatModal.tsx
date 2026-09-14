@@ -31,6 +31,8 @@ import {
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { processRoomLinksInDOM } from "./utils/roomLinksDom";
 import { toolLabel } from "./utils/toolLabels";
+import type { AgentSceneEvent } from "@/lib/scene-bubbles";
+import { useRoomScopedCharacterId } from "@/hooks/useRoomScopedCharacterId";
 
 interface ChatMessage {
   id: string;
@@ -50,6 +52,8 @@ interface ChatModalProps {
   onClose: () => void;
   onRoomSwitch?: (roomId: string) => void;
   initialMessage?: string;
+  /** 场景活动转发（D3）：把 RunEvent 投影成 3D 角色气泡驱动事件，页面层消费 */
+  onAgentActivity?: (event: AgentSceneEvent) => void;
 }
 
 // 代理颜色（仅 UI 层使用的主题色）
@@ -127,6 +131,7 @@ export function ChatModal({
   onClose,
   onRoomSwitch,
   initialMessage,
+  onAgentActivity,
 }: ChatModalProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -263,6 +268,14 @@ export function ChatModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // 空间性 characterId 限房：窗口开着换房间后，旧房间的角色定向不再把新消息路由回旧 agent
+  const scopedCharacterId = useRoomScopedCharacterId(roomId, characterId);
+  // 当前正在生成的 agent（agent.start 与 agent.done 之间）：给 text.delta 归因
+  const activeAgentRef = useRef<FezerType | undefined>(undefined);
+  const onAgentActivityRef = useRef(onAgentActivity);
+  useEffect(() => {
+    onAgentActivityRef.current = onAgentActivity;
+  }, [onAgentActivity]);
 
   // 房间链接点击处理
   const handleRoomLinkClick = useCallback(
@@ -459,7 +472,7 @@ export function ChatModal({
     try {
       // 显式定向（用户点击角色或从推荐里选中了 agent）才发 click；
       // 纯房间内打字聊天发 chat，让后端按内容路由，房间只做软偏置
-      const explicitAgentId = selectedAgentId || characterId;
+      const explicitAgentId = selectedAgentId || scopedCharacterId;
       const request = {
         userInput: text,
         characterId: explicitAgentId,
@@ -477,11 +490,18 @@ export function ChatModal({
 
       // 流式优先：工具步骤实时可见；流失败自动降级到非流式
       setLiveStep(null);
+      activeAgentRef.current = undefined;
       const streamed = await sendMessageStream(request, event => {
         if (event.type === "tool.call") {
           setLiveStep(toolLabel(event.toolName));
         } else if (event.type === "agent.start") {
           setLiveStep(`${event.displayName} 正在思考...`);
+          activeAgentRef.current = event.agentId;
+          onAgentActivityRef.current?.({
+            type: "agent-start",
+            agentId: event.agentId,
+            displayName: event.displayName,
+          });
           setCollaborators(prev =>
             prev.some(item => item.agentId === event.agentId)
               ? prev
@@ -495,12 +515,24 @@ export function ChatModal({
                 ]
           );
         } else if (event.type === "agent.done") {
+          if (activeAgentRef.current === event.agentId) {
+            activeAgentRef.current = undefined;
+          }
+          onAgentActivityRef.current?.({
+            type: "agent-done",
+            agentId: event.agentId,
+          });
           setCollaborators(prev =>
             prev.map(item =>
               item.agentId === event.agentId ? { ...item, done: true } : item
             )
           );
         } else if (event.type === "text.delta") {
+          onAgentActivityRef.current?.({
+            type: "text-delta",
+            agentId: activeAgentRef.current,
+            delta: event.delta,
+          });
           setStreamingText(prev => prev + event.delta);
         }
       });
@@ -524,6 +556,10 @@ export function ChatModal({
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+    } finally {
+      // 无论成功/失败/取消，都通知场景层清场（带短暂停留由页面层控制）
+      activeAgentRef.current = undefined;
+      onAgentActivityRef.current?.({ type: "run-settled" });
     }
   };
 
@@ -546,7 +582,7 @@ export function ChatModal({
   const currentAgentId =
     currentResponse?.speakingAgentId ||
     selectedAgentId ||
-    resolveAgentFromContext(characterId, roomId);
+    resolveAgentFromContext(scopedCharacterId, roomId);
   const currentAgentColor = currentAgentId
     ? AGENT_COLORS[currentAgentId]
     : "#f97316";
