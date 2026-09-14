@@ -128,6 +128,8 @@ export function ChatModal({
   const [chatMode, setChatMode] = useState<ChatMode>("floating");
   // 流式思考步骤：由 tool.call / agent.start 事件驱动，ThinkingIndicator 实时展示
   const [liveStep, setLiveStep] = useState<string | null>(null);
+  // 流式回答的逐字渲染：text.delta 事件累积
+  const [streamingText, setStreamingText] = useState("");
 
   // 拖拽状态
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -287,6 +289,7 @@ export function ChatModal({
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
+    setStreamingText("");
 
     try {
       // 显式定向（用户点击角色或从推荐里选中了 agent）才发 click；
@@ -310,14 +313,18 @@ export function ChatModal({
           setLiveStep(toolLabel(event.toolName));
         } else if (event.type === "agent.start") {
           setLiveStep(`${event.displayName} 正在思考...`);
+        } else if (event.type === "text.delta") {
+          setStreamingText(prev => prev + event.delta);
         }
       });
       if (!streamed) {
         await sendMessage(request);
       }
       setLiveStep(null);
+      setStreamingText("");
     } catch (error) {
       setLiveStep(null);
+      setStreamingText("");
       if ((error as Error).name === "AbortError") {
         // 用户取消：静默，不加错误气泡
         return;
@@ -486,7 +493,17 @@ export function ChatModal({
               </div>
             </div>
           ))}
-          {isLoading && (
+          {isLoading && streamingText && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] px-4 py-2 rounded-2xl bg-white text-gray-800 rounded-bl-md shadow-sm">
+                <div className="max-w-none font-chill-huofangsong whitespace-pre-wrap text-sm">
+                  {streamingText}
+                  <span className="animate-pulse">▍</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {isLoading && !streamingText && (
             <ThinkingIndicator
               agentName={currentAgentName}
               agentColor={currentAgentColor}
