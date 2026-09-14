@@ -9,11 +9,6 @@ import type { Request, Response } from "express";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import { isFezerType } from "@fezer/shared/characters";
 import { runAgent } from "../agents/harness/run";
-import {
-  sendE2eAgentResponse,
-  shouldUseE2eAgentMock,
-  toE2eFezerType,
-} from "./e2e-mock";
 import { sendAgentRouteError } from "./errors";
 
 /**
@@ -32,16 +27,6 @@ export async function characterHandler(
   res: Response
 ): Promise<void> {
   try {
-    if (shouldUseE2eAgentMock()) {
-      const { characterId = "core" } = req.body as {
-        characterId?: string;
-      };
-      sendE2eAgentResponse(res, {
-        highlightCharacterId: toE2eFezerType(characterId),
-      });
-      return;
-    }
-
     const { characterId, userInput = "你好！" } = req.body;
 
     if (!characterId) {

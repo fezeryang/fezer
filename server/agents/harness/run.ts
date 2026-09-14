@@ -25,6 +25,10 @@ import {
 import { RunError, toRunError } from "./errors";
 import { runWithRunControl } from "../../_core/run-control";
 import {
+  buildE2eMockRunResult,
+  shouldUseE2eAgentMock,
+} from "./e2e-mock";
+import {
   emitRunEvent,
   runWithEventSink,
   type RunEventSink,
@@ -173,6 +177,16 @@ function createStopGuard(
  */
 export async function runAgent(request: RunRequest): Promise<RunResult> {
   const runId = randomUUID();
+
+  // E2E mock：在入口处接管，路由/SSE/任何调用方都自动获得替身
+  if (shouldUseE2eAgentMock()) {
+    const result = buildE2eMockRunResult(request, runId);
+    for (const event of result.events) {
+      request.onEvent?.(event);
+    }
+    return result;
+  }
+
   const threadId = request.threadId ?? runId;
   const events: RunEvent[] = [];
   const sink: RunEventSink = event => {

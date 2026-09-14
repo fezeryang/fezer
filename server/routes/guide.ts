@@ -8,7 +8,6 @@
 import type { Request, Response } from "express";
 import type { AgentResponse } from "@fezer/shared/schemas/agent";
 import { runAgent } from "../agents/harness/run";
-import { sendE2eAgentResponse, shouldUseE2eAgentMock } from "./e2e-mock";
 import { sendAgentRouteError } from "./errors";
 
 /**
@@ -24,14 +23,6 @@ import { sendAgentRouteError } from "./errors";
  */
 export async function guideHandler(req: Request, res: Response): Promise<void> {
   try {
-    if (shouldUseE2eAgentMock()) {
-      sendE2eAgentResponse(res, {
-        panel: "guide",
-        text: "E2E mock guide response",
-      });
-      return;
-    }
-
     const { userInput = "请为我介绍一下这里" } = req.body;
 
     // interactionType=guide 让编排层硬绑定 core：导览是显式定向交互

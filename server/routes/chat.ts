@@ -15,11 +15,6 @@ import type {
   ConversationTurn,
 } from "@fezer/shared/schemas/agent";
 import { runAgent } from "../agents/harness/run";
-import {
-  sendE2eAgentResponse,
-  shouldUseE2eAgentMock,
-  toE2eFezerType,
-} from "./e2e-mock";
 import { sendAgentRouteError } from "./errors";
 
 /** 会话历史的信任边界：最多 8 轮、每轮 4000 字符 */
@@ -63,14 +58,6 @@ function sanitizeConversationHistory(history: unknown): ConversationTurn[] {
  */
 export async function chatHandler(req: Request, res: Response): Promise<void> {
   try {
-    if (shouldUseE2eAgentMock()) {
-      const { characterId } = req.body as FrontendAgentRequest;
-      sendE2eAgentResponse(res, {
-        highlightCharacterId: toE2eFezerType(characterId),
-      });
-      return;
-    }
-
     const {
       userInput,
       roomId,

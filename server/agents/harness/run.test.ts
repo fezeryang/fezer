@@ -203,4 +203,32 @@ describe("runAgent", () => {
     expect(events).toEqual(result.events);
     expect(events).toHaveLength(2);
   });
+
+  it("E2E_MOCK_AGENT_API=true 时返回完整形状的 mock 结果，不触编排", async () => {
+    process.env.E2E_MOCK_AGENT_API = "true";
+    const { events, onEvent } = captureEvents();
+
+    try {
+      const result = await runAgent({
+        input: "你好",
+        characterId: "builder",
+        onEvent,
+      });
+
+      expect(result.answer).toBe("E2E mock agent response");
+      expect(result.speakingAgent).toBe("builder");
+      expect(result.uiAction).toMatchObject({
+        panel: "character",
+        highlightCharacterId: "builder",
+      });
+      expect(invoke).not.toHaveBeenCalled();
+
+      // 流式消费方在 e2e 下也拿到合法的终止事件
+      expect(events).toEqual(result.events);
+      expect(events[0].type).toBe("run.started");
+      expect(events.at(-1)?.type).toBe("run.finished");
+    } finally {
+      delete process.env.E2E_MOCK_AGENT_API;
+    }
+  });
 });
