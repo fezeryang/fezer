@@ -65,6 +65,7 @@ export function buildE2eMockRunResult(
     {
       type: "run.finished",
       runId,
+      speakingAgentId: speakingAgent,
       outcome: { type: "success" },
       usage: {
         promptTokens: 0,

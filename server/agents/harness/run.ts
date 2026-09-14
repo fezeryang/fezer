@@ -24,10 +24,7 @@ import {
 } from "../../_core/observability/langsmith";
 import { RunError, toRunError } from "./errors";
 import { runWithRunControl } from "../../_core/run-control";
-import {
-  buildE2eMockRunResult,
-  shouldUseE2eAgentMock,
-} from "./e2e-mock";
+import { buildE2eMockRunResult, shouldUseE2eAgentMock } from "./e2e-mock";
 import {
   emitRunEvent,
   runWithEventSink,
@@ -270,6 +267,7 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
         emitRunEvent({
           type: "run.finished",
           runId,
+          speakingAgentId: speakingAgent,
           outcome,
           usage,
           answer: result.answer,

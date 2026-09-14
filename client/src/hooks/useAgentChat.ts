@@ -3,11 +3,13 @@
  * 封装与后端 Agent API 的交互
  */
 
-import { useState, useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import type {
   FrontendAgentRequest,
   AgentResponse,
 } from "@fezer/shared/schemas/agent";
+import type { RunEvent } from "@fezer/shared/schemas/run";
+import { consumeSseResponse } from "@/lib/sse";
 
 // API 基础 URL，开发环境使用本地，生产环境由 VITE_API_URL 指向后端
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -45,6 +47,17 @@ export interface UseAgentChatReturn {
     characterId: string,
     userInput?: string
   ) => Promise<AgentResponse>;
+  /**
+   * 流式发送：以 SSE 消费 RunEvent（工具进度实时到达）。
+   * 流失败（非取消）时返回 null，调用方降级到 sendMessage；
+   * 用户取消时抛 AbortError，调用方应静默。
+   */
+  sendMessageStream: (
+    request: FrontendAgentRequest,
+    onEvent: (event: RunEvent) => void
+  ) => Promise<AgentResponse | null>;
+  /** 中止当前在飞的请求 */
+  cancelInFlight: () => void;
   isLoading: boolean;
   error: Error | null;
   thinkingState?: ThinkingState;
@@ -60,6 +73,79 @@ export function useAgentChat(
   const [error, setError] = useState<Error | null>(null);
   const [thinkingState, setThinkingState] = useState<ThinkingState | undefined>(
     undefined
+  );
+  const inFlightControllerRef = useRef<AbortController | null>(null);
+
+  const cancelInFlight = useCallback(() => {
+    inFlightControllerRef.current?.abort();
+  }, []);
+
+  const sendMessageStream = useCallback(
+    async (
+      request: FrontendAgentRequest,
+      onEvent: (event: RunEvent) => void
+    ): Promise<AgentResponse | null> => {
+      setIsLoading(true);
+      setError(null);
+      setThinkingState({ step: "正在建立连接..." });
+
+      const controller = new AbortController();
+      inFlightControllerRef.current = controller;
+
+      try {
+        const response = await fetch(`${API_BASE}/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...request, stream: true }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          return null;
+        }
+
+        let finalResponse: AgentResponse | null = null;
+
+        const terminated = await consumeSseResponse(response, event => {
+          onEvent(event);
+
+          if (event.type === "run.finished") {
+            finalResponse = {
+              text: event.answer,
+              panel: event.uiAction?.panel ?? "character",
+              highlightCharacterId: event.uiAction?.highlightCharacterId,
+              focusRoomId: event.uiAction?.focusRoomId,
+              suggestedNextCharacterIds:
+                event.uiAction?.suggestedNextCharacterIds,
+              suggestedQuestions: event.uiAction?.suggestedQuestions,
+              speakingAgentId: event.speakingAgentId ?? "core",
+            };
+          }
+
+          if (event.type === "run.error") {
+            setError(new Error(event.message));
+          }
+        });
+
+        if (!terminated || !finalResponse) {
+          return null;
+        }
+
+        options?.onSuccess?.(finalResponse);
+        return finalResponse;
+      } catch (error) {
+        if (controller.signal.aborted) {
+          throw new DOMException("本次请求已取消", "AbortError");
+        }
+        // 流失败但非取消：给调用方降级到非流式的机会
+        return null;
+      } finally {
+        inFlightControllerRef.current = null;
+        setIsLoading(false);
+        setThinkingState(undefined);
+      }
+    },
+    [options]
   );
 
   const sendMessage = useCallback(
@@ -178,6 +264,8 @@ export function useAgentChat(
     sendMessage,
     sendGuide,
     sendCharacterMessage,
+    sendMessageStream,
+    cancelInFlight,
     isLoading,
     error,
     thinkingState,

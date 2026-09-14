@@ -20,6 +20,8 @@ import {
 } from "@fezer/shared/characters";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { processRoomLinksInDOM } from "./utils/roomLinksDom";
+import { toolLabel } from "./utils/toolLabels";
+import type { RunEvent } from "@fezer/shared/schemas/run";
 
 interface ChatMessage {
   id: string;
@@ -124,6 +126,8 @@ export function ChatModal({
     undefined
   );
   const [chatMode, setChatMode] = useState<ChatMode>("floating");
+  // 流式思考步骤：由 tool.call / agent.start 事件驱动，ThinkingIndicator 实时展示
+  const [liveStep, setLiveStep] = useState<string | null>(null);
 
   // 拖拽状态
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -144,7 +148,7 @@ export function ChatModal({
     [onRoomSwitch, onClose]
   );
 
-  const { sendMessage, isLoading, thinkingState } = useAgentChat({
+  const { sendMessage, sendMessageStream, cancelInFlight, isLoading, thinkingState } = useAgentChat({
     onSuccess: response => {
       // 弹窗已关闭（或关闭后重开、会话已被重置）时，丢弃属于旧会话的迟到响应
       if (!isOpenRef.current) return;
@@ -288,15 +292,36 @@ export function ChatModal({
       // 显式定向（用户点击角色或从推荐里选中了 agent）才发 click；
       // 纯房间内打字聊天发 chat，让后端按内容路由，房间只做软偏置
       const explicitAgentId = selectedAgentId || characterId;
-      await sendMessage({
+      const request = {
         userInput: text,
         characterId: explicitAgentId,
         roomId,
-        interactionType: explicitAgentId ? "click" : "chat",
-        grounding: "public_profile",
+        interactionType: (explicitAgentId ? "click" : "chat") as
+          | "click"
+          | "chat",
+        grounding: "public_profile" as const,
         conversationHistory,
+      };
+
+      // 流式优先：工具步骤实时可见；流失败自动降级到非流式
+      setLiveStep(null);
+      const streamed = await sendMessageStream(request, event => {
+        if (event.type === "tool.call") {
+          setLiveStep(toolLabel(event.toolName));
+        } else if (event.type === "agent.start") {
+          setLiveStep(`${event.displayName} 正在思考...`);
+        }
       });
+      if (!streamed) {
+        await sendMessage(request);
+      }
+      setLiveStep(null);
     } catch (error) {
+      setLiveStep(null);
+      if ((error as Error).name === "AbortError") {
+        // 用户取消：静默，不加错误气泡
+        return;
+      }
       console.error("Chat error:", error);
       const assistantMessage: ChatMessage = {
         id: createMessageId("assistant"),
@@ -465,7 +490,7 @@ export function ChatModal({
             <ThinkingIndicator
               agentName={currentAgentName}
               agentColor={currentAgentColor}
-              thinkingStep={thinkingState?.step}
+              thinkingStep={liveStep ?? thinkingState?.step}
             />
           )}
           <div ref={messagesEndRef} />
@@ -527,6 +552,14 @@ export function ChatModal({
               className="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
             />
+            {isLoading && (
+              <button
+                onClick={cancelInFlight}
+                className="px-4 py-2 border border-gray-300 text-gray-600 rounded-full hover:bg-gray-100 transition shrink-0"
+              >
+                取消
+              </button>
+            )}
             <button
               onClick={() => handleSend()}
               disabled={isLoading || !inputValue.trim()}

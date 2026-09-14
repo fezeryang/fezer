@@ -77,6 +77,8 @@ export type RunEvent =
   | {
       type: "run.finished";
       runId: string;
+      /** 实际生成回答的 agent（多专家运行下为综合者）；客户端做消息归因 */
+      speakingAgentId?: FezerType;
       outcome: RunOutcome;
       usage: RunUsage;
       answer: string;
