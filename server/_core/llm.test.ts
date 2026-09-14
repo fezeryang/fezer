@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { StreamChunk } from "./llm";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -15,6 +16,32 @@ function createTextResponse(body: string, status: number): Response {
     headers: { "content-type": "text/plain" },
     statusText: `status-${status}`,
   });
+}
+
+function sseData(payload: unknown): string {
+  return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
+function createSseStreamResponse(chunks: string[], status = 200): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, { status });
+}
+
+function setProviderEnv(): void {
+  process.env.AI_PRIMARY_PROVIDER = "deepseek";
+  process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+  process.env.AI_FALLBACK_PROVIDER = "forge";
+  process.env.DEEPSEEK_API_KEY = "deepseek-key";
+  process.env.DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
+  process.env.BUILT_IN_FORGE_API_KEY = "forge-key";
 }
 
 describe("invokeLLM provider routing", () => {
@@ -612,6 +639,176 @@ describe("invokeLLM provider routing", () => {
       )
     ).rejects.toMatchObject({ name: "AbortError" });
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("invokeLLMStream", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.restoreAllMocks();
+    process.env = { ...ORIGINAL_ENV };
+    delete process.env.LANGSMITH_TRACING;
+    delete process.env.LANGSMITH_API_KEY;
+    setProviderEnv();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    process.env = { ...ORIGINAL_ENV };
+  });
+
+  it("解析文本与工具调用增量，payload 带 stream: true", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      createSseStreamResponse([
+        sseData({
+          choices: [
+            { index: 0, delta: { content: "你" }, finish_reason: null },
+          ],
+        }),
+        sseData({
+          choices: [
+            { index: 0, delta: { content: "好" }, finish_reason: null },
+          ],
+        }),
+        sseData({
+          choices: [
+            {
+              index: 0,
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: "tc1",
+                    function: { name: "get_profile", arguments: '{"a":' },
+                  },
+                ],
+              },
+              finish_reason: null,
+            },
+          ],
+        }),
+        sseData({
+          choices: [
+            {
+              index: 0,
+              delta: {
+                tool_calls: [{ index: 0, function: { arguments: "1}" } }],
+              },
+              finish_reason: "tool_calls",
+            },
+          ],
+        }),
+        "data: [DONE]\n\n",
+      ])
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLMStream } = await import("./llm");
+
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of invokeLLMStream({
+      messages: [{ role: "user", content: "hi" }],
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks.map(c => c.text).join("")).toBe("你好");
+    expect(chunks.at(-1)?.finishReason).toBe("tool_calls");
+    expect(chunks.at(-1)?.toolCallDeltas).toMatchObject([
+      { index: 0, argumentsDelta: "1}" },
+    ]);
+
+    const posted = JSON.parse(
+      (fetchMock.mock.calls[0][1] as { body: string }).body
+    );
+    expect(posted.stream).toBe(true);
+    expect(posted.messages[0].role).toBe("user");
+  });
+
+  it("首 chunk 前失败会换 provider", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createTextResponse("boom", 500))
+      .mockResolvedValueOnce(
+        createSseStreamResponse([
+          sseData({
+            choices: [
+              { index: 0, delta: { content: "ok" }, finish_reason: "stop" },
+            ],
+          }),
+          "data: [DONE]\n\n",
+        ])
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLMStream } = await import("./llm");
+
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of invokeLLMStream({
+      messages: [{ role: "user", content: "hi" }],
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks.map(c => c.text).join("")).toBe("ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("流中途失败不换 provider（首 chunk 后错误直接上抛）", async () => {
+    const encoder = new TextEncoder();
+    const failingStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            sseData({
+              choices: [
+                { index: 0, delta: { content: "首" }, finish_reason: null },
+              ],
+            })
+          )
+        );
+      },
+      // 确定性的「中途断流」：首个 chunk 被读完、队列见底时，下一次
+      // 读取触发 pull，在这里 error 才让第二次 read 拒绝。
+      // （在 start() 里同步 error 会直接抛出构造函数；queueMicrotask
+      // 也会赶在第一次 read 之前落地 —— 两者都会变成「首 chunk 前失败」）
+      pull(controller) {
+        controller.error(new TypeError("connection reset"));
+      },
+    });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(failingStream, { status: 200 }))
+      .mockResolvedValueOnce(
+        createSseStreamResponse([
+          sseData({
+            choices: [
+              {
+                index: 0,
+                delta: { content: "不应到达" },
+                finish_reason: "stop",
+              },
+            ],
+          }),
+          "data: [DONE]\n\n",
+        ])
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLMStream } = await import("./llm");
+
+    const collected: string[] = [];
+    await expect(async () => {
+      for await (const chunk of invokeLLMStream({
+        messages: [{ role: "user", content: "hi" }],
+      })) {
+        collected.push(chunk.text);
+      }
+    }).rejects.toThrow();
+
+    expect(collected.join("")).toBe("首");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

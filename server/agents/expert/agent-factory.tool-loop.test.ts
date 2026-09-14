@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunEvent } from "@fezer/shared/schemas/run";
 
 const invokeLLMMock = vi.fn();
+const invokeLLMStreamMock = vi.fn();
 const isLLMProviderConfigurationErrorMock = vi.fn();
 const getLLMToolsByNamesMock = vi.fn();
 const getToolExecutionRegistryMock = vi.fn();
@@ -9,6 +10,7 @@ const MAX_TOOL_CALL_LOOPS = 3;
 
 vi.mock("../../_core/llm", () => ({
   invokeLLM: invokeLLMMock,
+  invokeLLMStream: invokeLLMStreamMock,
   isLLMProviderConfigurationError: isLLMProviderConfigurationErrorMock,
 }));
 
@@ -760,6 +762,7 @@ describe("expert agent run events", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     invokeLLMMock.mockReset();
+    invokeLLMStreamMock.mockReset();
     process.env.LANGSMITH_TRACING = "false";
     delete process.env.LANGSMITH_API_KEY;
 
@@ -921,5 +924,39 @@ describe("expert agent run events", () => {
 
     expect(result.answer).toBe("final answer");
     expect(invokeLLMMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("streamText 开启时以 text.delta 事件流式输出，不调非流式通道", async () => {
+    getLLMToolsByNamesMock.mockReturnValue([]);
+    getToolExecutionRegistryMock.mockReturnValue(new Map());
+    invokeLLMStreamMock.mockImplementation(async function* () {
+      yield { text: "你好", finishReason: null, toolCallDeltas: [] };
+      yield { text: "，世界", finishReason: "stop", toolCallDeltas: [] };
+    });
+
+    const { invokeAgent } = await import("./agent-factory");
+    const { runWithRunControl } = await import("../../_core/run-control");
+    const { runWithEventSink } = await import("../../_core/run-events");
+    const events: RunEvent[] = [];
+
+    const result = await runWithRunControl({ streamText: true }, () =>
+      runWithEventSink(event => events.push(event), () =>
+        invokeAgent("core", "你好")
+      )
+    );
+
+    expect(result.answer).toBe("你好，世界");
+    expect(invokeLLMMock).not.toHaveBeenCalled();
+
+    const deltas = events.filter(event => event.type === "text.delta");
+    expect(
+      deltas.map(delta => (delta as { delta: string }).delta)
+    ).toEqual(["你好", "，世界"]);
+
+    // 同一条 assistant 消息的所有增量共享 messageId
+    const ids = new Set(
+      deltas.map(delta => (delta as { messageId: string }).messageId)
+    );
+    expect(ids.size).toBe(1);
   });
 });

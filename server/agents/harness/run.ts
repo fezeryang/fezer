@@ -68,6 +68,8 @@ export interface RunRequest {
    * 忽略它，直接读 RunResult.events。
    */
   onEvent?: RunEventSink;
+  /** 以流式生成回答（LLM 增量以 text.delta 事件到达）；缺省一次性生成 */
+  stream?: boolean;
 }
 
 export interface RunResult {
@@ -223,6 +225,7 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
             {
               signal: runController.signal,
               maxToolLoops: request.budget?.maxTurns,
+              streamText: request.stream === true,
             },
             () =>
               traceSpan("harness.runAgent", () =>

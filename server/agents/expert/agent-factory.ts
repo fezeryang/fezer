@@ -7,8 +7,11 @@ import { setAgentInvoker, runWithAgentToolContext } from "../tools/agent.tool";
 import type { ConversationTurn } from "@fezer/shared/schemas/agent";
 import {
   invokeLLM,
+  invokeLLMStream,
   isLLMProviderConfigurationError,
+  type InvokeResult,
   type Message,
+  type Tool as LLMTool,
 } from "../../_core/llm";
 import {
   AGENT_DISPLAY_NAMES,
@@ -29,6 +32,7 @@ import {
   assertRunNotAborted,
   getRunControl,
 } from "../../_core/run-control";
+import { randomUUID } from "node:crypto";
 
 /**
  * Agent 调用选项
@@ -483,6 +487,83 @@ function getAgentRoleDescription(agentId: AgentId): string {
  * 简化的 Agent 实现
  * 由于当前环境限制，使用直接 LLM 调用而非完整的 LangGraph Agent
  */
+/**
+ * 流式调用并组装成与非流式一致的结果；文本增量以 text.delta 事件实时发出。
+ *
+ * 工具调用参数在流式下按 index 增量拼接，与 OpenAI 兼容协议一致。
+ */
+async function streamInvokeLLM(
+  messages: Message[],
+  llmTools: LLMTool[]
+): Promise<InvokeResult> {
+  let content = "";
+  const toolCalls = new Map<
+    number,
+    { id: string; name: string; args: string }
+  >();
+  let finishReason: string | null = null;
+  let usage: InvokeResult["usage"];
+
+  const messageId = `assistant-stream-${randomUUID()}`;
+
+  for await (const chunk of invokeLLMStream({
+    messages,
+    tools: llmTools.length > 0 ? llmTools : undefined,
+    tool_choice: llmTools.length > 0 ? "auto" : undefined,
+  })) {
+    if (chunk.text) {
+      content += chunk.text;
+      emitRunEvent({ type: "text.delta", messageId, delta: chunk.text });
+    }
+
+    for (const delta of chunk.toolCallDeltas) {
+      const current = toolCalls.get(delta.index) ?? {
+        id: "",
+        name: "",
+        args: "",
+      };
+      if (delta.id) current.id = delta.id;
+      if (delta.functionName) current.name = delta.functionName;
+      current.args += delta.argumentsDelta;
+      toolCalls.set(delta.index, current);
+    }
+
+    if (chunk.finishReason) finishReason = chunk.finishReason;
+    if (chunk.usage) usage = chunk.usage;
+  }
+
+  return {
+    id: "",
+    created: 0,
+    model: "",
+    usage,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content,
+          ...(toolCalls.size > 0
+            ? {
+                tool_calls: [...toolCalls.entries()]
+                  .sort(([a], [b]) => a - b)
+                  .map(([, toolCall]) => ({
+                    id: toolCall.id,
+                    type: "function" as const,
+                    function: {
+                      name: toolCall.name,
+                      arguments: toolCall.args,
+                    },
+                  })),
+              }
+            : {}),
+        },
+        finish_reason: finishReason,
+      },
+    ],
+  };
+}
+
 async function invokeAgentInternal(
   agentId: AgentId,
   input: string,
@@ -540,14 +621,19 @@ async function invokeAgentInternal(
         // 预算里的 maxTurns 覆盖默认循环上限；取消信号在每轮开始前检查
         const maxToolLoops =
           getRunControl().maxToolLoops ?? MAX_TOOL_CALL_LOOPS;
+        // 流式开关：harness 按调用方请求设置（SSE 路由 stream: true）
+        const streamText = getRunControl().streamText === true;
 
         while (loopCount < maxToolLoops) {
           assertRunNotAborted();
-          const result = await invokeLLM({
-            messages,
-            tools: llmTools.length > 0 ? llmTools : undefined,
-            tool_choice: llmTools.length > 0 ? "auto" : undefined,
-          });
+
+          const result = streamText
+            ? await streamInvokeLLM(messages, llmTools)
+            : await invokeLLM({
+                messages,
+                tools: llmTools.length > 0 ? llmTools : undefined,
+                tool_choice: llmTools.length > 0 ? "auto" : undefined,
+              });
 
           const assistantMessage = result.choices[0]?.message;
           if (!assistantMessage) {

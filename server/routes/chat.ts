@@ -106,6 +106,7 @@ async function chatStreamHandler(req: Request, res: Response): Promise<void> {
       ),
       caller: { kind: "route", id: "/api/chat" },
       signal: controller.signal,
+      stream: true,
       onEvent: event => writeSseEvent(res, event),
     });
   } catch (error) {

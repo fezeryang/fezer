@@ -508,13 +508,19 @@ const normalizeResponseFormat = ({
   };
 };
 
-export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+/**
+ * 构建基础 payload（模型名按 config 注入）。
+ * invokeLLM 与 invokeLLMStream 共用，保证流式与非流式请求体一致。
+ */
+function buildBasePayload(
+  params: InvokeParams,
+  config: ProviderRuntimeConfig
+): { payload: Record<string, unknown>; hasToolCallsInRequest: boolean } {
   const {
     messages,
     tools,
     toolChoice,
     tool_choice,
-    model,
     maxTokens,
     max_tokens,
     outputSchema,
@@ -523,18 +529,15 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
-  const primaryConfig = getPrimaryConfig(model);
-  const fallbackConfig = getFallbackConfig();
-  assertProviderApiKey(primaryConfig);
-
-  const payload: Record<string, unknown> = {
-    model: primaryConfig.model,
-    messages: messages.map(normalizeMessage),
-  };
   const hasToolCallsInRequest = messages.some(
     msg =>
       msg.role === "assistant" && !!msg.tool_calls && msg.tool_calls.length > 0
   );
+
+  const payload: Record<string, unknown> = {
+    model: config.model,
+    messages: messages.map(normalizeMessage),
+  };
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
@@ -550,11 +553,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   // 根据提供商设置合适的 max_tokens 默认值
   // DeepSeek 限制为 8192，Forge 支持更大值
-  const defaultMaxTokens = primaryConfig.provider === "deepseek" ? 4096 : 32768;
+  const defaultMaxTokens = config.provider === "deepseek" ? 4096 : 32768;
   payload.max_tokens =
     maxTokens || max_tokens || ENV.aiMaxTokens || defaultMaxTokens;
 
-  if (primaryConfig.provider === "forge") {
+  if (config.provider === "forge") {
     payload.thinking = {
       budget_tokens: 128,
     };
@@ -571,6 +574,48 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
+  return { payload, hasToolCallsInRequest };
+}
+
+/** 按 provider 施加差异调整（deepseek 删 tools/tool_choice、json_schema 回退等） */
+function applyProviderAdjustments(
+  payload: Record<string, unknown>,
+  config: ProviderRuntimeConfig
+): void {
+  if (config.provider === "forge") {
+    payload.thinking = {
+      budget_tokens: 128,
+    };
+  } else {
+    delete payload.thinking;
+    delete payload.tools;
+    delete payload.tool_choice;
+    if (typeof ENV.deepseekChatTemplateThinking === "boolean") {
+      payload.chat_template_kwargs = {
+        thinking: ENV.deepseekChatTemplateThinking,
+      };
+    }
+    // DeepSeek 目前不支持 json_schema 格式，回退到 text
+    if (config.provider === "deepseek" && payload.response_format) {
+      const format = payload.response_format as { type: string };
+      if (format.type === "json_schema") {
+        // 移除不支持的 json_schema 格式
+        delete payload.response_format;
+      }
+    }
+  }
+}
+
+export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  const primaryConfig = getPrimaryConfig(params.model);
+  const fallbackConfig = getFallbackConfig();
+  assertProviderApiKey(primaryConfig);
+
+  const { payload, hasToolCallsInRequest } = buildBasePayload(
+    params,
+    primaryConfig
+  );
+
   const callProvider = async (
     config: ProviderRuntimeConfig,
     attemptedFallback: boolean
@@ -581,28 +626,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       model: config.model,
     };
 
-    if (config.provider === "forge") {
-      providerPayload.thinking = {
-        budget_tokens: 128,
-      };
-    } else {
-      delete providerPayload.thinking;
-      delete providerPayload.tools;
-      delete providerPayload.tool_choice;
-      if (typeof ENV.deepseekChatTemplateThinking === "boolean") {
-        providerPayload.chat_template_kwargs = {
-          thinking: ENV.deepseekChatTemplateThinking,
-        };
-      }
-      // DeepSeek 目前不支持 json_schema 格式，回退到 text
-      if (config.provider === "deepseek" && providerPayload.response_format) {
-        const format = providerPayload.response_format as { type: string };
-        if (format.type === "json_schema") {
-          // 移除不支持的 json_schema 格式
-          delete providerPayload.response_format;
-        }
-      }
-    }
+    applyProviderAdjustments(providerPayload, config);
 
     return traceSpan(
       "llm.chat.completions",
@@ -695,4 +719,207 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       return await callProvider(fallbackConfig, true);
     }
   });
+}
+
+/** 流式增量的单次产出 */
+export interface StreamChunk {
+  /** 增量文本（delta.content） */
+  text: string;
+  finishReason: string | null;
+  toolCallDeltas: Array<{
+    index: number;
+    id?: string;
+    functionName?: string;
+    argumentsDelta: string;
+  }>;
+  usage?: InvokeResult["usage"];
+}
+
+/**
+ * 流式 LLM 调用（OpenAI 兼容 SSE）。
+ *
+ * 与 invokeLLM 共用 payload 构建；故障转移只在首 chunk 前生效 ——
+ * 一旦开始产出，错误直接上抛（参考.md 2.1）。
+ *
+ * ponytail: 暂不接 LangSmith span（traceable 面向返回 Promise 的函数，
+ * 流式观测待 A6 计量时统一处理）。
+ */
+export async function* invokeLLMStream(
+  params: InvokeParams
+): AsyncGenerator<StreamChunk> {
+  const primaryConfig = getPrimaryConfig(params.model);
+  const fallbackConfig = getFallbackConfig();
+  assertProviderApiKey(primaryConfig);
+
+  const { payload } = buildBasePayload(params, primaryConfig);
+
+  const streamProvider = async function* (
+    config: ProviderRuntimeConfig
+  ): AsyncGenerator<StreamChunk> {
+    assertProviderApiKey(config);
+    const providerPayload: Record<string, unknown> = {
+      ...payload,
+      model: config.model,
+      stream: true,
+    };
+    applyProviderAdjustments(providerPayload, config);
+
+    // 协议白名单：provider 端点来自 ENV 配置，但保持 fail-closed ——
+    // 若未来端点可被请求输入影响，这里直接拒绝非法 URL 与非 http(s) 协议
+    let endpoint: URL;
+    try {
+      endpoint = new URL(config.apiUrl);
+    } catch {
+      throw new Error(`[${config.provider}] 非法的 API 端点: ${config.apiUrl}`);
+    }
+    if (endpoint.protocol !== "https:" && endpoint.protocol !== "http:") {
+      throw new Error(
+        `[${config.provider}] 非法的 API 端点协议: ${endpoint.protocol}`
+      );
+    }
+
+    const response = await fetch(config.apiUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify(providerPayload),
+      signal: mergeAbortSignals(
+        AbortSignal.timeout(
+          ENV.aiRequestTimeoutMs || DEFAULT_LLM_REQUEST_TIMEOUT_MS
+        ),
+        getRunControl().signal
+      ),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new LLMHttpError(
+        config.provider,
+        response.status,
+        response.statusText,
+        errorText
+      );
+    }
+
+    if (!response.body) {
+      throw new Error(`[${config.provider}] 流式响应缺少 body`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          boundary = buffer.indexOf("\n\n");
+
+          const dataLine = frame
+            .split("\n")
+            .find(line => line.startsWith("data: "));
+          if (!dataLine) {
+            continue;
+          }
+
+          const raw = dataLine.slice("data: ".length);
+          if (raw.trim() === "[DONE]") {
+            return;
+          }
+
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            continue;
+          }
+
+          const chunk = parsed as {
+            choices?: Array<{
+              delta?: {
+                content?: unknown;
+                tool_calls?: Array<{
+                  index?: unknown;
+                  id?: unknown;
+                  function?: { name?: unknown; arguments?: unknown };
+                }>;
+              };
+              finish_reason?: unknown;
+            }>;
+            usage?: InvokeResult["usage"];
+          };
+
+          const choice = chunk.choices?.[0];
+          if (!choice) {
+            continue;
+          }
+
+          yield {
+            text:
+              typeof choice.delta?.content === "string"
+                ? choice.delta.content
+                : "",
+            finishReason:
+              typeof choice.finish_reason === "string"
+                ? choice.finish_reason
+                : null,
+            toolCallDeltas: (choice.delta?.tool_calls ?? []).map(tc => ({
+              index: typeof tc.index === "number" ? tc.index : 0,
+              ...(typeof tc.id === "string" ? { id: tc.id } : {}),
+              ...(typeof tc.function?.name === "string"
+                ? { functionName: tc.function.name }
+                : {}),
+              argumentsDelta:
+                typeof tc.function?.arguments === "string"
+                  ? tc.function.arguments
+                  : "",
+            })),
+            ...(chunk.usage ? { usage: chunk.usage } : {}),
+          };
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  };
+
+  // 故障转移只在首 chunk 前生效：一旦开始产出，错误直接上抛
+  let started = false;
+  let iterator = streamProvider(primaryConfig);
+
+  while (true) {
+    try {
+      const next = await iterator.next();
+      if (next.done) {
+        return;
+      }
+      started = true;
+      yield next.value;
+    } catch (error) {
+      if (
+        started ||
+        !shouldFallback(error) ||
+        isDuplicateProviderConfig(primaryConfig, fallbackConfig)
+      ) {
+        throw error;
+      }
+
+      assertProviderApiKey(fallbackConfig);
+      console.warn(
+        `[invokeLLMStream] fallback to ${fallbackConfig.provider}:${fallbackConfig.model} before first chunk`
+      );
+      iterator = streamProvider(fallbackConfig);
+    }
+  }
 }
