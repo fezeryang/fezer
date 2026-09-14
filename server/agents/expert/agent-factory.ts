@@ -735,7 +735,14 @@ async function invokeAgentInternal(
             : []),
           ...conversationHistory.map(turn => ({
             role: turn.role,
-            content: turn.content,
+            // 他人回答标注归属：否则当前专家会把历史里其他 agent 的话当成自己说的
+            // （跨房间人格串线：A 房间聊完到 B 房间，B 还以为自己是 A）
+            content:
+              turn.role === "assistant" &&
+              turn.agentId &&
+              turn.agentId !== agentId
+                ? `（此回答来自${AGENT_DISPLAY_NAMES[turn.agentId] ?? turn.agentId}）\n${turn.content}`
+                : turn.content,
           })),
           { role: "user", content: input },
         ];

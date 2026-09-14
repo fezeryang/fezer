@@ -1036,3 +1036,58 @@ describe("expert agent run events", () => {
     expect(result.uiAction?.cards ?? []).toEqual([]);
   });
 });
+
+describe("expert agent 会话历史归属", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.LANGSMITH_TRACING = "false";
+    delete process.env.LANGSMITH_API_KEY;
+
+    getLLMToolsByNamesMock.mockReturnValue([]);
+    getToolExecutionRegistryMock.mockReturnValue(new Map());
+    isLLMProviderConfigurationErrorMock.mockReturnValue(false);
+  });
+
+  const finalAnswer = {
+    id: "1",
+    created: 1,
+    model: "deepseek-chat",
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content: "answer" },
+        finish_reason: "stop",
+      },
+    ],
+  };
+
+  it("他人的 assistant 轮带显示名标注，自己的轮与 user 轮原样透传", async () => {
+    invokeLLMMock.mockResolvedValueOnce(finalAnswer);
+
+    const { invokeAgent } = await import("./agent-factory");
+    const { AGENT_DISPLAY_NAMES } = await import("@fezer/shared/characters");
+
+    await invokeAgent("builder", "接着聊", {
+      context: {
+        conversationHistory: [
+          { role: "user", content: "A 房间的问题" },
+          { role: "assistant", content: "我是 AI 专家", agentId: "ai" },
+          { role: "assistant", content: "我是建造专家", agentId: "builder" },
+        ],
+      },
+    });
+
+    const messages = invokeLLMMock.mock.calls[0][0].messages as Array<{
+      role: string;
+      content: string;
+    }>;
+    const foreign = messages.find(m => m.content.includes("我是 AI 专家"));
+    const own = messages.find(m => m.content.includes("我是建造专家"));
+
+    expect(foreign?.content).toContain(
+      `（此回答来自${AGENT_DISPLAY_NAMES.ai}）`
+    );
+    expect(own?.content).toBe("我是建造专家");
+    expect(messages.some(m => m.content === "A 房间的问题")).toBe(true);
+  });
+});
