@@ -45,12 +45,3 @@ export {
   getRoomInfo,
   getAdjacentRooms,
 } from "./map/rooms";
-
-// 导出简历数据
-export {
-  PROFILE,
-  SKILLS,
-  EXPERIENCE,
-  EDUCATION,
-  INTERESTS,
-} from "./resume/profile";

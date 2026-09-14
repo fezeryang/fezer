@@ -2,6 +2,8 @@
 name: "Fezer"
 bio: "AI 产品与 Agent 工作流实践者，中央财经大学保险专业硕士在读"
 locale: "zh-CN"
+title: "AI 产品与 Agent 工作流实践者"
+location: "北京"
 skills:
   - "AI Agent"
   - "Agent 工作流"
@@ -10,6 +12,24 @@ skills:
   - "数据分析"
   - "AI 产品"
   - "内容自动化"
+# 供 3D 简历 UI 使用的分组技能/兴趣与经历（C11：内容改这里，无需改代码）
+# 格式："分组名 | 逗号分隔的条目"；经历："职位 | 公司 | 时间 | 描述"
+skillsGrouped:
+  - "AI 与应用 | AI Agent, Agent 工作流, RAG, 多模态 AI 应用, Prompt Engineering, LangChain, LangGraph"
+  - "AI 协同开发 | Docker, Skill, MCP, Cursor, Claude Code, OpenCode, GitHub Copilot, Codex"
+  - "数据分析 | Python, Pandas, Scikit-learn, SQL, 统计分析, Kaggle 竞赛经验"
+  - "产品与执行 | 需求分析, 功能设计, 开发验证, 场景化测试, 数据驱动迭代"
+interestsGrouped:
+  - "AI | LLM 应用, Agent 开发, 自动化工作流"
+  - "阅读 | 技术书籍, 科幻小说, 哲学, 心理学"
+  - "写作 | 技术博客, 思考笔记, 读书笔记"
+  - "设计 | UI 设计, 3D 建模, 摄影"
+  - "旅行 | 徒步, 自驾游, 城市探索"
+experience:
+  - "AI 产品实习 | B2B 企业 AI 内容生成平台 | 2025.12 - 2026.03 | 参与核心 Agent 模块研发，围绕热点输入、内容生成、多模态素材和自动化分发构建端到端工作流。"
+  - "实习生 | 综合实习经历 | 2025.01 - 2025.03 | 独立负责全员社保核算与申报工作，参与互联网运营、产品调研与品牌建设。"
+education:
+  - "中央财经大学 | 保险专业硕士在读 | 在读 | 具备金融、保险、统计、经济与数据分析相关学习背景。"
 projects: []
 contact: {}
 ---

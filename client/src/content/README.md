@@ -68,6 +68,19 @@ Detailed project write-up...
 - `projects` (object[]): Featured projects with `name` and `url`
 - `contact` (object): Social links with platform names as keys
 
+#### 3D 简历 UI 字段（C11：改内容只改这里，不用改代码）
+
+`/jianli` 的简历摘要直接读这些字段（`client/src/content/loaders/resume.ts`）：
+
+- `title` (string): 职位标题
+- `location` (string): 所在地
+- `skillsGrouped` (string[]): 技能分组，格式 `"分组名 | 逗号分隔的条目"`
+- `interestsGrouped` (string[]): 兴趣分组，同上
+- `experience` (string[]): 实习/实践经历，格式 `"职位 | 公司 | 时间 | 描述"`
+- `education` (string[]): 教育背景，格式 `"学校 | 学位 | 时间 | 描述"`
+
+格式不符的条目会被丢弃（不会让页面崩掉）；字段缺失时对应区块为空。
+
 **Example:**
 ```yaml
 ---

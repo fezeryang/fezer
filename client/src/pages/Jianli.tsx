@@ -4,14 +4,8 @@ import { MessageCircle } from "lucide-react";
 import { Link } from "wouter";
 import { ChatModal } from "@/components/jianli/ChatModal";
 import { ROOM_IDS, ROOMS } from "@/components/jianli/assets/roomsConfig";
-import {
-  PROFILE,
-  SKILLS,
-  EXPERIENCE,
-  EDUCATION,
-  INTERESTS,
-} from "@fezer/shared/resume";
 import { loadPosts, loadWorks } from "@/content/loaders";
+import { loadResumeSummary } from "@/content/loaders/resume";
 import { Minimap } from "@/components/jianli/Minimap";
 import { WebGLFallback } from "@/components/jianli/WebGLFallback";
 import { SceneLoadingFallback } from "@/components/jianli/SceneLoadingFallback";
@@ -29,21 +23,6 @@ import {
   setGreetingEnabled,
   shouldShowGreeting,
 } from "@/lib/room-greeting";
-
-const SKILL_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
-  { label: "AI 与应用", items: SKILLS.ai },
-  { label: "AI 协同开发", items: SKILLS.tools },
-  { label: "数据分析", items: SKILLS.data },
-  { label: "产品与执行", items: SKILLS.product },
-];
-
-const INTEREST_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
-  { label: "AI", items: INTERESTS.ai },
-  { label: "阅读", items: INTERESTS.reading },
-  { label: "写作", items: INTERESTS.writing },
-  { label: "设计", items: INTERESTS.design },
-  { label: "旅行", items: INTERESTS.travel },
-];
 
 const Scene = lazy(() =>
   import("@/components/jianli/Scene").then(module => ({
@@ -115,7 +94,10 @@ export default function Jianli() {
   // B8：拿不到 WebGL 时降级为文字版，而不是白屏
   const [webglAvailable] = useState(() => isWebGLAvailable())
   const isChatOpenRef = useRef(isChatOpen);
-  const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId]);
+  const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId])
+
+  // 简历内容来自 profile markdown（C11）：改内容只改 markdown，不改代码
+  const resume = useMemo(() => loadResumeSummary(), []);
 
   // 房间内容化（C9）：来自 frontmatter 的 rooms 标注，见 content/works|blog
   const roomContent = useMemo(() => {    const works = loadWorks().filter(work =>
@@ -530,10 +512,10 @@ export default function Jianli() {
                   简介
                 </h3>
                 <p className="whitespace-pre-line text-slate-700">
-                  {PROFILE.bio}
+                  {resume.bio}
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
-                  {PROFILE.location} · {PROFILE.title}
+                  {resume.location} · {resume.title}
                 </p>
               </section>
 
@@ -542,7 +524,7 @@ export default function Jianli() {
                   核心能力
                 </h3>
                 <ul className="space-y-2 text-slate-700">
-                  {SKILL_GROUPS_FOR_SUMMARY.map(group => (
+                  {resume.skillGroups.map(group => (
                     <li key={group.label}>
                       <span className="font-medium text-slate-800">
                         {group.label}：
@@ -558,7 +540,7 @@ export default function Jianli() {
                   实习经历
                 </h3>
                 <ul className="space-y-3 text-slate-700">
-                  {EXPERIENCE.map(item => (
+                  {resume.experience.map(item => (
                     <li key={`${item.company}-${item.period}`}>
                       <p className="font-medium text-slate-800">
                         {item.position} · {item.company}
@@ -579,7 +561,7 @@ export default function Jianli() {
                   教育背景
                 </h3>
                 <ul className="space-y-2 text-slate-700">
-                  {EDUCATION.map(item => (
+                  {resume.education.map(item => (
                     <li key={item.school}>
                       <p className="font-medium text-slate-800">
                         {item.school} · {item.degree}
@@ -600,7 +582,7 @@ export default function Jianli() {
                   兴趣方向
                 </h3>
                 <ul className="space-y-1 text-slate-700">
-                  {INTEREST_GROUPS_FOR_SUMMARY.map(group => (
+                  {resume.interestGroups.map(group => (
                     <li key={group.label}>
                       <span className="font-medium text-slate-800">
                         {group.label}：
