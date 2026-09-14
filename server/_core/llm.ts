@@ -14,6 +14,11 @@
 
 import { ENV } from "./env";
 import { traceSpan } from "./observability/langsmith";
+import {
+  getRunControl,
+  isRunAborted,
+  mergeAbortSignals,
+} from "./run-control";
 
 // ============================================================================
 // 类型定义
@@ -411,6 +416,12 @@ export function isLLMProviderConfigurationError(
 }
 
 function shouldFallback(error: unknown): boolean {
+  // 运行被取消（用户取消 / 预算耗尽）不是 provider 故障：
+  // 不要换 provider 重试，直接上抛，否则取消会被一次完整重试吞掉
+  if (isRunAborted()) {
+    return false;
+  }
+
   if (error instanceof LLMHttpError) {
     if (
       error.provider === "deepseek" &&
@@ -603,8 +614,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
             authorization: `Bearer ${config.apiKey}`,
           },
           body: JSON.stringify(providerPayload),
-          signal: AbortSignal.timeout(
-            ENV.aiRequestTimeoutMs || DEFAULT_LLM_REQUEST_TIMEOUT_MS
+          signal: mergeAbortSignals(
+            AbortSignal.timeout(
+              ENV.aiRequestTimeoutMs || DEFAULT_LLM_REQUEST_TIMEOUT_MS
+            ),
+            getRunControl().signal
           ),
         });
 

@@ -25,6 +25,10 @@ import {
   type ExecutableTool,
 } from "../tools";
 import { emitRunEvent } from "../../_core/run-events";
+import {
+  assertRunNotAborted,
+  getRunControl,
+} from "../../_core/run-control";
 
 /**
  * Agent 调用选项
@@ -533,8 +537,12 @@ async function invokeAgentInternal(
 
         let lastAssistantAnswer = "抱歉，我暂时无法回答。";
         let loopCount = 0;
+        // 预算里的 maxTurns 覆盖默认循环上限；取消信号在每轮开始前检查
+        const maxToolLoops =
+          getRunControl().maxToolLoops ?? MAX_TOOL_CALL_LOOPS;
 
-        while (loopCount < MAX_TOOL_CALL_LOOPS) {
+        while (loopCount < maxToolLoops) {
+          assertRunNotAborted();
           const result = await invokeLLM({
             messages,
             tools: llmTools.length > 0 ? llmTools : undefined,
@@ -702,7 +710,7 @@ async function invokeAgentInternal(
         // 提取 UI 提示（简单实现）
         return {
           answer:
-            loopCount >= MAX_TOOL_CALL_LOOPS
+            loopCount >= maxToolLoops
               ? `${fallbackAnswer}\n\n（已达到工具调用上限，返回当前结果）`
               : fallbackAnswer,
           uiAction: {

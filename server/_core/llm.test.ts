@@ -583,4 +583,35 @@ describe("invokeLLM provider routing", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("运行取消时不换 provider 重试（取消不是 provider 故障）", async () => {
+    process.env.AI_PRIMARY_PROVIDER = "deepseek";
+    process.env.AI_PRIMARY_MODEL = "deepseek-chat";
+    process.env.AI_FALLBACK_PROVIDER = "forge";
+    process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    process.env.BUILT_IN_FORGE_API_KEY = "forge-key";
+
+    const controller = new AbortController();
+    controller.abort();
+
+    // AbortError 通常是可回退的超时；但运行已取消时必须直接上抛，
+    // 否则一次取消会被一次完整重试吞掉
+    const fetchMock = vi.fn().mockRejectedValueOnce(
+      Object.assign(new Error("This operation was aborted"), {
+        name: "AbortError",
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { invokeLLM } = await import("./llm");
+    const { runWithRunControl } = await import("./run-control");
+
+    await expect(
+      runWithRunControl({ signal: controller.signal }, () =>
+        invokeLLM({ messages: [{ role: "user", content: "hello" }] })
+      )
+    ).rejects.toMatchObject({ name: "AbortError" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

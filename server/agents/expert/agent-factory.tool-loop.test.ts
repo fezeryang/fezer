@@ -755,6 +755,23 @@ describe("expert agent tool loop", () => {
 });
 
 describe("expert agent run events", () => {
+  // 必须有自己的清理：文件顶部的 beforeEach 只作用于第一个 describe，
+  // 否则 mock 调用计数与 Once 队列会跨 describe 泄漏（clearAllMocks 不清 Once 队列）
+  beforeEach(() => {
+    vi.clearAllMocks();
+    invokeLLMMock.mockReset();
+    process.env.LANGSMITH_TRACING = "false";
+    delete process.env.LANGSMITH_API_KEY;
+
+    getLLMToolsByNamesMock.mockReturnValue([]);
+    getToolExecutionRegistryMock.mockReturnValue(new Map());
+    isLLMProviderConfigurationErrorMock.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   function mockedTool(name: string) {
     return [
       name,
@@ -873,5 +890,36 @@ describe("expert agent run events", () => {
       ok: false,
       truncated: false,
     });
+  });
+
+  it("运行控制中止后专家循环抛 AbortError", async () => {
+    invokeLLMMock.mockResolvedValueOnce(llmFinalAnswer);
+
+    const { invokeAgent } = await import("./agent-factory");
+    const { runWithRunControl } = await import("../../_core/run-control");
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      runWithRunControl({ signal: controller.signal }, () =>
+        invokeAgent("core", "你好")
+      )
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("预算里的 maxTurns 覆盖默认循环上限", async () => {
+    invokeLLMMock.mockResolvedValue(llmFinalAnswer);
+    getLLMToolsByNamesMock.mockReturnValue([]);
+    getToolExecutionRegistryMock.mockReturnValue(new Map());
+
+    const { invokeAgent } = await import("./agent-factory");
+    const { runWithRunControl } = await import("../../_core/run-control");
+
+    const result = await runWithRunControl({ maxToolLoops: 1 }, () =>
+      invokeAgent("core", "你好")
+    );
+
+    expect(result.answer).toBe("final answer");
+    expect(invokeLLMMock).toHaveBeenCalledTimes(1);
   });
 });

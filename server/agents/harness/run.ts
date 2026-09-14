@@ -23,6 +23,7 @@ import {
   traceSpan,
 } from "../../_core/observability/langsmith";
 import { RunError, toRunError } from "./errors";
+import { runWithRunControl } from "../../_core/run-control";
 import {
   emitRunEvent,
   runWithEventSink,
@@ -107,12 +108,15 @@ const UNMEASURED_USAGE: Omit<RunUsage, "wallClockMs"> = {
 /**
  * 墙钟 / 取消守卫。
  *
- * ponytail: 只做“停止等待”，不会中断已在飞行的 LLM 请求（真正的中断在 A4 做，
- * 需要把 signal 一路传到 invokeLLM）。当前实现下超时后那次请求会自行结束并被丢弃。
+ * 超时或外部取消都会 abort 运行控制器，信号经 _core/run-control 传到
+ * invokeLLM 的 fetch 与工具循环，所以飞行中的 LLM 请求会真正中断，
+ * 而不是被丢弃后继续烧 token。分类（budget_exhausted vs cancelled）
+ * 由这里的 reject 值决定，不受底层 AbortError 影响。
  */
 function createStopGuard(
   maxWallClockMs: number | undefined,
-  signal?: AbortSignal
+  signal: AbortSignal | undefined,
+  controller: AbortController
 ): { promise: Promise<never>; dispose: () => void } | null {
   if (maxWallClockMs === undefined && !signal) {
     return null;
@@ -121,14 +125,19 @@ function createStopGuard(
   let dispose = () => {};
 
   const promise = new Promise<never>((_, reject) => {
-    const onTimeout = () =>
+    const onTimeout = () => {
+      controller.abort();
       reject(
         new RunError(
           "budget_exhausted",
           `本次运行超过 ${maxWallClockMs}ms 墙钟预算`
         )
       );
-    const onAbort = () => reject(new RunError("cancelled", "本次请求已取消"));
+    };
+    const onAbort = () => {
+      controller.abort();
+      reject(new RunError("cancelled", "本次请求已取消"));
+    };
 
     const timer =
       maxWallClockMs === undefined
@@ -172,9 +181,13 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
   };
 
   const startedAt = Date.now();
+  // 运行控制器：超时/取消都会 abort 它，信号沿 run-control ALS
+  // 传到 invokeLLM 的 fetch 与专家层工具循环
+  const runController = new AbortController();
   const guard = createStopGuard(
     resolveWallClockLimit(request.budget),
-    request.signal
+    request.signal,
+    runController
   );
 
   const emitError = (code: RunErrorCode, message: string): void => {
@@ -195,25 +208,38 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
 
         let result: Awaited<ReturnType<typeof orchestratorGraph.invoke>>;
         try {
-          const invocation = traceSpan("harness.runAgent", () =>
-            orchestratorGraph.invoke({
-              userInput: request.input,
-              roomId: request.roomId,
-              characterId: request.characterId,
-              interactionType: request.interactionType ?? "chat",
-              grounding: request.grounding,
-              conversationHistory: request.conversationHistory ?? [],
-              visitedRooms: request.visitedRooms ?? [],
-              discoveredCharacters: request.discoveredCharacters ?? [],
-              messages: [],
-            })
+          const invocation = runWithRunControl(
+            {
+              signal: runController.signal,
+              maxToolLoops: request.budget?.maxTurns,
+            },
+            () =>
+              traceSpan("harness.runAgent", () =>
+                orchestratorGraph.invoke({
+                  userInput: request.input,
+                  roomId: request.roomId,
+                  characterId: request.characterId,
+                  interactionType: request.interactionType ?? "chat",
+                  grounding: request.grounding,
+                  conversationHistory: request.conversationHistory ?? [],
+                  visitedRooms: request.visitedRooms ?? [],
+                  discoveredCharacters: request.discoveredCharacters ?? [],
+                  messages: [],
+                })
+              )
           );
+
+          // 预挂空 catch：race 输掉后（超时/取消已 abort 底层请求），
+          // 它随后的拒绝不会变成 unhandledRejection
+          invocation.catch(() => undefined);
 
           result = guard
             ? await Promise.race([invocation, guard.promise])
             : await invocation;
         } catch (error) {
           guard?.dispose();
+          // 兜底中止：错误路径上也要停掉可能在飞行的请求
+          runController.abort();
           const runError = toRunError(error);
           emitError(runError.code, runError.message);
           throw runError;

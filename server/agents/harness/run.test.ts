@@ -159,6 +159,26 @@ describe("runAgent", () => {
     });
   });
 
+  it("运行中途取消：以 cancelled 结束", async () => {
+    invoke.mockImplementation(() => new Promise(() => {}) as never);
+    const controller = new AbortController();
+    const { events, onEvent } = captureEvents();
+
+    const timer = setTimeout(() => controller.abort(), 10);
+    try {
+      await expect(
+        runAgent({ input: "你好", signal: controller.signal, onEvent })
+      ).rejects.toMatchObject({ code: "cancelled" });
+    } finally {
+      clearTimeout(timer);
+    }
+
+    expect(events.at(-1)).toMatchObject({
+      type: "run.error",
+      code: "cancelled",
+    });
+  });
+
   it("未知异常归类为 internal，并保留可读信息", async () => {
     invoke.mockRejectedValue(new Error("数据库连接失败"));
     const { events, onEvent } = captureEvents();
