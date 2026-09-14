@@ -4,18 +4,18 @@ This file records the observed production VM and API runtime for this project. I
 
 ## Host
 
-| Item | Value |
-| --- | --- |
-| Public IP | `4.188.113.194` |
-| API domain | `https://api.fezern8n.com` |
-| SSH aliases seen locally | `my-azure-vm`, `openclawed` |
-| Runtime SSH user | `openclawed` |
-| App directory | `/var/www/fezer` |
-| Node entrypoint | `/var/www/fezer/dist/index.js` |
-| PM2 process | `fezer-api` |
-| App port | `3000` |
-| Frontend hosting | GitHub Pages |
-| Frontend API target | `https://api.fezern8n.com` |
+| Item                     | Value                          |
+| ------------------------ | ------------------------------ |
+| Public IP                | `4.188.113.194`                |
+| API domain               | `https://api.fezern8n.com`     |
+| SSH aliases seen locally | `my-azure-vm`, `openclawed`    |
+| Runtime SSH user         | `openclawed`                   |
+| App directory            | `/var/www/fezer`               |
+| Node entrypoint          | `/var/www/fezer/dist/index.js` |
+| PM2 process              | `fezer-api`                    |
+| App port                 | `3000`                         |
+| Frontend hosting         | GitHub Pages                   |
+| Frontend API target      | `https://api.fezern8n.com`     |
 
 ## SSH Notes
 
@@ -30,13 +30,13 @@ If using an explicit key, reference the key from the local SSH config or passwor
 
 ## Important Paths
 
-| Path | Purpose |
-| --- | --- |
-| `/var/www/fezer` | Production repo checkout |
-| `/var/www/fezer/.env` | Production environment variables, not committed |
-| `/var/www/fezer/dist/index.js` | Built backend entrypoint served by PM2 |
-| `/home/openclawed/.pm2/logs/` | PM2 logs |
-| `/var/log/nginx/` | Nginx access and error logs |
+| Path                           | Purpose                                         |
+| ------------------------------ | ----------------------------------------------- |
+| `/var/www/fezer`               | Production repo checkout                        |
+| `/var/www/fezer/.env`          | Production environment variables, not committed |
+| `/var/www/fezer/dist/index.js` | Built backend entrypoint served by PM2          |
+| `/home/openclawed/.pm2/logs/`  | PM2 logs                                        |
+| `/var/log/nginx/`              | Nginx access and error logs                     |
 
 ## Runtime Commands
 
@@ -75,6 +75,18 @@ sudo -iu openclawed bash -lc '
 '
 ```
 
+**Env updates**: the app dotenv-loads `/var/www/fezer/.env`, but dotenv does
+NOT override variables already captured in PM2's environment. Changing a var
+in `.env` alone is not enough — reload with the value in the shell:
+
+```bash
+export ALLOWED_ORIGINS="<new list>"   # 与 .env 保持一致
+pm2 reload fezer-api --update-env
+```
+
+(Caught live 2026-09-14: `home.fezern8n.com` was missing from `ALLOWED_ORIGINS`;
+browser preflights got 403 while curl — which never preflights — worked.)
+
 (From WSL: `ssh -i ~/.ssh/azureuserfoez.pem azureuser@4.188.113.194` — the
 `my-azure-vm` / `openclawed` aliases in `ops/VM.md` live in the Windows-side
 SSH config, not WSL's.)
@@ -96,7 +108,7 @@ curl -s 'https://api.fezern8n.com/api/trpc/system.health?input=%7B%22json%22%3A%
 Expected response:
 
 ```json
-{"result":{"data":{"json":{"ok":true}}}}
+{ "result": { "data": { "json": { "ok": true } } } }
 ```
 
 ## Deploy Checklist
