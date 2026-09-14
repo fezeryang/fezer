@@ -216,6 +216,32 @@ describe("runAgent", () => {
     expect(events).toHaveLength(2);
   });
 
+  it("把 LLM 与工具计量带进 run 结果（A6）", async () => {
+    const { recordLlmUsage, recordToolCall } = await import(
+      "../../_core/run-usage"
+    );
+
+    invoke.mockImplementationOnce(async () => {
+      recordLlmUsage({
+        prompt_tokens: 100,
+        completion_tokens: 20,
+        total_tokens: 120,
+      });
+      recordToolCall();
+      return orchestratorResult() as never;
+    });
+
+    const result = await runAgent({ input: "你好" });
+
+    expect(result.usage).toMatchObject({
+      promptTokens: 100,
+      completionTokens: 20,
+      totalTokens: 120,
+      toolCalls: 1,
+      providerFallbacks: 0,
+    });
+  });
+
   it("同一 threadId 的第二次 run 会带上服务端会话历史（A5）", async () => {
     const threadId = "thread-round-trip";
 

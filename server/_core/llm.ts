@@ -15,6 +15,10 @@
 import { ENV } from "./env";
 import { traceSpan } from "./observability/langsmith";
 import { getRunControl, isRunAborted, mergeAbortSignals } from "./run-control";
+import {
+  recordLlmUsage,
+  recordProviderFallback,
+} from "./run-usage";
 
 // ============================================================================
 // 类型定义
@@ -604,6 +608,27 @@ function applyProviderAdjustments(
   }
 }
 
+/**
+ * provider 端点白名单校验（两处 fetch 之前都调用）。
+ *
+ * 端点来自 ENV 配置（非用户输入），但保持 fail-closed：若未来端点可被请求
+ * 输入影响，这里会直接拒绝非法 URL 与非 http(s) 协议。
+ */
+function assertSafeEndpoint(config: ProviderRuntimeConfig): void {
+  let endpoint: URL;
+  try {
+    endpoint = new URL(config.apiUrl);
+  } catch {
+    throw new Error(`[${config.provider}] 非法的 API 端点: ${config.apiUrl}`);
+  }
+
+  if (endpoint.protocol !== "https:" && endpoint.protocol !== "http:") {
+    throw new Error(
+      `[${config.provider}] 非法的 API 端点协议: ${endpoint.protocol}`
+    );
+  }
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const primaryConfig = getPrimaryConfig(params.model);
   const fallbackConfig = getFallbackConfig();
@@ -625,6 +650,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     };
 
     applyProviderAdjustments(providerPayload, config);
+    assertSafeEndpoint(config);
 
     return traceSpan(
       "llm.chat.completions",
@@ -654,7 +680,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
           );
         }
 
-        return (await response.json()) as InvokeResult;
+        const result = (await response.json()) as InvokeResult;
+        recordLlmUsage(result.usage);
+        return result;
       },
       {
         runType: "llm",
@@ -714,6 +742,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       console.warn(
         `[invokeLLM] fallback to ${fallbackConfig.provider}:${fallbackConfig.model}, reason=${fallbackReason}, primary=${primaryConfig.provider}:${primaryConfig.model}, elapsed_ms=${Date.now() - primaryStartedAt}, has_tool_calls=${hasToolCallsInRequest}`
       );
+      recordProviderFallback();
       return await callProvider(fallbackConfig, true);
     }
   });
@@ -761,20 +790,7 @@ export async function* invokeLLMStream(
       stream: true,
     };
     applyProviderAdjustments(providerPayload, config);
-
-    // 协议白名单：provider 端点来自 ENV 配置，但保持 fail-closed ——
-    // 若未来端点可被请求输入影响，这里直接拒绝非法 URL 与非 http(s) 协议
-    let endpoint: URL;
-    try {
-      endpoint = new URL(config.apiUrl);
-    } catch {
-      throw new Error(`[${config.provider}] 非法的 API 端点: ${config.apiUrl}`);
-    }
-    if (endpoint.protocol !== "https:" && endpoint.protocol !== "http:") {
-      throw new Error(
-        `[${config.provider}] 非法的 API 端点协议: ${endpoint.protocol}`
-      );
-    }
+    assertSafeEndpoint(config);
 
     const response = await fetch(config.apiUrl, {
       method: "POST",
@@ -861,6 +877,10 @@ export async function* invokeLLMStream(
           const choice = chunk.choices?.[0];
           if (!choice) {
             continue;
+          }
+
+          if (chunk.usage) {
+            recordLlmUsage(chunk.usage);
           }
 
           yield {

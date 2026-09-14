@@ -30,6 +30,7 @@ import {
 import { emitRunEvent } from "../../_core/run-events";
 import { assertRunNotAborted, getRunControl } from "../../_core/run-control";
 import { randomUUID } from "node:crypto";
+import { recordToolCall } from "../../_core/run-usage";
 import type { ContentCard } from "@fezer/shared/schemas/agent";
 import { getBlogPostBySlug, getWorkBySlug } from "../../content";
 
@@ -538,6 +539,9 @@ async function buildDirectToolContext(
         ? PROFILE_TOOL_RESULT_CHAR_LIMIT
         : TOOL_RESULT_CHAR_LIMIT;
 
+    // 计量（A6）：预取也是一次真实的工具执行
+    recordToolCall();
+
     emitRunEvent({
       type: "tool.result",
       toolName: request.name,
@@ -886,6 +890,9 @@ async function invokeAgentInternal(
             );
 
             const serialized = stableStringify(toolResult);
+
+            // 计量（A6）：一次真实的工具执行
+            recordToolCall();
 
             if (toolResult.success === true) {
               successfulToolResults.push({

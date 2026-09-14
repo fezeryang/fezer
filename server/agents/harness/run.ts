@@ -24,6 +24,10 @@ import {
 } from "../../_core/observability/langsmith";
 import { RunError, toRunError } from "./errors";
 import { appendThreadTurns, loadThreadTurns } from "./session";
+import {
+  runWithUsageTracking,
+  type RunUsageAccumulator,
+} from "../../_core/run-usage";
 import { runWithRunControl } from "../../_core/run-control";
 import { buildE2eMockRunResult, shouldUseE2eAgentMock } from "./e2e-mock";
 import {
@@ -96,18 +100,6 @@ export const DEFAULT_MAX_WALL_CLOCK_MS = 60_000;
 export function resolveWallClockLimit(budget?: RunBudget): number | undefined {
   return budget?.maxWallClockMs;
 }
-
-/**
- * ponytail: 计量目前只填可测的 wallClockMs，token / 工具计数等仍为 0 ——
- * A6（观测与计量）接上 invokeLLM 的 usage 之前，调用方不应把这些 0 当成真实用量。
- */
-const UNMEASURED_USAGE: Omit<RunUsage, "wallClockMs"> = {
-  promptTokens: 0,
-  completionTokens: 0,
-  totalTokens: 0,
-  toolCalls: 0,
-  providerFallbacks: 0,
-};
 
 /**
  * 墙钟 / 取消守卫。
@@ -227,36 +219,41 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
         emitRunEvent({ type: "run.started", runId, threadId });
 
         let result: Awaited<ReturnType<typeof orchestratorGraph.invoke>>;
+        let trackedUsage: RunUsageAccumulator | undefined;
         try {
-          const invocation = runWithRunControl(
-            {
-              signal: runController.signal,
-              maxToolLoops: request.budget?.maxTurns,
-              streamText: request.stream === true,
-            },
-            () =>
-              traceSpan("harness.runAgent", () =>
-                orchestratorGraph.invoke({
-                  userInput: request.input,
-                  roomId: request.roomId,
-                  characterId: request.characterId,
-                  interactionType: request.interactionType ?? "chat",
-                  grounding: request.grounding,
-                  conversationHistory,
-                  visitedRooms: request.visitedRooms ?? [],
-                  discoveredCharacters: request.discoveredCharacters ?? [],
-                  messages: [],
-                })
-              )
+          const invocation = runWithUsageTracking(() =>
+            runWithRunControl(
+              {
+                signal: runController.signal,
+                maxToolLoops: request.budget?.maxTurns,
+                streamText: request.stream === true,
+              },
+              () =>
+                traceSpan("harness.runAgent", () =>
+                  orchestratorGraph.invoke({
+                    userInput: request.input,
+                    roomId: request.roomId,
+                    characterId: request.characterId,
+                    interactionType: request.interactionType ?? "chat",
+                    grounding: request.grounding,
+                    conversationHistory,
+                    visitedRooms: request.visitedRooms ?? [],
+                    discoveredCharacters: request.discoveredCharacters ?? [],
+                    messages: [],
+                  })
+                )
+            )
           );
 
           // 预挂空 catch：race 输掉后（超时/取消已 abort 底层请求），
           // 它随后的拒绝不会变成 unhandledRejection
           invocation.catch(() => undefined);
 
-          result = guard
+          const settled = guard
             ? await Promise.race([invocation, guard.promise])
             : await invocation;
+          result = settled.result;
+          trackedUsage = settled.usage;
         } catch (error) {
           guard?.dispose();
           // 兜底中止：错误路径上也要停掉可能在飞行的请求
@@ -268,7 +265,11 @@ export async function runAgent(request: RunRequest): Promise<RunResult> {
         guard?.dispose();
 
         const usage: RunUsage = {
-          ...UNMEASURED_USAGE,
+          promptTokens: trackedUsage?.promptTokens ?? 0,
+          completionTokens: trackedUsage?.completionTokens ?? 0,
+          totalTokens: trackedUsage?.totalTokens ?? 0,
+          toolCalls: trackedUsage?.toolCalls ?? 0,
+          providerFallbacks: trackedUsage?.providerFallbacks ?? 0,
           wallClockMs: Date.now() - startedAt,
         };
         const speakingAgent = (result.currentPrimaryAgent ?? "core") as AgentId;
