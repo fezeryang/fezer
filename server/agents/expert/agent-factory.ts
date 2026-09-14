@@ -158,6 +158,8 @@ export interface AgentInvokeOptions {
     conversationHistory?: ConversationTurn[];
     fromAgent?: string;
     grounding?: "public_profile";
+    /** 访客探索进度（C6）：仅用于推荐与措辞 */
+    visitorProgress?: string;
   };
 }
 
@@ -717,6 +719,14 @@ async function invokeAgentInternal(
                 {
                   role: "system" as const,
                   content: PUBLIC_PROFILE_GROUNDING_POLICY,
+                },
+              ]
+            : []),
+          ...(options?.context?.visitorProgress
+            ? [
+                {
+                  role: "system" as const,
+                  content: options.context.visitorProgress,
                 },
               ]
             : []),

@@ -87,6 +87,38 @@ describe("supervisor spatial routing", () => {
     // rule-based 兜底为 complex/core，不参与本次断言的 agent
     expect(typeof result.speakingAgent).toBe("string");
   });
+
+  it("把访客探索进度注入给专家层（C6）", async () => {
+    await askSupervisor("随便聊点什么", {
+      roomId: "central",
+      interactionType: "chat",
+      visitedRooms: ["central", "builder"],
+      discoveredCharacters: ["core"],
+    } as any);
+
+    const options = mocks.invokeAgent.mock.calls.at(-1)?.[2] as
+      | { context?: { visitorProgress?: string } }
+      | undefined;
+
+    expect(options?.context?.visitorProgress).toContain(
+      "访客已探索：central、builder"
+    );
+    expect(options?.context?.visitorProgress).toContain("尚未访问：ai");
+    expect(options?.context?.visitorProgress).toContain("已接触角色：core");
+  });
+
+  it("首次到访（无进度）时不注入进度行", async () => {
+    await askSupervisor("随便聊点什么", {
+      roomId: "central",
+      interactionType: "chat",
+    } as any);
+
+    const options = mocks.invokeAgent.mock.calls.at(-1)?.[2] as
+      | { context?: { visitorProgress?: string } }
+      | undefined;
+
+    expect(options?.context?.visitorProgress).toBeUndefined();
+  });
 });
 
 describe("supervisor multi-expert synthesis", () => {

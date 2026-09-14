@@ -180,6 +180,8 @@ export function createOrchestratorGraph() {
         grounding,
         messages,
         conversationHistory,
+        visitedRooms,
+        discoveredCharacters,
         currentPrimaryAgent,
       } = state;
 
@@ -208,6 +210,8 @@ export function createOrchestratorGraph() {
             grounding,
             messages,
             conversationHistory,
+            visitedRooms,
+            discoveredCharacters,
           })
       );
 

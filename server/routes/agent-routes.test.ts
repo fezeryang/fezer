@@ -428,6 +428,66 @@ describe("Agent API routes", () => {
     });
   });
 
+  describe("POST /api/chat（C6 个性化推荐）", () => {
+    it("无推荐时优先推荐未访问房间的 agent", async () => {
+      mockOrchestratorResult({ answer: "回答", uiAction: {} });
+      const res = createRes();
+
+      await chatHandler(
+        createReq({ userInput: "你好", visitedRooms: ["central", "builder"] }),
+        res as unknown as Response
+      );
+
+      // ROOM_PRIMARY_AGENT 顺序：central, builder, ai, writer, ...
+      expect(res.body).toMatchObject({
+        suggestedNextCharacterIds: ["ai", "writer"],
+      });
+    });
+
+    it("编排已给出推荐时不覆盖", async () => {
+      mockOrchestratorResult({
+        answer: "回答",
+        uiAction: { suggestedNextCharacterIds: ["visual"] },
+      });
+      const res = createRes();
+
+      await chatHandler(
+        createReq({ userInput: "你好", visitedRooms: ["central"] }),
+        res as unknown as Response
+      );
+
+      expect(res.body).toMatchObject({
+        suggestedNextCharacterIds: ["visual"],
+      });
+    });
+
+    it("房间全部访问过时不再推荐", async () => {
+      mockOrchestratorResult({ answer: "回答", uiAction: {} });
+      const res = createRes();
+
+      await chatHandler(
+        createReq({
+          userInput: "你好",
+          visitedRooms: [
+            "central",
+            "builder",
+            "ai",
+            "writer",
+            "reader",
+            "visual",
+            "wanderer",
+          ],
+        }),
+        res as unknown as Response
+      );
+
+      expect(
+        (res.body as { suggestedNextCharacterIds?: unknown })
+          .suggestedNextCharacterIds
+      ).toBeUndefined();
+    });
+  });
+
   describe("route error handling", () => {
     it("returns 500 for chat route when orchestrator throws", async () => {
       vi.mocked(orchestratorGraph.invoke).mockRejectedValueOnce(

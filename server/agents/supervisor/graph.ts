@@ -16,6 +16,34 @@ import {
 } from "../../_core/observability/langsmith";
 import { invokeLLM } from "../../_core/llm";
 import { resolvePreferredAgent } from "../spatial/agent-resolution";
+import { ROOM_PRIMARY_AGENT } from "../spatial/room-map";
+
+/**
+ * C6：把访客探索进度压成一行上下文，让 agent 的推荐有依据。
+ * 无进度（首次到访）时返回 undefined，不注入空行。
+ */
+function buildVisitorProgressLine(
+  visitedRooms: string[],
+  discoveredCharacters: string[]
+): string | undefined {
+  if (visitedRooms.length === 0 && discoveredCharacters.length === 0) {
+    return undefined;
+  }
+
+  const unvisited = Object.keys(ROOM_PRIMARY_AGENT).filter(
+    roomId => !visitedRooms.includes(roomId)
+  );
+
+  const parts = [
+    visitedRooms.length > 0 ? `访客已探索：${visitedRooms.join("、")}` : null,
+    unvisited.length > 0 ? `尚未访问：${unvisited.join("、")}` : null,
+    discoveredCharacters.length > 0
+      ? `已接触角色：${discoveredCharacters.join("、")}`
+      : null,
+  ].filter((part): part is string => Boolean(part));
+
+  return `【访客探索进度】${parts.join("；")}。（仅用于调整推荐与措辞，不要在回答里罗列这些字段）`;
+}
 
 /**
  * 多专家综合提示词。
@@ -76,6 +104,16 @@ export const SupervisorState = Annotation.Root({
 
   // 多轮会话历史（结构化，不含当前 userInput）
   conversationHistory: Annotation<ConversationTurn[]>({
+    reducer: (_, current) => current,
+    default: () => [],
+  }),
+
+  // 访客探索进度（C6）：仅用于个性化推荐与措辞
+  visitedRooms: Annotation<string[]>({
+    reducer: (_, current) => current,
+    default: () => [],
+  }),
+  discoveredCharacters: Annotation<string[]>({
     reducer: (_, current) => current,
     default: () => [],
   }),
@@ -208,7 +246,14 @@ async function executeSingleAgent(
   state: typeof SupervisorState.State
 ): Promise<Partial<typeof SupervisorState.State>> {
   return traceSpan("supervisor.executeSingleAgent", async () => {
-    const { targetAgent, userInput, grounding, conversationHistory } = state;
+    const {
+      targetAgent,
+      userInput,
+      grounding,
+      conversationHistory,
+      visitedRooms,
+      discoveredCharacters,
+    } = state;
 
     const response = await runWithTraceContext(
       {
@@ -216,7 +261,14 @@ async function executeSingleAgent(
       },
       async () =>
         invokeAgent(targetAgent, userInput, {
-          context: { grounding, conversationHistory },
+          context: {
+            grounding,
+            conversationHistory,
+            visitorProgress: buildVisitorProgressLine(
+              visitedRooms,
+              discoveredCharacters
+            ),
+          },
         })
     );
 
@@ -418,6 +470,9 @@ export async function askSupervisor(
     grounding?: "public_profile";
     messages?: BaseMessage[];
     conversationHistory?: ConversationTurn[];
+    /** 访客探索进度（C6）：注入给专家层做个性化 */
+    visitedRooms?: string[];
+    discoveredCharacters?: string[];
   }
 ): Promise<{
   answer: string;
@@ -435,6 +490,8 @@ export async function askSupervisor(
     grounding: context?.grounding,
     messages: context?.messages || [],
     conversationHistory: context?.conversationHistory ?? [],
+    visitedRooms: context?.visitedRooms ?? [],
+    discoveredCharacters: context?.discoveredCharacters ?? [],
   });
 
   return {

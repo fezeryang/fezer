@@ -24,6 +24,10 @@ import {
 import { ROOMS } from "./assets/roomsConfig";
 import { fetchThreadHistory, useAgentChat } from "../../hooks/useAgentChat";
 import { getThreadId } from "@/lib/chat-thread";
+import {
+  loadVisitorProgress,
+  markQuestionAsked,
+} from "@/lib/visitor-progress";
 import type { AgentResponse, ContentCard } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import {
@@ -154,6 +158,14 @@ export function ChatModal({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  // C6：把本地探索进度随请求上送（服务端据此做个性化推荐）
+  const buildCheckpoint = useCallback(() => {
+    const progress = loadVisitorProgress();
+    return {
+      visitedRooms: progress.visitedRooms,
+      discoveredCharacters: progress.discoveredCharacters,
+    };
+  }, []);
 
   const handleToggleRecording = useCallback(async () => {
     if (isRecording) {
@@ -463,7 +475,11 @@ export function ChatModal({
           | "chat",
         grounding: "public_profile" as const,
         conversationHistory,
+        ...buildCheckpoint(),
       };
+
+      // C6：已问问题记入访客进度（供“避免重复提问”类个性化）
+      markQuestionAsked(text);
 
       // 流式优先：工具步骤实时可见；流失败自动降级到非流式
       setLiveStep(null);

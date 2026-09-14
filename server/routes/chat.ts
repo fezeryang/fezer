@@ -15,9 +15,32 @@ import type {
   ConversationTurn,
 } from "@fezer/shared/schemas/agent";
 import type { RunEvent } from "@fezer/shared/schemas/run";
+import type { FezerType } from "@fezer/shared/schemas/character";
 import { runAgent } from "../agents/harness/run";
 import { loadThreadTurns } from "../agents/harness/session";
+import { ROOM_PRIMARY_AGENT } from "../agents/spatial/room-map";
 import { sendAgentRouteError } from "./errors";
+
+/**
+ * C6：没有明确推荐时，优先推荐未访问房间的 agent。
+ *
+ * 编排层已经给出推荐（模型主动提议或并行咨询参与者）时不动它 —— 那是更有意图的信号；
+ * 只有空推荐时才用访客进度补位，让「下一个去哪」随探索变化。
+ */
+function preferUnvisitedAgents(
+  suggested: FezerType[] | undefined,
+  visitedRooms: string[]
+): FezerType[] | undefined {
+  if (suggested && suggested.length > 0) {
+    return suggested;
+  }
+
+  const unvisited = Object.entries(ROOM_PRIMARY_AGENT)
+    .filter(([roomId]) => !visitedRooms.includes(roomId))
+    .map(([, agentId]) => agentId as FezerType);
+
+  return unvisited.length > 0 ? unvisited.slice(0, 2) : undefined;
+}
 
 /** 会话历史的信任边界：最多 8 轮、每轮 4000 字符 */
 const MAX_CONVERSATION_TURNS = 8;
@@ -197,7 +220,10 @@ export async function chatHandler(req: Request, res: Response): Promise<void> {
       panel: result.uiAction?.panel ?? "character",
       highlightCharacterId: result.uiAction?.highlightCharacterId,
       focusRoomId: result.uiAction?.focusRoomId,
-      suggestedNextCharacterIds: result.uiAction?.suggestedNextCharacterIds,
+      suggestedNextCharacterIds: preferUnvisitedAgents(
+        result.uiAction?.suggestedNextCharacterIds,
+        visitedRooms
+      ),
       suggestedQuestions: result.uiAction?.suggestedQuestions,
       speakingAgentId: result.speakingAgent,
       cards: result.uiAction?.cards,
