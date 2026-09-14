@@ -1,67 +1,66 @@
-import { lazy, Suspense, useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { MessageCircle } from "lucide-react"
-import { Link } from "wouter"
-import { ChatModal } from "@/components/jianli/ChatModal"
-import { ROOM_IDS, ROOMS } from "@/components/jianli/assets/roomsConfig"
+import { lazy, Suspense, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { MessageCircle } from "lucide-react";
+import { Link } from "wouter";
+import { ChatModal } from "@/components/jianli/ChatModal";
+import { ROOM_IDS, ROOMS } from "@/components/jianli/assets/roomsConfig";
 import {
   PROFILE,
   SKILLS,
   EXPERIENCE,
   EDUCATION,
   INTERESTS,
-} from "@fezer/shared/resume"
+} from "@fezer/shared/resume";
 
 const SKILL_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
   { label: "AI 与应用", items: SKILLS.ai },
   { label: "AI 协同开发", items: SKILLS.tools },
   { label: "数据分析", items: SKILLS.data },
   { label: "产品与执行", items: SKILLS.product },
-]
+];
 
-const INTEREST_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> =
-  [
-    { label: "AI", items: INTERESTS.ai },
-    { label: "阅读", items: INTERESTS.reading },
-    { label: "写作", items: INTERESTS.writing },
-    { label: "设计", items: INTERESTS.design },
-    { label: "旅行", items: INTERESTS.travel },
-  ]
+const INTEREST_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
+  { label: "AI", items: INTERESTS.ai },
+  { label: "阅读", items: INTERESTS.reading },
+  { label: "写作", items: INTERESTS.writing },
+  { label: "设计", items: INTERESTS.design },
+  { label: "旅行", items: INTERESTS.travel },
+];
 
 const Scene = lazy(() =>
-  import("@/components/jianli/Scene").then((module) => ({
+  import("@/components/jianli/Scene").then(module => ({
     default: module.Scene,
   }))
-)
+);
 
 export default function Jianli() {
-  const [showResumeModal, setShowResumeModal] = useState(false)
-  const [activeRoomId, setActiveRoomId] = useState("central")
-  const [isRoomPanelCollapsed, setIsRoomPanelCollapsed] = useState(false)
-  const [isGuidePanelCollapsed, setIsGuidePanelCollapsed] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [activeRoomId, setActiveRoomId] = useState("central");
+  const [isRoomPanelCollapsed, setIsRoomPanelCollapsed] = useState(false);
+  const [isGuidePanelCollapsed, setIsGuidePanelCollapsed] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatContext, setChatContext] = useState<{
-    characterId?: string
-    roomId?: string
-  }>({ roomId: "central" })
+    characterId?: string;
+    roomId?: string;
+  }>({ roomId: "central" });
   // 递增即重置相机视角到当前房间
-  const [cameraResetToken, setCameraResetToken] = useState(0)
-  const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId])
+  const [cameraResetToken, setCameraResetToken] = useState(0);
+  const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId]);
 
   const handleChatRequest = (context: {
-    characterId?: string
-    roomId?: string
+    characterId?: string;
+    roomId?: string;
   }) => {
     setChatContext({
       characterId: context.characterId,
       roomId: context.roomId ?? activeRoomId,
-    })
-    setIsChatOpen(true)
-  }
+    });
+    setIsChatOpen(true);
+  };
 
   const handleCurrentRoomChat = () => {
-    handleChatRequest({ roomId: activeRoomId })
-  }
+    handleChatRequest({ roomId: activeRoomId });
+  };
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-200">
@@ -107,7 +106,9 @@ export default function Jianli() {
               isRoomPanelCollapsed ? "w-14 p-3" : "max-w-sm p-5"
             }`}
           >
-            <div className={`flex items-center ${isRoomPanelCollapsed ? "justify-center" : "justify-between"}`}>
+            <div
+              className={`flex items-center ${isRoomPanelCollapsed ? "justify-center" : "justify-between"}`}
+            >
               {!isRoomPanelCollapsed && (
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
                   Current Room
@@ -115,9 +116,11 @@ export default function Jianli() {
               )}
               <button
                 type="button"
-                onClick={() => setIsRoomPanelCollapsed((prev) => !prev)}
+                onClick={() => setIsRoomPanelCollapsed(prev => !prev)}
                 className="rounded-full border border-slate-300/80 bg-white/80 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                aria-label={isRoomPanelCollapsed ? "展开房间面板" : "收起房间面板"}
+                aria-label={
+                  isRoomPanelCollapsed ? "展开房间面板" : "收起房间面板"
+                }
               >
                 {isRoomPanelCollapsed ? "展开" : "收起"}
               </button>
@@ -143,7 +146,7 @@ export default function Jianli() {
                     {activeRoom.description}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {activeRoom.highlights.map((item) => (
+                    {activeRoom.highlights.map(item => (
                       <span
                         key={item}
                         className="rounded-full border border-slate-300/80 bg-slate-100/80 px-3 py-1 text-xs text-slate-700"
@@ -155,9 +158,9 @@ export default function Jianli() {
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-2">
-                  {ROOM_IDS.map((roomId) => {
-                    const room = ROOMS[roomId]
-                    const isActive = roomId === activeRoomId
+                  {ROOM_IDS.map(roomId => {
+                    const room = ROOMS[roomId];
+                    const isActive = roomId === activeRoomId;
                     return (
                       <button
                         key={roomId}
@@ -171,7 +174,7 @@ export default function Jianli() {
                       >
                         {room.name}
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </>
@@ -183,7 +186,9 @@ export default function Jianli() {
               isGuidePanelCollapsed ? "w-14 p-3" : "max-w-xs p-5"
             }`}
           >
-            <div className={`flex items-center ${isGuidePanelCollapsed ? "justify-center" : "justify-between"}`}>
+            <div
+              className={`flex items-center ${isGuidePanelCollapsed ? "justify-center" : "justify-between"}`}
+            >
               {!isGuidePanelCollapsed && (
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
                   Exploration Guide
@@ -191,9 +196,11 @@ export default function Jianli() {
               )}
               <button
                 type="button"
-                onClick={() => setIsGuidePanelCollapsed((prev) => !prev)}
+                onClick={() => setIsGuidePanelCollapsed(prev => !prev)}
                 className="rounded-full border border-slate-300/80 bg-white/80 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-                aria-label={isGuidePanelCollapsed ? "展开引导面板" : "收起引导面板"}
+                aria-label={
+                  isGuidePanelCollapsed ? "展开引导面板" : "收起引导面板"
+                }
               >
                 {isGuidePanelCollapsed ? "展开" : "收起"}
               </button>
@@ -203,7 +210,10 @@ export default function Jianli() {
               <>
                 <div className="mt-4 space-y-4 text-sm leading-6 text-slate-600">
                   <p>点击房间标签或左侧卡片，镜头会切换到对应空间。</p>
-                  <p>这个页面目前是 3D 简历的第一阶段：地图结构、分区语义和导览面板已经接通。</p>
+                  <p>
+                    这个页面目前是 3D
+                    简历的第一阶段：地图结构、分区语义和导览面板已经接通。
+                  </p>
                   <p>下一步可以继续往每个房间填充项目、经历和作品内容。</p>
                 </div>
                 <Button
@@ -224,15 +234,21 @@ export default function Jianli() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-4 text-sm text-slate-700 sm:gap-6">
               <span className="flex items-center gap-2">
-                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">拖动</kbd>
+                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">
+                  拖动
+                </kbd>
                 探索视角
               </span>
               <span className="flex items-center gap-2">
-                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">滚轮</kbd>
+                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">
+                  滚轮
+                </kbd>
                 缩放
               </span>
               <span className="flex items-center gap-2">
-                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">点击</kbd>
+                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">
+                  点击
+                </kbd>
                 交互
               </span>
             </div>
@@ -279,7 +295,7 @@ export default function Jianli() {
         >
           <div
             className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg border border-slate-200/80 bg-slate-50/95 p-8 text-slate-900 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold">Fezer - 简历</h2>
@@ -388,5 +404,5 @@ export default function Jianli() {
         </div>
       )}
     </div>
-  )
+  );
 }

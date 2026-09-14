@@ -12,7 +12,11 @@ function configureModelLoader(loader: any) {
   loader.setResourcePath(MODEL_RESOURCE_PATH);
 }
 
-export function ModelInstance({ config, onClick, onHoverChange }: ModelInstanceProps) {
+export function ModelInstance({
+  config,
+  onClick,
+  onHoverChange,
+}: ModelInstanceProps) {
   const groupRef = useRef<any>(null);
   const { scene } = useGLTF(
     config.model,

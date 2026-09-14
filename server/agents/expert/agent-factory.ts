@@ -28,10 +28,7 @@ import {
   type ExecutableTool,
 } from "../tools";
 import { emitRunEvent } from "../../_core/run-events";
-import {
-  assertRunNotAborted,
-  getRunControl,
-} from "../../_core/run-control";
+import { assertRunNotAborted, getRunControl } from "../../_core/run-control";
 import { randomUUID } from "node:crypto";
 
 /**

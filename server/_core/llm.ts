@@ -14,11 +14,7 @@
 
 import { ENV } from "./env";
 import { traceSpan } from "./observability/langsmith";
-import {
-  getRunControl,
-  isRunAborted,
-  mergeAbortSignals,
-} from "./run-control";
+import { getRunControl, isRunAborted, mergeAbortSignals } from "./run-control";
 
 // ============================================================================
 // 类型定义
@@ -312,7 +308,9 @@ type ProviderRuntimeConfig = {
 export class LLMProviderConfigurationError extends Error {
   constructor(
     public readonly provider: LLMProvider,
-    public readonly configVariable: "DEEPSEEK_API_KEY" | "BUILT_IN_FORGE_API_KEY"
+    public readonly configVariable:
+      | "DEEPSEEK_API_KEY"
+      | "BUILT_IN_FORGE_API_KEY"
   ) {
     super(`${configVariable} is not configured`);
     this.name = "LLMProviderConfigurationError";

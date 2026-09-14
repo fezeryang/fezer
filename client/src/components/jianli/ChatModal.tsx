@@ -150,7 +150,13 @@ export function ChatModal({
     [onRoomSwitch, onClose]
   );
 
-  const { sendMessage, sendMessageStream, cancelInFlight, isLoading, thinkingState } = useAgentChat({
+  const {
+    sendMessage,
+    sendMessageStream,
+    cancelInFlight,
+    isLoading,
+    thinkingState,
+  } = useAgentChat({
     onSuccess: response => {
       // 弹窗已关闭（或关闭后重开、会话已被重置）时，丢弃属于旧会话的迟到响应
       if (!isOpenRef.current) return;

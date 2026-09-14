@@ -940,8 +940,9 @@ describe("expert agent run events", () => {
     const events: RunEvent[] = [];
 
     const result = await runWithRunControl({ streamText: true }, () =>
-      runWithEventSink(event => events.push(event), () =>
-        invokeAgent("core", "你好")
+      runWithEventSink(
+        event => events.push(event),
+        () => invokeAgent("core", "你好")
       )
     );
 
@@ -949,9 +950,10 @@ describe("expert agent run events", () => {
     expect(invokeLLMMock).not.toHaveBeenCalled();
 
     const deltas = events.filter(event => event.type === "text.delta");
-    expect(
-      deltas.map(delta => (delta as { delta: string }).delta)
-    ).toEqual(["你好", "，世界"]);
+    expect(deltas.map(delta => (delta as { delta: string }).delta)).toEqual([
+      "你好",
+      "，世界",
+    ]);
 
     // 同一条 assistant 消息的所有增量共享 messageId
     const ids = new Set(
