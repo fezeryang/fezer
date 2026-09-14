@@ -1,4 +1,12 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { EventEmitter } from "node:events";
 import type { Request, Response } from "express";
 
@@ -74,9 +82,10 @@ function createRes(): MockResponse {
 }
 
 /** SSE 流式用：req 需要能触发 close（客户端断开） */
-function createStreamReq(
-  body: unknown
-): { req: Request; emitter: EventEmitter } {
+function createStreamReq(body: unknown): {
+  req: Request;
+  emitter: EventEmitter;
+} {
   const emitter = new EventEmitter();
   const req = Object.assign(emitter, { body }) as unknown as Request;
   return { req, emitter };
@@ -195,9 +204,7 @@ describe("Agent API routes", () => {
       expect(res.ended).toBe(true);
 
       // 帧格式：event: <type>\ndata: <json>\n\n
-      expect(res.chunks[0].startsWith("event: run.started\ndata: ")).toBe(
-        true
-      );
+      expect(res.chunks[0].startsWith("event: run.started\ndata: ")).toBe(true);
 
       const frames = parseSseChunks(res.chunks);
       expect(frames[0]).toMatchObject({ type: "run.started" });

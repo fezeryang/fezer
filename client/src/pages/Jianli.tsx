@@ -84,23 +84,24 @@ export default function Jianli() {
     roomId?: string;
   }>({ roomId: "central" });
   // 递增即重置相机视角到当前房间
-  const [cameraResetToken, setCameraResetToken] = useState(0)
+  const [cameraResetToken, setCameraResetToken] = useState(0);
   // 已访问房间（B7 minimap 状态 + C6 访客进度，纯客户端）
-  const [visitedRoomIds, setVisitedRoomIds] = useState<string[]>(() =>
-    loadVisitorProgress().visitedRooms
-  )
+  const [visitedRoomIds, setVisitedRoomIds] = useState<string[]>(
+    () => loadVisitorProgress().visitedRooms
+  );
   // C1 主动招呼：模板拼接，零 LLM
-  const [roomGreeting, setRoomGreeting] = useState<string | null>(null)
+  const [roomGreeting, setRoomGreeting] = useState<string | null>(null);
   // B8：拿不到 WebGL 时降级为文字版，而不是白屏
-  const [webglAvailable] = useState(() => isWebGLAvailable())
+  const [webglAvailable] = useState(() => isWebGLAvailable());
   const isChatOpenRef = useRef(isChatOpen);
-  const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId])
+  const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId]);
 
   // 简历内容来自 profile markdown（C11）：改内容只改 markdown，不改代码
   const resume = useMemo(() => loadResumeSummary(), []);
 
   // 房间内容化（C9）：来自 frontmatter 的 rooms 标注，见 content/works|blog
-  const roomContent = useMemo(() => {    const works = loadWorks().filter(work =>
+  const roomContent = useMemo(() => {
+    const works = loadWorks().filter(work =>
       work.rooms?.includes(activeRoomId)
     );
     const posts = loadPosts().filter(post =>
@@ -371,7 +372,11 @@ export default function Jianli() {
 
           <aside
             className={`pointer-events-auto rounded-3xl border border-slate-900/10 bg-slate-50/72 text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all ${
-              isMobile ? "hidden" : isGuidePanelCollapsed ? "w-14 p-3" : "max-w-xs p-5"
+              isMobile
+                ? "hidden"
+                : isGuidePanelCollapsed
+                  ? "w-14 p-3"
+                  : "max-w-xs p-5"
             }`}
           >
             <div

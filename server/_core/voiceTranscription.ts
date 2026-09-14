@@ -5,7 +5,7 @@
  * 1. Capture audio using MediaRecorder API
  * 2. Upload audio to storage (e.g., S3) to get URL
  * 3. Call transcription with the URL
- * 
+ *
  * Example usage:
  * ```tsx
  * // Frontend component
@@ -16,7 +16,7 @@
  *     console.log(data.segments); // Timestamped segments
  *   }
  * });
- * 
+ *
  * // After uploading audio to storage
  * transcribeMutation.mutate({
  *   audioUrl: uploadedAudioUrl,
@@ -53,7 +53,12 @@ export type TranscriptionResponse = WhisperResponse; // Return native Whisper AP
 
 export type TranscriptionError = {
   error: string;
-  code: "FILE_TOO_LARGE" | "INVALID_FORMAT" | "TRANSCRIPTION_FAILED" | "UPLOAD_FAILED" | "SERVICE_ERROR";
+  code:
+    | "FILE_TOO_LARGE"
+    | "INVALID_FORMAT"
+    | "TRANSCRIPTION_FAILED"
+    | "UPLOAD_FAILED"
+    | "SERVICE_ERROR";
   details?: string;
 };
 
@@ -77,7 +82,7 @@ export function buildDefaultTranscriptionPrompt(language?: string): string {
 
 /**
  * Transcribe audio to text using the internal Speech-to-Text service
- * 
+ *
  * @param options - Audio data and metadata
  * @returns Transcription result or error
  */
@@ -104,7 +109,7 @@ function requireTranscriptionConfig(): TranscriptionError | undefined {
 function buildTranscriptionFormData(
   audioBuffer: Buffer,
   mimeType: string,
-  options: { language?: string; prompt?: string },
+  options: { language?: string; prompt?: string }
 ): FormData {
   const formData = new FormData();
 
@@ -125,7 +130,7 @@ function buildTranscriptionFormData(
 
 /** 调用转写服务并校验响应 */
 async function postTranscriptionFormData(
-  formData: FormData,
+  formData: FormData
 ): Promise<TranscriptionResponse | TranscriptionError> {
   try {
     const baseUrl = ENV.forgeApiUrl.endsWith("/")
@@ -192,7 +197,7 @@ export type TranscribeDataOptions = {
  * 且拿调用方给的 URL 直接 fetch 就是 SSRF 跳板（探测内网服务）。
  */
 export async function transcribeAudioData(
-  options: TranscribeDataOptions,
+  options: TranscribeDataOptions
 ): Promise<TranscriptionResponse | TranscriptionError> {
   const configError = requireTranscriptionConfig();
   if (configError) {
@@ -216,7 +221,7 @@ export async function transcribeAudioData(
   }
 
   return postTranscriptionFormData(
-    buildTranscriptionFormData(audioBuffer, options.mimeType, options),
+    buildTranscriptionFormData(audioBuffer, options.mimeType, options)
   );
 }
 
@@ -225,17 +230,17 @@ export async function transcribeAudioData(
  */
 function getFileExtension(mimeType: string): string {
   const mimeToExt: Record<string, string> = {
-    'audio/webm': 'webm',
-    'audio/mp3': 'mp3',
-    'audio/mpeg': 'mp3',
-    'audio/wav': 'wav',
-    'audio/wave': 'wav',
-    'audio/ogg': 'ogg',
-    'audio/m4a': 'm4a',
-    'audio/mp4': 'm4a',
+    "audio/webm": "webm",
+    "audio/mp3": "mp3",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+    "audio/wave": "wav",
+    "audio/ogg": "ogg",
+    "audio/m4a": "m4a",
+    "audio/mp4": "m4a",
   };
-  
-  return mimeToExt[mimeType] || 'audio';
+
+  return mimeToExt[mimeType] || "audio";
 }
 
 /**
@@ -243,37 +248,37 @@ function getFileExtension(mimeType: string): string {
  */
 function getLanguageName(langCode: string): string {
   const langMap: Record<string, string> = {
-    'en': 'English',
-    'es': 'Spanish',
-    'fr': 'French',
-    'de': 'German',
-    'it': 'Italian',
-    'pt': 'Portuguese',
-    'ru': 'Russian',
-    'ja': 'Japanese',
-    'ko': 'Korean',
-    'zh': 'Chinese',
-    'ar': 'Arabic',
-    'hi': 'Hindi',
-    'nl': 'Dutch',
-    'pl': 'Polish',
-    'tr': 'Turkish',
-    'sv': 'Swedish',
-    'da': 'Danish',
-    'no': 'Norwegian',
-    'fi': 'Finnish',
+    en: "English",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    it: "Italian",
+    pt: "Portuguese",
+    ru: "Russian",
+    ja: "Japanese",
+    ko: "Korean",
+    zh: "Chinese",
+    ar: "Arabic",
+    hi: "Hindi",
+    nl: "Dutch",
+    pl: "Polish",
+    tr: "Turkish",
+    sv: "Swedish",
+    da: "Danish",
+    no: "Norwegian",
+    fi: "Finnish",
   };
-  
+
   return langMap[langCode] || langCode;
 }
 
 /**
  * Example tRPC procedure implementation:
- * 
+ *
  * ```ts
  * // In server/routers.ts
  * import { transcribeAudio } from "./_core/voiceTranscription";
- * 
+ *
  * export const voiceRouter = router({
  *   transcribe: protectedProcedure
  *     .input(z.object({
@@ -283,7 +288,7 @@ function getLanguageName(langCode: string): string {
  *     }))
  *     .mutation(async ({ input, ctx }) => {
  *       const result = await transcribeAudio(input);
- *       
+ *
  *       // Check if it's an error
  *       if ('error' in result) {
  *         throw new TRPCError({
@@ -292,7 +297,7 @@ function getLanguageName(langCode: string): string {
  *           cause: result,
  *         });
  *       }
- *       
+ *
  *       // Optionally save transcription to database
  *       await db.insert(transcriptions).values({
  *         userId: ctx.user.id,
@@ -302,7 +307,7 @@ function getLanguageName(langCode: string): string {
  *         audioUrl: input.audioUrl,
  *         createdAt: new Date(),
  *       });
- *       
+ *
  *       return result;
  *     }),
  * });

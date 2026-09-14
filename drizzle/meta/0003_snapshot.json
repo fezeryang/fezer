@@ -88,12 +88,8 @@
           "name": "assets_uploadedBy_users_id_fk",
           "tableFrom": "assets",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploadedBy"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploadedBy"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -101,9 +97,7 @@
       "compositePrimaryKeys": {
         "assets_id": {
           "name": "assets_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -219,16 +213,12 @@
       "indexes": {
         "blog_posts_status_idx": {
           "name": "blog_posts_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "blog_posts_publishedAt_idx": {
           "name": "blog_posts_publishedAt_idx",
-          "columns": [
-            "publishedAt"
-          ],
+          "columns": ["publishedAt"],
           "isUnique": false
         }
       },
@@ -236,17 +226,13 @@
       "compositePrimaryKeys": {
         "blog_posts_id": {
           "name": "blog_posts_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "blog_posts_slug_unique": {
           "name": "blog_posts_slug_unique",
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "checkConstraint": {}
@@ -297,12 +283,8 @@
           "name": "content_asset_relations_assetId_assets_id_fk",
           "tableFrom": "content_asset_relations",
           "tableTo": "assets",
-          "columnsFrom": [
-            "assetId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assetId"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -310,9 +292,7 @@
       "compositePrimaryKeys": {
         "content_asset_relations_id": {
           "name": "content_asset_relations_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -401,17 +381,13 @@
       "compositePrimaryKeys": {
         "portfolio_projects_id": {
           "name": "portfolio_projects_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "portfolio_projects_slug_unique": {
           "name": "portfolio_projects_slug_unique",
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "checkConstraint": {}
@@ -470,23 +446,17 @@
       "compositePrimaryKeys": {
         "tags_id": {
           "name": "tags_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "tags_name_unique": {
           "name": "tags_name_unique",
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "tags_slug_unique": {
           "name": "tags_slug_unique",
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "checkConstraint": {}
@@ -555,10 +525,7 @@
       "indexes": {
         "thread_turns_thread_seq": {
           "name": "thread_turns_thread_seq",
-          "columns": [
-            "threadId",
-            "seq"
-          ],
+          "columns": ["threadId", "seq"],
           "isUnique": false
         }
       },
@@ -566,9 +533,7 @@
       "compositePrimaryKeys": {
         "thread_turns_id": {
           "name": "thread_turns_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -635,9 +600,7 @@
       "compositePrimaryKeys": {
         "threads_id": {
           "name": "threads_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -720,17 +683,13 @@
       "compositePrimaryKeys": {
         "users_id": {
           "name": "users_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "users_openId_unique": {
           "name": "users_openId_unique",
-          "columns": [
-            "openId"
-          ]
+          "columns": ["openId"]
         }
       },
       "checkConstraint": {}
@@ -831,16 +790,12 @@
       "indexes": {
         "works_status_idx": {
           "name": "works_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "works_publishedAt_idx": {
           "name": "works_publishedAt_idx",
-          "columns": [
-            "publishedAt"
-          ],
+          "columns": ["publishedAt"],
           "isUnique": false
         }
       },
@@ -848,17 +803,13 @@
       "compositePrimaryKeys": {
         "works_id": {
           "name": "works_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "works_slug_unique": {
           "name": "works_slug_unique",
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "checkConstraint": {}

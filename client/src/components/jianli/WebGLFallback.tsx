@@ -25,9 +25,7 @@ export function WebGLFallback() {
   return (
     <div className="h-full w-full overflow-y-auto bg-slate-200 px-6 py-10">
       <div className="mx-auto max-w-2xl rounded-3xl border border-slate-900/10 bg-white/95 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.12)]">
-        <h1 className="text-xl font-bold text-slate-900">
-          3D 档案馆 · 文字版
-        </h1>
+        <h1 className="text-xl font-bold text-slate-900">3D 档案馆 · 文字版</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           当前浏览器或设备不支持 WebGL，已自动切换为文字版。内容与 3D
           版一致，只是没有空间导览。

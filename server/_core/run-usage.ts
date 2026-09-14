@@ -42,9 +42,11 @@ export async function runWithUsageTracking<T>(
   return { result, usage: accumulator };
 }
 
-export function recordLlmUsage(
-  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
-): void {
+export function recordLlmUsage(usage?: {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}): void {
   const accumulator = usageStorage.getStore();
   if (!accumulator || !usage) {
     return;

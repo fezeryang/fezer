@@ -13,10 +13,7 @@ import {
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
 import { Download, Mic, Square } from "lucide-react";
-import {
-  canRecordAudio,
-  transcribeAudioBlob,
-} from "@/lib/audio-recording";
+import { canRecordAudio, transcribeAudioBlob } from "@/lib/audio-recording";
 import {
   buildConversationMarkdown,
   downloadMarkdown,
@@ -24,10 +21,7 @@ import {
 import { ROOMS } from "./assets/roomsConfig";
 import { fetchThreadHistory, useAgentChat } from "../../hooks/useAgentChat";
 import { getThreadId } from "@/lib/chat-thread";
-import {
-  loadVisitorProgress,
-  markQuestionAsked,
-} from "@/lib/visitor-progress";
+import { loadVisitorProgress, markQuestionAsked } from "@/lib/visitor-progress";
 import type { AgentResponse, ContentCard } from "@fezer/shared/schemas/agent";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import {

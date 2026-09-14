@@ -51,16 +51,16 @@ describe("resume summary parsing", () => {
       },
     ]);
 
-    expect(parseEducation(["中央财经大学 | 保险专业硕士 | 在读 | 背景"])).toEqual(
-      [
-        {
-          school: "中央财经大学",
-          degree: "保险专业硕士",
-          period: "在读",
-          description: "背景",
-        },
-      ]
-    );
+    expect(
+      parseEducation(["中央财经大学 | 保险专业硕士 | 在读 | 背景"])
+    ).toEqual([
+      {
+        school: "中央财经大学",
+        degree: "保险专业硕士",
+        period: "在读",
+        description: "背景",
+      },
+    ]);
   });
 
   it("从真实 profile markdown 读出完整摘要（内容即配置）", () => {

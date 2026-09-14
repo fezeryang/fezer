@@ -7,10 +7,12 @@ This directory contains static content for the portfolio site. All markdown file
 ### Blog Posts (`blog/*.md`)
 
 **Required fields:**
+
 - `title` (string): Post title displayed in sidebar
 - `date` (string): ISO 8601 date (e.g., "2024-03-15") for chronological sort
 
 **Optional fields:**
+
 - `excerpt` (string): Short preview text (1-3 sentences)
 - `summary` (string): Alternative to `excerpt` for preview text (use one or the other)
 - `tags` (string[]): Array of topic tags for filtering/categorization
@@ -18,6 +20,7 @@ This directory contains static content for the portfolio site. All markdown file
 - `slug` (string): URL-friendly identifier (auto-derived from filename if omitted)
 
 **Example:**
+
 ```yaml
 ---
 title: "Architectural Sonics"
@@ -25,17 +28,18 @@ date: "2024-06-15"
 excerpt: "Exploring the intersection of sound and spatial design."
 category: "Architecture"
 ---
-
 Post content goes here...
 ```
 
 ### Works (`works/*.md`)
 
 **Required fields:**
+
 - `title` (string): Project name
 - `description` (string): One-paragraph summary (shown in grid cards)
 
 **Optional fields:**
+
 - `slug` (string): URL-friendly identifier (auto-derived from filename if omitted)
 - `summary` (string): Alternative to `description` for brief project summary
 - `tags` (string[]): Array of technology/domain tags
@@ -44,6 +48,7 @@ Post content goes here...
 - `imageUrl` (string): Path to project thumbnail
 
 **Example:**
+
 ```yaml
 ---
 title: "Kinetic Typography Engine"
@@ -51,18 +56,19 @@ description: "A creative work exploring digital and physical boundaries."
 technologies: "React, p5.js, TypeScript"
 link: "https://example.com"
 ---
-
 Detailed project write-up...
 ```
 
 ### Profile (`profile/*.{lang}.md`)
 
 **Required fields:**
+
 - `name` (string): Display name
 - `bio` (string): One-line tagline
 - `locale` (string): Language code (e.g., "zh-CN", "en-US")
 
 **Optional fields:**
+
 - `avatar` (string): Path to profile image
 - `skills` (string[]): List of skills/interests
 - `projects` (object[]): Featured projects with `name` and `url`
@@ -82,6 +88,7 @@ Detailed project write-up...
 格式不符的条目会被丢弃（不会让页面崩掉）；字段缺失时对应区块为空。
 
 **Example:**
+
 ```yaml
 ---
 name: "Fezer"
@@ -91,7 +98,6 @@ skills: ["vibe coding", "写作", "摄影"]
 projects: []
 contact: {}
 ---
-
 Extended biography content (optional)...
 ```
 
@@ -106,9 +112,9 @@ Extended biography content (optional)...
 Recommended loader using `import.meta.glob` + `gray-matter`:
 
 ```typescript
-import matter from 'gray-matter';
+import matter from "gray-matter";
 
-const rawFiles = import.meta.glob('./blog/*.md', { eager: true, as: 'raw' });
+const rawFiles = import.meta.glob("./blog/*.md", { eager: true, as: "raw" });
 
 export function loadPosts() {
   return Object.entries(rawFiles)

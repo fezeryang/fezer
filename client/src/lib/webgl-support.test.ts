@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  isWebGLAvailable,
-  resetWebGLAvailabilityCache,
-} from "./webgl-support";
+import { isWebGLAvailable, resetWebGLAvailabilityCache } from "./webgl-support";
 
 describe("webgl availability", () => {
   beforeEach(() => {

@@ -66,7 +66,9 @@ export interface UseAgentChatReturn {
 /**
  * 读取某个会话线程的历史（C7：打开聊天时恢复上次对话）
  */
-export async function fetchThreadHistory(threadId: string): Promise<
+export async function fetchThreadHistory(
+  threadId: string
+): Promise<
   Array<{ role: "user" | "assistant"; content: string; agentId?: FezerType }>
 > {
   const response = await fetch(

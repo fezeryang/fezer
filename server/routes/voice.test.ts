@@ -81,10 +81,7 @@ describe("POST /api/voice/transcribe", () => {
       { audioBase64: "x".repeat(24 * 1024 * 1024), mimeType: "audio/webm" },
     ]) {
       const res = createRes();
-      await voiceTranscribeHandler(
-        createReq(body),
-        res as unknown as Response
-      );
+      await voiceTranscribeHandler(createReq(body), res as unknown as Response);
 
       expect(res.statusCode).toBe(400);
       expect(res.body).toMatchObject({ error: "Invalid audio payload" });
