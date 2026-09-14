@@ -631,7 +631,7 @@ export function ChatModal({
                       className={`h-1.5 w-1.5 rounded-full ${
                         item.done
                           ? "bg-emerald-500"
-                          : "bg-amber-400 animate-pulse"
+                          : "bg-amber-400 animate-pulse motion-reduce:animate-none"
                       }`}
                     />
                   </span>
@@ -644,7 +644,9 @@ export function ChatModal({
               <div className="max-w-[85%] px-4 py-2 rounded-2xl bg-white text-gray-800 rounded-bl-md shadow-sm">
                 <div className="max-w-none font-chill-huofangsong whitespace-pre-wrap text-sm">
                   {streamingText}
-                  <span className="animate-pulse">▍</span>
+                  <span className="animate-pulse motion-reduce:animate-none">
+                    ▍
+                  </span>
                 </div>
               </div>
             </div>

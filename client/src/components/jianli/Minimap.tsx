@@ -85,7 +85,11 @@ export function Minimap({
                 height={height}
                 rx={1.5}
                 fill={fill}
-                className={!isActive && !isVisited ? "animate-pulse" : ""}
+                className={
+                  !isActive && !isVisited
+                    ? "animate-pulse motion-reduce:animate-none"
+                    : ""
+                }
               />
             </g>
           );

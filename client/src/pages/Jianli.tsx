@@ -13,6 +13,9 @@ import {
 } from "@fezer/shared/resume";
 import { loadPosts, loadWorks } from "@/content/loaders";
 import { Minimap } from "@/components/jianli/Minimap";
+import { WebGLFallback } from "@/components/jianli/WebGLFallback";
+import { SceneLoadingFallback } from "@/components/jianli/SceneLoadingFallback";
+import { isWebGLAvailable } from "@/lib/webgl-support";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   loadVisitorProgress,
@@ -109,6 +112,8 @@ export default function Jianli() {
   )
   // C1 主动招呼：模板拼接，零 LLM
   const [roomGreeting, setRoomGreeting] = useState<string | null>(null)
+  // B8：拿不到 WebGL 时降级为文字版，而不是白屏
+  const [webglAvailable] = useState(() => isWebGLAvailable())
   const isChatOpenRef = useRef(isChatOpen);
   const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId]);
 
@@ -187,21 +192,19 @@ export default function Jianli() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-200">
-      {/* 3D 场景 */}
-      <Suspense
-        fallback={
-          <div className="flex h-full w-full items-center justify-center bg-slate-200 text-sm text-slate-600">
-            正在加载 3D 场景...
-          </div>
-        }
-      >
-        <Scene
-          activeRoomId={activeRoomId}
-          onRoomSelect={setActiveRoomId}
-          onChatRequest={handleChatRequest}
-          cameraResetToken={cameraResetToken}
-        />
-      </Suspense>
+      {/* 3D 场景（B8：无 WebGL 时降级为文字版） */}
+      {webglAvailable ? (
+        <Suspense fallback={<SceneLoadingFallback />}>
+          <Scene
+            activeRoomId={activeRoomId}
+            onRoomSelect={setActiveRoomId}
+            onChatRequest={handleChatRequest}
+            cameraResetToken={cameraResetToken}
+          />
+        </Suspense>
+      ) : (
+        <WebGLFallback />
+      )}
 
       {/* UI 层 */}
       <div className="pointer-events-none absolute inset-0 flex flex-col">
