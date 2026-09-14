@@ -27,13 +27,6 @@
  */
 import { ENV } from "./env";
 
-export type TranscribeOptions = {
-  audioUrl: string; // URL to the audio file (e.g., S3 URL)
-  language?: string; // Optional: specify language code (e.g., "en", "es", "zh")
-  prompt?: string; // Optional: custom prompt for the transcription
-};
-
-// Native Whisper API segment format
 export type WhisperSegment = {
   id: number;
   seek: number;
@@ -88,83 +81,58 @@ export function buildDefaultTranscriptionPrompt(language?: string): string {
  * @param options - Audio data and metadata
  * @returns Transcription result or error
  */
-export async function transcribeAudio(
-  options: TranscribeOptions
+/** 语音转写服务配置校验 */
+function requireTranscriptionConfig(): TranscriptionError | undefined {
+  if (!ENV.forgeApiUrl) {
+    return {
+      error: "Voice transcription service is not configured",
+      code: "SERVICE_ERROR",
+      details: "BUILT_IN_FORGE_API_URL is not set",
+    };
+  }
+  if (!ENV.forgeApiKey) {
+    return {
+      error: "Voice transcription service authentication is missing",
+      code: "SERVICE_ERROR",
+      details: "BUILT_IN_FORGE_API_KEY is not set",
+    };
+  }
+  return undefined;
+}
+
+/** 组装 multipart 请求体（Whisper 兼容） */
+function buildTranscriptionFormData(
+  audioBuffer: Buffer,
+  mimeType: string,
+  options: { language?: string; prompt?: string },
+): FormData {
+  const formData = new FormData();
+
+  const filename = `audio.${getFileExtension(mimeType)}`;
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
+  formData.append("file", audioBlob, filename);
+
+  formData.append("model", "whisper-1");
+  formData.append("response_format", "verbose_json");
+
+  // Prefer user prompt when provided; otherwise use stable internal template.
+  const prompt =
+    options.prompt || buildDefaultTranscriptionPrompt(options.language);
+  formData.append("prompt", prompt);
+
+  return formData;
+}
+
+/** 调用转写服务并校验响应 */
+async function postTranscriptionFormData(
+  formData: FormData,
 ): Promise<TranscriptionResponse | TranscriptionError> {
   try {
-    // Step 1: Validate environment configuration
-    if (!ENV.forgeApiUrl) {
-      return {
-        error: "Voice transcription service is not configured",
-        code: "SERVICE_ERROR",
-        details: "BUILT_IN_FORGE_API_URL is not set"
-      };
-    }
-    if (!ENV.forgeApiKey) {
-      return {
-        error: "Voice transcription service authentication is missing",
-        code: "SERVICE_ERROR",
-        details: "BUILT_IN_FORGE_API_KEY is not set"
-      };
-    }
-
-    // Step 2: Download audio from URL
-    let audioBuffer: Buffer;
-    let mimeType: string;
-    try {
-      const response = await fetch(options.audioUrl);
-      if (!response.ok) {
-        return {
-          error: "Failed to download audio file",
-          code: "INVALID_FORMAT",
-          details: `HTTP ${response.status}: ${response.statusText}`
-        };
-      }
-      
-      audioBuffer = Buffer.from(await response.arrayBuffer());
-      mimeType = response.headers.get('content-type') || 'audio/mpeg';
-      
-      // Check file size (16MB limit)
-      const sizeMB = audioBuffer.length / (1024 * 1024);
-      if (sizeMB > 16) {
-        return {
-          error: "Audio file exceeds maximum size limit",
-          code: "FILE_TOO_LARGE",
-          details: `File size is ${sizeMB.toFixed(2)}MB, maximum allowed is 16MB`
-        };
-      }
-    } catch (error) {
-      return {
-        error: "Failed to fetch audio file",
-        code: "SERVICE_ERROR",
-        details: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-
-    // Step 3: Create FormData for multipart upload to Whisper API
-    const formData = new FormData();
-    
-    // Create a Blob from the buffer and append to form
-    const filename = `audio.${getFileExtension(mimeType)}`;
-    const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
-    formData.append("file", audioBlob, filename);
-    
-    formData.append("model", "whisper-1");
-    formData.append("response_format", "verbose_json");
-    
-    // Prefer user prompt when provided; otherwise use stable internal template.
-    const prompt = options.prompt || buildDefaultTranscriptionPrompt(options.language);
-    formData.append("prompt", prompt);
-
-    // Step 4: Call the transcription service
     const baseUrl = ENV.forgeApiUrl.endsWith("/")
       ? ENV.forgeApiUrl
       : `${ENV.forgeApiUrl}/`;
-    
-    const fullUrl = new URL(
-      "v1/audio/transcriptions",
-      baseUrl
-    ).toString();
+
+    const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
 
     const response = await fetch(fullUrl, {
       method: "POST",
@@ -180,32 +148,76 @@ export async function transcribeAudio(
       return {
         error: "Transcription service request failed",
         code: "TRANSCRIPTION_FAILED",
-        details: `${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ""}`
+        details: `${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ""}`,
       };
     }
 
-    // Step 5: Parse and return the transcription result
-    const whisperResponse = await response.json() as WhisperResponse;
-    
-    // Validate response structure
-    if (!whisperResponse.text || typeof whisperResponse.text !== 'string') {
+    const whisperResponse = (await response.json()) as WhisperResponse;
+
+    if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
       return {
         error: "Invalid transcription response",
         code: "SERVICE_ERROR",
-        details: "Transcription service returned an invalid response format"
+        details: "Transcription service returned an invalid response format",
       };
     }
 
-    return whisperResponse; // Return native Whisper API response directly
-
+    return whisperResponse;
   } catch (error) {
-    // Handle unexpected errors
     return {
       error: "Voice transcription failed",
       code: "SERVICE_ERROR",
-      details: error instanceof Error ? error.message : "An unexpected error occurred"
+      details:
+        error instanceof Error ? error.message : "An unexpected error occurred",
     };
   }
+}
+
+/** 音频体积上限（转写服务限制 16MB） */
+export const MAX_TRANSCRIPTION_BYTES = 16 * 1024 * 1024;
+
+export type TranscribeDataOptions = {
+  /** base64 编码的音频（客户端录音直接上传，无需先落存储） */
+  audioBase64: string;
+  mimeType: string;
+  language?: string;
+  prompt?: string;
+};
+
+/**
+ * 直接转写内存中的音频（C8 语音输入）。
+ *
+ * 访客录音没有可落存储的 URL，所以走 base64 → 服务端解码后进同一套
+ * formData/POST 流程。旧的「传 URL 再下载」入口已删除：它零消费者，
+ * 且拿调用方给的 URL 直接 fetch 就是 SSRF 跳板（探测内网服务）。
+ */
+export async function transcribeAudioData(
+  options: TranscribeDataOptions,
+): Promise<TranscriptionResponse | TranscriptionError> {
+  const configError = requireTranscriptionConfig();
+  if (configError) {
+    return configError;
+  }
+
+  const audioBuffer = Buffer.from(options.audioBase64, "base64");
+  if (audioBuffer.byteLength === 0) {
+    return {
+      error: "Empty audio payload",
+      code: "INVALID_FORMAT",
+      details: "Decoded audio contained no bytes",
+    };
+  }
+  if (audioBuffer.byteLength > MAX_TRANSCRIPTION_BYTES) {
+    return {
+      error: "Audio file exceeds maximum size limit",
+      code: "FILE_TOO_LARGE",
+      details: `Audio is ${(audioBuffer.byteLength / (1024 * 1024)).toFixed(2)}MB, maximum allowed is 16MB`,
+    };
+  }
+
+  return postTranscriptionFormData(
+    buildTranscriptionFormData(audioBuffer, options.mimeType, options),
+  );
 }
 
 /**

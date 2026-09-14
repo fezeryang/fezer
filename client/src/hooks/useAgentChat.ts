@@ -12,9 +12,7 @@ import type { RunEvent } from "@fezer/shared/schemas/run";
 import type { FezerType } from "@fezer/shared/schemas/character";
 import { consumeSseResponse } from "@/lib/sse";
 import { getOrCreateThreadId } from "@/lib/chat-thread";
-
-// API 基础 URL，开发环境使用本地，生产环境由 VITE_API_URL 指向后端
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+import { API_BASE } from "@/lib/api-base";
 
 function toPublicChatError(errorData: unknown, status: number): Error {
   if (
@@ -167,7 +165,11 @@ export function useAgentChat(
         if (controller.signal.aborted) {
           throw new DOMException("本次请求已取消", "AbortError");
         }
-        // 流失败但非取消：给调用方降级到非流式的机会
+        // 流失败但非取消：降级到非流式，并留下可诊断的痕迹
+        console.warn(
+          "[chat] 流式请求失败，降级为非流式:",
+          error instanceof Error ? error.message : error
+        );
         return null;
       } finally {
         inFlightControllerRef.current = null;

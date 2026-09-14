@@ -12,6 +12,11 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
+import { Mic, Square } from "lucide-react";
+import {
+  canRecordAudio,
+  transcribeAudioBlob,
+} from "@/lib/audio-recording";
 import { fetchThreadHistory, useAgentChat } from "../../hooks/useAgentChat";
 import { getThreadId } from "@/lib/chat-thread";
 import type { AgentResponse, ContentCard } from "@fezer/shared/schemas/agent";
@@ -139,6 +144,66 @@ export function ChatModal({
   const [collaborators, setCollaborators] = useState<
     Array<{ agentId: FezerType; displayName: string; done: boolean }>
   >([]);
+  // C8 语音输入：录音 → 转写 → 填进输入框（不直接发送，用户仍可编辑）
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  const handleToggleRecording = useCallback(async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    setVoiceError(null);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+
+        void (async () => {
+          setIsTranscribing(true);
+          try {
+            const text = await transcribeAudioBlob(
+              new Blob(chunks, { type: recorder.mimeType || "audio/webm" })
+            );
+            if (text.trim()) {
+              setInputValue(prev =>
+                prev ? `${prev} ${text.trim()}` : text.trim()
+              );
+            }
+          } catch (error) {
+            setVoiceError(
+              error instanceof Error ? error.message : "语音识别失败"
+            );
+          } finally {
+            setIsTranscribing(false);
+          }
+        })();
+      };
+
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch {
+      setVoiceError("无法访问麦克风，请检查浏览器权限。");
+    }
+  }, [isRecording]);
+
   const [, setLocation] = useLocation();
 
   // 内容卡片点击：博客去详情页；作品优先去自己的链接，否则去作品列表
@@ -707,6 +772,9 @@ export function ChatModal({
 
         {/* 输入框 */}
         <div className="p-4 border-t bg-white shrink-0">
+          {voiceError && (
+            <p className="mb-2 text-xs text-red-500">{voiceError}</p>
+          )}
           <div className="flex gap-2">
             <input
               type="text"
@@ -717,6 +785,28 @@ export function ChatModal({
               className="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
             />
+            {canRecordAudio() && (
+              <button
+                type="button"
+                onClick={handleToggleRecording}
+                disabled={isTranscribing || isLoading}
+                aria-label={isRecording ? "停止录音" : "语音输入"}
+                title={isRecording ? "停止录音" : "语音输入"}
+                className={`shrink-0 rounded-full px-3 py-2 transition disabled:opacity-50 ${
+                  isRecording
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {isTranscribing ? (
+                  <span className="text-xs">识别中</span>
+                ) : isRecording ? (
+                  <Square className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </button>
+            )}
             {isLoading && (
               <button
                 onClick={cancelInFlight}
