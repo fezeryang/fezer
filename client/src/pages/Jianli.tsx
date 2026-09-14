@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { Link } from "wouter";
@@ -19,6 +19,13 @@ import {
   markCharacterDiscovered,
   markRoomVisited,
 } from "@/lib/visitor-progress";
+import {
+  buildRoomGreeting,
+  isGreetingEnabled,
+  markGreetingShown,
+  setGreetingEnabled,
+  shouldShowGreeting,
+} from "@/lib/room-greeting";
 
 const SKILL_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
   { label: "AI 与应用", items: SKILLS.ai },
@@ -99,7 +106,10 @@ export default function Jianli() {
   // 已访问房间（B7 minimap 状态 + C6 访客进度，纯客户端）
   const [visitedRoomIds, setVisitedRoomIds] = useState<string[]>(() =>
     loadVisitorProgress().visitedRooms
-  );
+  )
+  // C1 主动招呼：模板拼接，零 LLM
+  const [roomGreeting, setRoomGreeting] = useState<string | null>(null)
+  const isChatOpenRef = useRef(isChatOpen);
   const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId]);
 
   // 房间内容化（C9）：来自 frontmatter 的 rooms 标注，见 content/works|blog
@@ -144,6 +154,37 @@ export default function Jianli() {
     setVisitedRoomIds(markRoomVisited(activeRoomId).visitedRooms);
   }, [activeRoomId]);
 
+  // C1：进入房间 1.5s 后招呼一次；正在聊天不打断，关闭开关后不再出现
+  useEffect(() => {
+    isChatOpenRef.current = isChatOpen;
+  }, [isChatOpen]);
+
+  useEffect(() => {
+    if (!isGreetingEnabled() || !shouldShowGreeting(activeRoomId)) return;
+    if (isChatOpenRef.current) return;
+
+    const timer = setTimeout(() => {
+      if (isChatOpenRef.current) return;
+
+      const text = buildRoomGreeting(
+        { name: activeRoom.name, summary: activeRoom.summary },
+        roomContent.works.map(work => ({ title: work.title })),
+        roomContent.posts.map(post => ({ title: post.title }))
+      );
+      markGreetingShown(activeRoomId);
+      setRoomGreeting(text);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [activeRoomId, activeRoom, roomContent]);
+
+  // 招呼气泡自动消失
+  useEffect(() => {
+    if (!roomGreeting) return;
+    const timer = setTimeout(() => setRoomGreeting(null), 9000);
+    return () => clearTimeout(timer);
+  }, [roomGreeting]);
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-200">
       {/* 3D 场景 */}
@@ -169,6 +210,40 @@ export default function Jianli() {
           visitedRoomIds={visitedRoomIds}
           onRoomSelect={setActiveRoomId}
         />
+
+        {/* C1 房间招呼（模板拼接，零 LLM） */}
+        {roomGreeting && (
+          <div className="pointer-events-auto absolute bottom-24 left-4 max-w-xs rounded-2xl border border-slate-900/10 bg-slate-50/95 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur-md">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+              {activeRoom.name}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              {roomGreeting}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRoomGreeting(null);
+                  handleCurrentRoomChat();
+                }}
+                className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white hover:bg-slate-800"
+              >
+                聊聊这个房间
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGreetingEnabled(false);
+                  setRoomGreeting(null);
+                }}
+                className="text-xs text-slate-500 hover:text-slate-800"
+              >
+                不再自动出现
+              </button>
+            </div>
+          </div>
+        )}
         {/* 顶部导航栏 */}
         <header className="pointer-events-auto flex items-center justify-between border-b border-slate-800/10 bg-slate-100/60 px-6 py-4 backdrop-blur-md">
           <div className="flex items-center gap-4">
