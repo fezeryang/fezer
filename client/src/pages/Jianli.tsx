@@ -11,6 +11,7 @@ import {
   EDUCATION,
   INTERESTS,
 } from "@fezer/shared/resume";
+import { loadPosts, loadWorks } from "@/content/loaders";
 
 const SKILL_GROUPS_FOR_SUMMARY: Array<{ label: string; items: string[] }> = [
   { label: "AI 与应用", items: SKILLS.ai },
@@ -33,6 +34,48 @@ const Scene = lazy(() =>
   }))
 );
 
+/** 房间内容入口：内部链接走 wouter，外部链接新开标签页 */
+function RoomContentLink({
+  href,
+  label,
+  title,
+}: {
+  href: string;
+  label: string;
+  title: string;
+}) {
+  const className =
+    "block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition";
+  const badge = (
+    <span className="text-[10px] uppercase tracking-wider text-slate-400">
+      {label}
+    </span>
+  );
+  const name = (
+    <p className="text-sm font-medium text-slate-800 truncate">{title}</p>
+  );
+
+  if (href.startsWith("/")) {
+    return (
+      <Link href={href} className={className}>
+        {badge}
+        {name}
+      </Link>
+    );
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+    >
+      {badge}
+      {name}
+    </a>
+  );
+}
+
 export default function Jianli() {
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState("central");
@@ -46,6 +89,17 @@ export default function Jianli() {
   // 递增即重置相机视角到当前房间
   const [cameraResetToken, setCameraResetToken] = useState(0);
   const activeRoom = useMemo(() => ROOMS[activeRoomId], [activeRoomId]);
+
+  // 房间内容化（C9）：来自 frontmatter 的 rooms 标注，见 content/works|blog
+  const roomContent = useMemo(() => {
+    const works = loadWorks().filter(work =>
+      work.rooms?.includes(activeRoomId)
+    );
+    const posts = loadPosts().filter(post =>
+      post.rooms?.includes(activeRoomId)
+    );
+    return { works, posts };
+  }, [activeRoomId]);
 
   const handleChatRequest = (context: {
     characterId?: string;
@@ -155,6 +209,43 @@ export default function Jianli() {
                       </span>
                     ))}
                   </div>
+                </div>
+
+                {/* 房间真实内容（作品/博客，来自内容 frontmatter 的 rooms 标注） */}
+                <div className="mt-5 rounded-2xl bg-white/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    房间内容
+                  </p>
+                  {roomContent.works.length === 0 &&
+                  roomContent.posts.length === 0 ? (
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      这个房间的内容还在整理中 ——
+                      可以先和这里的角色聊聊，或去相邻房间看看。
+                    </p>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {roomContent.works.map(work => (
+                        <RoomContentLink
+                          key={`work-${work.slug}`}
+                          href={
+                            work.link?.startsWith("/")
+                              ? work.link
+                              : (work.link ?? "/portfolio")
+                          }
+                          label="作品"
+                          title={work.title}
+                        />
+                      ))}
+                      {roomContent.posts.map(post => (
+                        <RoomContentLink
+                          key={`post-${post.slug}`}
+                          href={`/blog/${post.slug}`}
+                          label="博客"
+                          title={post.title}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-2">

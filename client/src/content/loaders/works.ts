@@ -12,11 +12,12 @@ function normalizeWork(raw: string, filePath: string): Work {
 
   const title = requireField<string>(data, "title", filePath);
 
-  const description = typeof data.description === "string" && data.description
-    ? data.description
-    : typeof data.summary === "string" && data.summary
-      ? data.summary
-      : null;
+  const description =
+    typeof data.description === "string" && data.description
+      ? data.description
+      : typeof data.summary === "string" && data.summary
+        ? data.summary
+        : null;
 
   if (!description) {
     throw new Error(
@@ -24,15 +25,17 @@ function normalizeWork(raw: string, filePath: string): Work {
     );
   }
 
-  const slug = typeof data.slug === "string" && data.slug
-    ? data.slug
-    : extractSlugFromPath(filePath);
+  const slug =
+    typeof data.slug === "string" && data.slug
+      ? data.slug
+      : extractSlugFromPath(filePath);
 
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
 
   const rooms = Array.isArray(data.rooms) ? data.rooms.map(String) : [];
 
-  const date = typeof data.date === "string" && data.date ? data.date : undefined;
+  const date =
+    typeof data.date === "string" && data.date ? data.date : undefined;
 
   return {
     slug,
@@ -41,7 +44,8 @@ function normalizeWork(raw: string, filePath: string): Work {
     date,
     tags,
     rooms: rooms.length > 0 ? rooms : undefined,
-    technologies: typeof data.technologies === "string" ? data.technologies : undefined,
+    technologies:
+      typeof data.technologies === "string" ? data.technologies : undefined,
     link: typeof data.link === "string" ? data.link : undefined,
     imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
     body: content,
@@ -72,5 +76,5 @@ export function loadWorks(): Work[] {
 }
 
 export function getWorkBySlug(slug: string): Work | undefined {
-  return loadWorks().find((work) => work.slug === slug);
+  return loadWorks().find(work => work.slug === slug);
 }

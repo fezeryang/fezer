@@ -15,18 +15,22 @@ function normalizePost(raw: string, filePath: string): Post {
 
   const dateObj = new Date(date);
   if (isNaN(dateObj.getTime())) {
-    throw new Error(`[${filePath}] Invalid date format: "${date}". Expected ISO 8601 (YYYY-MM-DD).`);
+    throw new Error(
+      `[${filePath}] Invalid date format: "${date}". Expected ISO 8601 (YYYY-MM-DD).`
+    );
   }
 
-  const slug = typeof data.slug === "string" && data.slug
-    ? data.slug
-    : extractSlugFromPath(filePath);
+  const slug =
+    typeof data.slug === "string" && data.slug
+      ? data.slug
+      : extractSlugFromPath(filePath);
 
-  const excerpt = typeof data.excerpt === "string" && data.excerpt
-    ? data.excerpt
-    : typeof data.summary === "string" && data.summary
-      ? data.summary
-      : "";
+  const excerpt =
+    typeof data.excerpt === "string" && data.excerpt
+      ? data.excerpt
+      : typeof data.summary === "string" && data.summary
+        ? data.summary
+        : "";
 
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
 
@@ -68,5 +72,5 @@ export function loadPosts(): Post[] {
 }
 
 export function getPostBySlug(slug: string): Post | undefined {
-  return loadPosts().find((post) => post.slug === slug);
+  return loadPosts().find(post => post.slug === slug);
 }

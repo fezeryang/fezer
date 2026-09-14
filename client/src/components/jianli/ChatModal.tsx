@@ -135,21 +135,24 @@ export function ChatModal({
   const [, setLocation] = useLocation();
 
   // 内容卡片点击：博客去详情页；作品优先去自己的链接，否则去作品列表
-  const openContentCard = useCallback((card: ContentCard) => {
-    if (card.type === "blog") {
-      setLocation(`/blog/${card.slug}`);
-      return;
-    }
-    if (card.link?.startsWith("/")) {
-      setLocation(card.link);
-      return;
-    }
-    if (card.link) {
-      window.open(card.link, "_blank", "noopener");
-      return;
-    }
-    setLocation("/portfolio");
-  }, [setLocation]);
+  const openContentCard = useCallback(
+    (card: ContentCard) => {
+      if (card.type === "blog") {
+        setLocation(`/blog/${card.slug}`);
+        return;
+      }
+      if (card.link?.startsWith("/")) {
+        setLocation(card.link);
+        return;
+      }
+      if (card.link) {
+        window.open(card.link, "_blank", "noopener");
+        return;
+      }
+      setLocation("/portfolio");
+    },
+    [setLocation]
+  );
 
   // 拖拽状态
   const [position, setPosition] = useState({ x: 0, y: 0 });
