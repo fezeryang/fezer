@@ -73,8 +73,16 @@ export function Character({
   const [waitEndTime, setWaitEndTime] = useState<number>(0);
   // 本次行走的目的：巡逻回家 or 赴会（决定速度与到达后的行为）
   const walkingToMeeting = useRef(false);
-  // 悬停角色：显示投喂条（D7）
+  // 悬停角色：显示投喂条（D7）；移向头顶投喂条（DOM 层）时有缓冲窗口，不立刻收起
   const [hovered, setHovered] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelHide = () => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+  useEffect(() => cancelHide, []);
   useCursor(hovered);
 
   // 会议目标同步到 ref：useFrame 闭包跨渲染读取最新值
@@ -189,9 +197,15 @@ export function Character({
       onClick={() => onClick?.(config.id)}
       onPointerOver={event => {
         event.stopPropagation();
+        cancelHide();
         setHovered(true);
       }}
-      onPointerOut={() => setHovered(false)}
+      onPointerOut={() => {
+        // 指针离开角色可能是在移向头顶的投喂条（DOM 层）：给 800ms 缓冲，
+        // 条内 onMouseEnter 会取消；真离开才收起
+        cancelHide();
+        hideTimerRef.current = setTimeout(() => setHovered(false), 800);
+      }}
     >
       {/* 内层：模型缩放。分两层是为了让气泡高度用世界坐标表达 */}
       <group scale={config.scale || [0.3, 0.3, 0.3]}>
@@ -221,7 +235,11 @@ export function Character({
           distanceFactor={12}
           zIndexRange={[20, 0]}
         >
-          <div className="t-bubble flex items-center gap-0.5 rounded-full border border-slate-900/10 bg-white/92 px-2 py-0.5 shadow-[0_8px_28px_rgba(15,23,42,0.15)]">
+          <div
+            className="t-bubble flex items-center gap-0.5 rounded-full border border-slate-900/10 bg-white/92 px-2 py-0.5 shadow-[0_8px_28px_rgba(15,23,42,0.15)]"
+            onMouseEnter={cancelHide}
+            onMouseLeave={() => setHovered(false)}
+          >
             {FEED_BAR.map(({ item, emoji, label }) => (
               <button
                 key={item}
