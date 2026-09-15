@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
+import { FileText, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
 import { ChatModal } from "@/components/jianli/ChatModal";
 import { ROOM_IDS, ROOMS } from "@/components/jianli/assets/roomsConfig";
@@ -356,22 +357,13 @@ export default function Jianli() {
           collaboratingRoomIds={Object.keys(agentBubbles)}
         />
 
-        {/* 顶部导航栏 */}
-        <header className="pointer-events-auto flex items-center justify-between border-b border-slate-800/10 bg-slate-100/60 px-6 py-4 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <span className="rounded-full bg-slate-50/80 px-3 py-1 text-xs text-slate-700">
-              3D Archive
-            </span>
-          </div>
-          <nav className="flex gap-4">
-            <Link
-              href="/"
-              className="text-sm text-slate-700 transition-colors hover:text-slate-950"
-            >
-              返回主页
-            </Link>
-          </nav>
-        </header>
+        {/* 顶部居中轻量返回（替代原通栏 header） */}
+        <Link
+          href="/"
+          className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs text-slate-600/90 drop-shadow-sm transition-colors hover:text-slate-950"
+        >
+          ← 返回主页
+        </Link>
 
         {/* 中间区域 */}
         <div className="flex flex-1 items-start justify-between gap-6 px-6 py-6">
@@ -548,64 +540,36 @@ export default function Jianli() {
           </aside>
         </div>
 
-        {/* 底部操作提示 */}
-        <footer className="pointer-events-auto border-t border-slate-800/10 bg-slate-100/60 px-6 py-4 backdrop-blur-md">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-4 text-sm text-slate-700 sm:gap-6">
-              <span className="flex items-center gap-2">
-                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">
-                  拖动
-                </kbd>
-                探索视角
-              </span>
-              <span className="flex items-center gap-2">
-                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">
-                  滚轮
-                </kbd>
-                缩放
-              </span>
-              <span className="flex items-center gap-2">
-                <kbd className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-800">
-                  点击
-                </kbd>
-                交互
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              {isMobile && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl border-slate-400/60 bg-slate-100/70 px-3 text-xs text-slate-900 hover:bg-slate-200"
-                  onClick={() => setShowResumeModal(true)}
-                >
-                  简历摘要
-                </Button>
-              )}
-              <Button
-                type="button"
-                size="sm"
-                className="gap-2 rounded-xl bg-slate-900 px-3 text-xs text-white hover:bg-slate-800 sm:text-sm"
-                onClick={handleCurrentRoomChat}
-              >
-                <MessageCircle className="h-4 w-4" />
-                与当前房间 Agent 聊天
-              </Button>
-              <span className="text-xs text-slate-500">
-                已聚焦：{activeRoom.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCameraResetToken(prev => prev + 1)}
-                className="rounded-lg border border-slate-300/70 bg-white/80 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100"
-              >
-                重置视角
-              </button>
-            </div>
-          </div>
-        </footer>
+        {/* 底部居中轻量操作簇（替代原通栏 footer；保留移动端简历/聊天入口） */}
+        <div className="pointer-events-auto absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2">
+          <button
+            type="button"
+            title="简历摘要"
+            aria-label="打开简历摘要"
+            onClick={() => setShowResumeModal(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-900/10 bg-white/70 text-slate-600 shadow-sm backdrop-blur-sm transition hover:bg-white/95 hover:text-slate-900"
+          >
+            <FileText className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            title="重置视角"
+            aria-label="重置视角"
+            onClick={() => setCameraResetToken(prev => prev + 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-900/10 bg-white/70 text-slate-600 shadow-sm backdrop-blur-sm transition hover:bg-white/95 hover:text-slate-900"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            title="与当前房间 Agent 聊天"
+            aria-label="与当前房间 Agent 聊天"
+            onClick={handleCurrentRoomChat}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-900/10 bg-white/70 text-slate-600 shadow-sm backdrop-blur-sm transition hover:bg-white/95 hover:text-slate-900"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <ChatModal
