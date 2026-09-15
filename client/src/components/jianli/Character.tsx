@@ -4,10 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CharacterProps, CharacterState, Vec3 } from "./assets/types";
 import { CHARACTER_MODELS } from "./assets/characterConfig";
 import { SpeechBubble } from "./SpeechBubble";
-import {
-  MEETING_WALK_SPEED,
-  type FeedItem,
-} from "@/lib/scene-bubbles";
+import { MEETING_WALK_SPEED, type FeedItem } from "@/lib/scene-bubbles";
 
 // Vite base path 用于纹理资源路径修正
 const BASE_URL = import.meta.env.BASE_URL ?? "/";

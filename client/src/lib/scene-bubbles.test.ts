@@ -247,9 +247,9 @@ describe("投喂（D7）", () => {
     let sawMood = false;
     for (let i = 0; i < 40; i++) {
       const exchange = pickChatterExchange("central", "fish")!;
-      expect(roomLines.has(exchange.lines[0]) || moodLines.has(exchange.lines[0])).toBe(
-        true
-      );
+      expect(
+        roomLines.has(exchange.lines[0]) || moodLines.has(exchange.lines[0])
+      ).toBe(true);
       if (moodLines.has(exchange.lines[0])) sawMood = true;
     }
     // 50% 概率 × 40 次仍一次不中的概率 ≈ 0.5^40，可安全断言
