@@ -5,10 +5,13 @@
 import { describe, expect, it } from "vitest";
 import {
   adjacencySegments,
+  buildMeetingTargets,
   charactersInRoom,
+  chatterIntervals,
   clipStreamText,
   leadCharacterIdOfRoom,
   mergeSceneBubbles,
+  MOOD_CHATTER,
   roomOfAgent,
   roomOfCharacter,
   pickChatterExchange,
@@ -175,6 +178,88 @@ describe("adjacencySegments", () => {
     for (const s of segments) {
       expect(positions.has(s.a.join(","))).toBe(true);
       expect(positions.has(s.b.join(","))).toBe(true);
+    }
+  });
+});
+
+describe("buildMeetingTargets（D6 会议可视化）", () => {
+  it("点位确定性：同一输入两次调用结果一致", () => {
+    expect(buildMeetingTargets("central", ["ai", "builder"])).toEqual(
+      buildMeetingTargets("central", ["ai", "builder"])
+    );
+  });
+
+  it("顾问房间各自的首席角色拿到会议点，聊天房间自己的角色不动", () => {
+    const targets = buildMeetingTargets("central", ["central", "ai"]);
+    expect(Object.keys(targets)).toEqual([leadCharacterIdOfRoom("ai")!]);
+    expect(targets[leadCharacterIdOfRoom("ai")!]).toBeDefined();
+  });
+
+  it("会议点落在聊天房间中心半径 2.2 的圆上", () => {
+    const center = ROOMS.central.position;
+    const targets = buildMeetingTargets("central", ["ai", "builder", "writer"]);
+    expect(Object.keys(targets)).toHaveLength(3);
+    for (const spot of Object.values(targets)) {
+      const dist = Math.hypot(spot[0] - center[0], spot[2] - center[2]);
+      expect(dist).toBeGreaterThan(0);
+      expect(dist).toBeLessThanOrEqual(2.2);
+    }
+  });
+
+  it("多个顾问房间的点位互不相同（哈希扇区）", () => {
+    const targets = buildMeetingTargets("central", [
+      "ai",
+      "builder",
+      "writer",
+      "reader",
+    ]);
+    const spots = Object.values(targets).map(s => s.join(","));
+    expect(new Set(spots).size).toBe(spots.length);
+  });
+
+  it("未知聊天房间不产生会议点", () => {
+    expect(buildMeetingTargets("nope", ["ai"])).toEqual({});
+    expect(buildMeetingTargets(undefined, ["ai"])).toEqual({});
+  });
+});
+
+describe("投喂（D7）", () => {
+  it("反应气泡优先于闲聊，但让位于 agent 活动", () => {
+    const busy = leadCharacterIdOfRoom("ai")!;
+    expect(
+      mergeSceneBubbles({
+        agentBubbles: { ai: { kind: "speaking", text: "…" } },
+        reaction: { characterId: busy, text: "咕噜咕噜" },
+      })[busy].kind
+    ).toBe("speaking");
+    expect(
+      mergeSceneBubbles({
+        agentBubbles: {},
+        reaction: { characterId: busy, text: "咕噜咕噜" },
+        chatter: { characterId: busy, text: "闲聊" },
+      })[busy]
+    ).toMatchObject({ kind: "chatter", text: "咕噜咕噜" });
+  });
+
+  it("带情绪时台词来自房间池 ∪ 情绪池，且情绪台词确实会被抽到", () => {
+    const moodLines = new Set(MOOD_CHATTER.fish.flat());
+    const roomLines = new Set(ROOMS.central.chatter.flat());
+    let sawMood = false;
+    for (let i = 0; i < 40; i++) {
+      const exchange = pickChatterExchange("central", "fish")!;
+      expect(roomLines.has(exchange.lines[0]) || moodLines.has(exchange.lines[0])).toBe(
+        true
+      );
+      if (moodLines.has(exchange.lines[0])) sawMood = true;
+    }
+    // 50% 概率 × 40 次仍一次不中的概率 ≈ 0.5^40，可安全断言
+    expect(sawMood).toBe(true);
+  });
+
+  it("咖啡情绪下闲聊间隔减半", () => {
+    for (let i = 0; i < 10; i++) {
+      expect(chatterIntervals("coffee").firstDelay()).toBeLessThanOrEqual(4000);
+      expect(chatterIntervals("book").firstDelay()).toBeLessThanOrEqual(8000);
     }
   });
 });

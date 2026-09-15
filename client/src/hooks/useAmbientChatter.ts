@@ -9,7 +9,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { pickChatterExchange } from "@/lib/scene-bubbles";
+import {
+  chatterIntervals,
+  pickChatterExchange,
+  type CharacterMood,
+} from "@/lib/scene-bubbles";
 
 export interface AmbientChatter {
   characterId: string;
@@ -21,18 +25,19 @@ const LINE_DURATION_MS = 3600;
 const GAP_DURATION_MS = 1600;
 const REPLY_DURATION_MS = 3400;
 
-const firstDelay = () => 4000 + Math.random() * 4000;
-const nextRoundDelay = () => 9000 + Math.random() * 5000;
-
 export function useAmbientChatter(
   roomId: string | undefined,
-  suppressed: boolean
+  suppressed: boolean,
+  mood?: CharacterMood
 ): AmbientChatter | null {
   const [chatter, setChatter] = useState<AmbientChatter | null>(null);
 
   useEffect(() => {
     setChatter(null);
     if (!roomId) return;
+
+    // 情绪影响调度（咖啡=频率翻倍）与台词池（D7）
+    const intervals = chatterIntervals(mood);
 
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -46,7 +51,7 @@ export function useAmbientChatter(
           return;
         }
 
-        const exchange = pickChatterExchange(roomId);
+        const exchange = pickChatterExchange(roomId, mood);
         if (!exchange) return;
 
         setChatter({ characterId: exchange.a, text: exchange.lines[0] });
@@ -57,7 +62,7 @@ export function useAmbientChatter(
             timers.push(
               setTimeout(() => {
                 if (cancelled || suppressed || document.hidden) {
-                  schedule(nextRoundDelay());
+                  schedule(intervals.nextRoundDelay());
                   return;
                 }
                 setChatter({
@@ -68,7 +73,7 @@ export function useAmbientChatter(
                   setTimeout(() => {
                     if (cancelled) return;
                     setChatter(null);
-                    schedule(nextRoundDelay());
+                    schedule(intervals.nextRoundDelay());
                   }, REPLY_DURATION_MS)
                 );
               }, GAP_DURATION_MS)
@@ -79,14 +84,14 @@ export function useAmbientChatter(
       timers.push(timer);
     };
 
-    schedule(firstDelay());
+    schedule(intervals.firstDelay());
 
     return () => {
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-    // suppressed 进依赖：抑制状态一变就清场重排，避免闲聊压住真实活动
-  }, [roomId, suppressed]);
+    // suppressed/mood 进依赖：一变就清场重排，避免旧节奏/旧台词池残留
+  }, [roomId, suppressed, mood]);
 
   return chatter;
 }

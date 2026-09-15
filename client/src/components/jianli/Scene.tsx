@@ -2,7 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { CameraController } from "./CameraController";
 import { ModelInstance, Room } from "./Room";
 import { Character, preloadCharacters } from "./Character";
-import type { SceneBubble } from "@/lib/scene-bubbles";
+import type { FeedItem, SceneBubble } from "@/lib/scene-bubbles";
 import { Html } from "@react-three/drei";
 import {
   CORRIDOR_MODULES,
@@ -22,6 +22,10 @@ type SceneProps = {
   bubbleByCharacter: Record<string, SceneBubble>;
   /** 招呼气泡的操作按钮（透传给 greeting 气泡） */
   greetingActions?: { onChat?: () => void; onDismiss?: () => void };
+  /** 会议目标点（D6）：角色 → 点位；多专家咨询时被咨询房间首席角色赴会 */
+  meetingByCharacter?: Record<string, [number, number, number]>;
+  /** 投喂回调（D7）：透传给角色悬停投喂条 */
+  onFeedCharacter?: (characterId: string, item: FeedItem) => void;
 };
 
 function LoadingFallback() {
@@ -40,6 +44,8 @@ export function Scene({
   cameraResetToken,
   bubbleByCharacter,
   greetingActions,
+  meetingByCharacter,
+  onFeedCharacter,
 }: SceneProps) {
   // 预加载角色模型
   useEffect(() => {
@@ -115,6 +121,8 @@ export function Scene({
               onClick={handleCharacterClick}
               bubble={bubbleByCharacter[characterConfig.id]}
               bubbleActions={greetingActions}
+              meetingTarget={meetingByCharacter?.[characterConfig.id]}
+              onFeed={onFeedCharacter}
             />
           ))}
         </Suspense>

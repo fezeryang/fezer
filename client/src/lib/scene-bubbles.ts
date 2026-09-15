@@ -39,6 +39,33 @@ export type AgentSceneEvent =
   | { type: "text-delta"; agentId?: FezerType; delta: string }
   | { type: "run-settled" };
 
+/** 投喂物品（D7）：会话内存情绪，3 分钟过期，可覆盖 */
+export type FeedItem = "coffee" | "fish" | "book";
+export type CharacterMood = FeedItem;
+
+/** 每种物品的即时反应台词（挂在被投喂角色头上） */
+export const MOOD_REACTIONS: Record<FeedItem, string[]> = {
+  coffee: ["咕噜咕噜……今晚能再战三小时", "咖啡因注入完毕，精神！", "谢谢，正好在赶方案"],
+  fish: ["鱼干！猫生满足，打个滚", "呜哇，最喜欢这个了", "饱了，今天的班值完了"],
+  book: ["这本正好想看，划个重点先", "安静一会儿，让我想想", "书页里有答案，等我找找"],
+};
+
+/** 情绪期的闲聊台词池（50% 抽中概率，与房间池混抽）；导出仅供测试校验 */
+export const MOOD_CHATTER: Record<FeedItem, Array<[string, string]>> = {
+  coffee: [
+    ["这杯咖啡绝了，思路全开了", "那你赶紧把那个方案写完"],
+    ["今天状态特别好", "看出来了，你已经转了三圈了"],
+  ],
+  fish: [
+    ["尾巴摇到停不下来", "刚才那条鱼干真香"],
+    ["困了，趴一会儿", "睡吧，有人来了我叫你"],
+  ],
+  book: [
+    ["这段写得真好，划个重点", "你划的比正文还多"],
+    ["让我想想这个问题……", "想好了再告诉我"],
+  ],
+};
+
 /** agentId → roomId（房间与 agent 一一对应，ROOM_AGENT_IDS 反查） */
 export function roomOfAgent(agentId: FezerType): string | undefined {
   const entry = Object.entries(ROOM_AGENT_IDS).find(
@@ -84,6 +111,8 @@ export interface MergeSceneBubblesInput {
   greeting?: { roomId: string; text: string };
   /** 环境闲聊（D4）：挂具体角色头上 */
   chatter?: { characterId: string; text: string };
+  /** 投喂反应（D7）：挂被投喂角色头上，优先级高于招呼与闲聊 */
+  reaction?: { characterId: string; text: string };
 }
 
 /**
@@ -112,6 +141,15 @@ export function mergeSceneBubbles(
     }
   }
 
+  if (input.reaction) {
+    if (!(input.reaction.characterId in byCharacter)) {
+      byCharacter[input.reaction.characterId] = {
+        kind: "chatter",
+        text: input.reaction.text,
+      };
+    }
+  }
+
   if (input.chatter) {
     if (!(input.chatter.characterId in byCharacter)) {
       byCharacter[input.chatter.characterId] = {
@@ -124,24 +162,91 @@ export function mergeSceneBubbles(
   return byCharacter;
 }
 
+/** 闲聊调度间隔（ms）：咖啡情绪下频率翻倍，其余默认 */
+export function chatterIntervals(mood?: CharacterMood): {
+  firstDelay: () => number;
+  nextRoundDelay: () => number;
+} {
+  const scale = mood === "coffee" ? 0.5 : 1;
+  return {
+    firstDelay: () => (4000 + Math.random() * 4000) * scale,
+    nextRoundDelay: () => (9000 + Math.random() * 5000) * scale,
+  };
+}
+
 export interface ChatterExchange {
   a: string;
   b: string;
   lines: [string, string];
 }
 
-/** 从房间对话池随机挑一组台词，并指派给房间内两个不同角色（不足两人时 A=B） */
-export function pickChatterExchange(roomId: string): ChatterExchange | null {
+/**
+ * 从房间对话池随机挑一组台词，并指派给房间内两个不同角色（不足两人时 A=B）。
+ * 有情绪时 50% 抽情绪池（咖啡=兴奋、鱼干=慵懒、书=专注），与房间池混抽。
+ */
+export function pickChatterExchange(
+  roomId: string,
+  mood?: CharacterMood
+): ChatterExchange | null {
   const room = SCENE_ROOMS[roomId];
   const chars = charactersInRoom(roomId);
   if (!room?.chatter?.length || chars.length === 0) return null;
 
-  const lines = room.chatter[Math.floor(Math.random() * room.chatter.length)];
+  const moodPool = mood ? MOOD_CHATTER[mood] : undefined;
+  const useMood = moodPool && Math.random() < 0.5;
+  const pool = useMood
+    ? moodPool
+    : (room.chatter as ReadonlyArray<[string, string]>);
+  const lines = pool[Math.floor(Math.random() * pool.length)];
+
   const a = chars[Math.floor(Math.random() * chars.length)];
   const others = chars.filter(id => id !== a);
   const b =
     others.length > 0 ? others[Math.floor(Math.random() * others.length)] : a;
-  return { a, b, lines };
+  return { a, b, lines: [lines[0], lines[1]] };
+}
+
+// ── 会议可视化（D6）────────────────────────────────────────
+
+/** 会议圆半径：聊天房间中心外圈，不压房间内原有漫游区 */
+const MEETING_RADIUS = 2.0;
+
+/** 会议行进速度：漫游速度的 4-7 倍，否则跨房间（16-30 单位）走不到会就散了 */
+export const MEETING_WALK_SPEED = 2.2;
+
+/** 会议点位的 Y 恒为地面高度（与 Character 的 GROUND_Y 一致） */
+const MEETING_GROUND_Y = 0;
+
+/**
+ * 多专家咨询时，被咨询房间的首席角色走到聊天房间“开会”。
+ * 点位 = 聊天房间中心圆周上按 roomId 哈希稳定分配的扇区，避免叠在一起。
+ * 全部由现有状态派生：agentBubbles 的房间（去掉聊天房间本身）× chatRoomId。
+ */
+export function buildMeetingTargets(
+  chatRoomId: string | undefined,
+  consultantRoomIds: string[]
+): Record<string, [number, number, number]> {
+  const targets: Record<string, [number, number, number]> = {};
+  const center = chatRoomId ? SCENE_ROOMS[chatRoomId]?.position : undefined;
+  if (!center) return targets;
+
+  for (const roomId of consultantRoomIds) {
+    if (roomId === chatRoomId) continue;
+    const lead = leadCharacterIdOfRoom(roomId);
+    if (!lead) continue;
+
+    // 稳定角度：roomId 字符码和 → [0, 2π)。不同顾问房间基本落在不同扇区
+    let hash = 0;
+    for (let i = 0; i < roomId.length; i++) hash += roomId.charCodeAt(i);
+    const angle = ((hash % 360) / 360) * Math.PI * 2;
+
+    targets[lead] = [
+      center[0] + Math.cos(angle) * MEETING_RADIUS,
+      MEETING_GROUND_Y,
+      center[2] + Math.sin(angle) * MEETING_RADIUS,
+    ];
+  }
+  return targets;
 }
 
 /** Minimap 邻接走廊线段：ROOM_ADJACENCY 去重后的房间坐标对 */

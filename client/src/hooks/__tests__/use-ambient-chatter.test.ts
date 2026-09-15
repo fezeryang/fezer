@@ -98,6 +98,16 @@ describe("useAmbientChatter", () => {
     expect(result.current).toBeNull();
   });
 
+  it("咖啡情绪下首句闲聊更快出现（间隔减半，≤4.5s）", () => {
+    const { result } = renderHook(() =>
+      useAmbientChatter("central", false, "coffee")
+    );
+
+    // 正常首延迟 4-8s；咖啡减半后应在 4.5s 内出现
+    act(() => vi.advanceTimersByTime(4500));
+    expect(result.current).not.toBeNull();
+  });
+
   it("切换房间即清场", () => {
     const { result, rerender } = renderHook(
       ({ roomId }: { roomId: string }) => useAmbientChatter(roomId, false),

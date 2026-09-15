@@ -1,4 +1,4 @@
-import type { SceneBubble } from "@/lib/scene-bubbles";
+import type { FeedItem, SceneBubble } from "@/lib/scene-bubbles";
 
 export type FezerType =
   | "core"
@@ -47,7 +47,7 @@ export interface RoomProps {
 }
 
 // 角色相关类型
-export type CharacterState = "idle" | "walking" | "waiting";
+export type CharacterState = "idle" | "walking" | "waiting" | "meeting";
 
 export interface CharacterConfig {
   id: string;
@@ -67,4 +67,8 @@ export interface CharacterProps {
   bubble?: SceneBubble;
   /** 仅 greeting 气泡使用的操作回调 */
   bubbleActions?: { onChat?: () => void; onDismiss?: () => void };
+  /** 会议目标点（D6）：存在即赴会（会议速度），消失即返回巡逻 */
+  meetingTarget?: Vec3;
+  /** 投喂回调（D7）：悬停角色时显示投喂条，点击触发 */
+  onFeed?: (characterId: string, item: FeedItem) => void;
 }

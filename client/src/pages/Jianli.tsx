@@ -32,10 +32,15 @@ import {
   shouldShowGreeting,
 } from "@/lib/room-greeting";
 import {
+  buildMeetingTargets,
   clipStreamText,
   mergeSceneBubbles,
+  MOOD_REACTIONS,
   roomOfAgent,
+  roomOfCharacter,
   type AgentSceneEvent,
+  type CharacterMood,
+  type FeedItem,
   type SceneBubble,
 } from "@/lib/scene-bubbles";
 import { useAmbientChatter } from "@/hooks/useAmbientChatter";
@@ -113,6 +118,14 @@ export default function Jianli() {
   );
   // 空场清理的代际号：新一轮 run-settled 使旧定时器失效
   const runSeqRef = useRef(0);
+  // D7 投喂：房间情绪（会话内存，3 分钟过期）+ 即时反应气泡
+  const [moodByRoom, setMoodByRoom] = useState<
+    Record<string, { item: FeedItem; expiresAt: number }>
+  >({});
+  const [reaction, setReaction] = useState<{
+    characterId: string;
+    text: string;
+  } | null>(null);
   // B8：拿不到 WebGL 时降级为文字版，而不是白屏
   const [webglAvailable] = useState(() => isWebGLAvailable());
   const isChatOpenRef = useRef(isChatOpen);
@@ -245,11 +258,17 @@ export default function Jianli() {
     }
   }, []);
 
-  // D1：合并三类气泡到「角色 → 气泡」（agent 活动 > 招呼 > 闲聊）
+  // D1：合并四类气泡到「角色 → 气泡」（agent 活动 > 投喂反应 > 招呼 > 闲聊）
   const agentBubbleActive = Object.keys(agentBubbles).length > 0;
+  // 当前房间的情绪（惰性过期：读取时校验，过期后自然回落默认节奏）
+  const roomMood: CharacterMood | undefined = useMemo(() => {
+    const m = moodByRoom[activeRoomId];
+    return m && m.expiresAt > Date.now() ? m.item : undefined;
+  }, [moodByRoom, activeRoomId]);
   const chatter = useAmbientChatter(
     activeRoomId,
-    Boolean(roomGreeting) || agentBubbleActive
+    Boolean(roomGreeting) || agentBubbleActive,
+    roomMood
   );
   const bubbleByCharacter = useMemo(
     () =>
@@ -258,10 +277,40 @@ export default function Jianli() {
         greeting: roomGreeting
           ? { roomId: activeRoomId, text: roomGreeting }
           : undefined,
+        reaction: reaction ?? undefined,
         chatter: chatter ?? undefined,
       }),
-    [agentBubbles, roomGreeting, activeRoomId, chatter]
+    [agentBubbles, roomGreeting, activeRoomId, reaction, chatter]
   );
+
+  // D6 会议可视化：多专家咨询时，被咨询房间的首席角色走到聊天房间开会。
+  // 全部派生：agentBubbles 清场（run 结束后 1.6s）即散会回家
+  const meetingByCharacter = useMemo(
+    () => buildMeetingTargets(chatContext.roomId, Object.keys(agentBubbles)),
+    [chatContext.roomId, agentBubbles]
+  );
+
+  // D7 投喂：记房间情绪 + 被喂角色立刻冒反应气泡
+  const handleFeed = useCallback((characterId: string, item: FeedItem) => {
+    const roomId = roomOfCharacter(characterId);
+    if (!roomId) return;
+    setMoodByRoom(prev => ({
+      ...prev,
+      [roomId]: { item, expiresAt: Date.now() + 3 * 60 * 1000 },
+    }));
+    const lines = MOOD_REACTIONS[item];
+    setReaction({
+      characterId,
+      text: lines[Math.floor(Math.random() * lines.length)],
+    });
+  }, []);
+
+  // 反应气泡自动消失
+  useEffect(() => {
+    if (!reaction) return;
+    const timer = setTimeout(() => setReaction(null), 3500);
+    return () => clearTimeout(timer);
+  }, [reaction]);
 
   // 招呼气泡的操作按钮：依赖 activeRoomId（聊聊必须路由到“当前”房间，而非首次渲染时的房间）
   const greetingActions = useMemo(
@@ -290,6 +339,8 @@ export default function Jianli() {
             cameraResetToken={cameraResetToken}
             bubbleByCharacter={bubbleByCharacter}
             greetingActions={greetingActions}
+            meetingByCharacter={meetingByCharacter}
+            onFeedCharacter={handleFeed}
           />
         </Suspense>
       ) : (
