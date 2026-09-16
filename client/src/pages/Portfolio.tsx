@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Box, ChevronDown, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  Box,
+  ChevronDown,
+  MousePointerClick,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navigation from "@/components/Navigation";
 import GrainOverlay from "@/components/GrainOverlay";
@@ -102,20 +108,25 @@ function WorksCollapsibleSection({
 export default function Portfolio() {
   const [isModelsExpanded, setIsModelsExpanded] = useState(false);
   const [isGenerativeExpanded, setIsGenerativeExpanded] = useState(false);
+  const [isUiDesignExpanded, setIsUiDesignExpanded] = useState(false);
   const works = loadWorks();
 
-  // Separate 3D models and generative art from regular works
+  // Separate 3D models, generative art, and UI designs from regular works
   const modelWorks = works.filter(w => w.link?.includes("3d-models"));
   const generativeWorks = works.filter(w => w.link?.includes("generative-art"));
+  const uiDesignWorks = works.filter(w => w.link?.includes("ui-designs"));
   const regularWorks = works.filter(
-    w => !w.link?.includes("3d-models") && !w.link?.includes("generative-art")
+    w =>
+      !w.link?.includes("3d-models") &&
+      !w.link?.includes("generative-art") &&
+      !w.link?.includes("ui-designs")
   );
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.p5) return;
 
     const p5 = window.p5 as any;
-    let pieces: any[] = [];
+    const pieces: any[] = [];
     let gravity: any;
     let wind: any;
     const colors = [
@@ -236,9 +247,9 @@ export default function Portfolio() {
       }
 
       reactToMouse(mx: number, my: number) {
-        let d = this.p.dist(mx, my, this.pos.x, this.pos.y);
+        const d = this.p.dist(mx, my, this.pos.x, this.pos.y);
         if (d < 250) {
-          let push = p5.Vector.sub(this.pos, this.p.createVector(mx, my));
+          const push = p5.Vector.sub(this.pos, this.p.createVector(mx, my));
           push.normalize();
           push.mult(2);
           this.applyForce(push);
@@ -276,19 +287,19 @@ export default function Portfolio() {
         this.p.fill(this.color);
         this.p.beginShape();
         for (let i = 0; i <= 10; i++) {
-          let x = this.p.lerp(-this.w / 2, this.w / 2, i / 10);
+          const x = this.p.lerp(-this.w / 2, this.w / 2, i / 10);
           this.p.vertex(x, -this.h / 2 + this.p.random(-2, 2));
         }
         for (let i = 0; i <= 10; i++) {
-          let y = this.p.lerp(-this.h / 2, this.h / 2, i / 10);
+          const y = this.p.lerp(-this.h / 2, this.h / 2, i / 10);
           this.p.vertex(this.w / 2 + this.p.random(-2, 2), y);
         }
         for (let i = 10; i >= 0; i--) {
-          let x = this.p.lerp(-this.w / 2, this.w / 2, i / 10);
+          const x = this.p.lerp(-this.w / 2, this.w / 2, i / 10);
           this.p.vertex(x, this.h / 2 + this.p.random(-2, 2));
         }
         for (let i = 10; i >= 0; i--) {
-          let y = this.p.lerp(-this.h / 2, this.h / 2, i / 10);
+          const y = this.p.lerp(-this.h / 2, this.h / 2, i / 10);
           this.p.vertex(-this.w / 2 + this.p.random(-2, 2), y);
         }
         this.p.endShape(this.p.CLOSE);
@@ -338,7 +349,7 @@ export default function Portfolio() {
     }
 
     const sketch = (p: any) => {
-      p.setup = function () {
+      p.setup = () => {
         const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
         canvas.parent("p5-container");
         gravity = p.createVector(0, 0.05);
@@ -350,11 +361,11 @@ export default function Portfolio() {
         p.rectMode(p.CENTER);
       };
 
-      p.draw = function () {
+      p.draw = () => {
         p.clear();
 
-        let scrollY = window.scrollY;
-        let gravY = p.map(p.sin(scrollY * 0.01), -1, 1, 0.02, 0.18);
+        const scrollY = window.scrollY;
+        const gravY = p.map(p.sin(scrollY * 0.01), -1, 1, 0.02, 0.18);
         gravity.y = gravY;
 
         wind = p.createVector(
@@ -362,7 +373,7 @@ export default function Portfolio() {
           (p.mouseY - p.pmouseY) * 0.02
         );
 
-        for (let piece of pieces) {
+        for (const piece of pieces) {
           piece.applyForce(gravity);
           if (p.mouseIsPressed || p.abs(p.mouseX - p.pmouseX) > 1) {
             piece.reactToMouse(p.mouseX, p.mouseY);
@@ -374,11 +385,11 @@ export default function Portfolio() {
         }
       };
 
-      p.mousePressed = function () {
-        for (let piece of pieces) {
-          let d = p.dist(p.mouseX, p.mouseY, piece.pos.x, piece.pos.y);
+      p.mousePressed = () => {
+        for (const piece of pieces) {
+          const d = p.dist(p.mouseX, p.mouseY, piece.pos.x, piece.pos.y);
           if (d < 300) {
-            let force = p5.Vector.sub(
+            const force = p5.Vector.sub(
               piece.pos,
               p.createVector(p.mouseX, p.mouseY)
             );
@@ -393,7 +404,7 @@ export default function Portfolio() {
         }
       };
 
-      p.windowResized = function () {
+      p.windowResized = () => {
         p.resizeCanvas(window.innerWidth, window.innerHeight);
       };
     };
@@ -487,6 +498,15 @@ export default function Portfolio() {
                 </div>
               )}
             </div>
+
+            {/* UI Designs Section */}
+            <WorksCollapsibleSection
+              title="UI 设计作品"
+              icon={MousePointerClick}
+              works={uiDesignWorks}
+              expanded={isUiDesignExpanded}
+              onToggle={() => setIsUiDesignExpanded(!isUiDesignExpanded)}
+            />
 
             {/* Generative Art Section */}
             <WorksCollapsibleSection

@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Slingshot Slider — Physics Replica++</title>
+    <style>
+      :root {
+        --bg: #19181e;
+        --text: #eeeef4;
+        --muted: #85828d;
+        --rail: #34323a;
+        --fill: #d4d2db;
+        --purple: #5b4ee7;
+        --purple-soft: #756bf0;
+        --purple-hot: #9d90ff;
+        --purple-impact: #d8d2ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        overflow: hidden;
+        background: #000;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        color: var(--text);
+      }
+      .viewport {
+        width: min(860px, 100vw);
+        height: 100vh;
+        min-height: 620px;
+        margin-inline: auto;
+        background: var(--bg);
+        display: grid;
+        place-items: center;
+        position: relative;
+      }
+      .panel {
+        width: min(452px, 72vw);
+        min-width: 360px;
+        position: relative;
+        padding: 12px 0 28px;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .slider-row {
+        height: 92px;
+        position: relative;
+        z-index: 2;
+      }
+      .slider-head {
+        height: 28px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        font-size: 14px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+      }
+      .slider-name {
+        color: var(--muted);
+        transition: color 0.12s linear;
+      }
+      .slider-value {
+        color: #d3d0da;
+        font-variant-numeric: tabular-nums;
+        transition: color 0.12s linear;
+      }
+      .slider-row.active .slider-value {
+        color: var(--purple-soft);
+      }
+      .track-zone {
+        position: relative;
+        height: 34px;
+        cursor: default;
+      }
+      .rail {
+        position: absolute;
+        top: 12px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--rail);
+        overflow: visible;
+      }
+      .fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        border-radius: 2px;
+        background: var(--fill);
+        transform-origin: left center;
+        transition: opacity 0.12s linear;
+      }
+      .slider-row.active .fill {
+        opacity: 0.22;
+      }
+      .thumb {
+        --x: 0px;
+        position: absolute;
+        top: 12px;
+        left: 0;
+        width: 14px;
+        height: 14px;
+        margin: -6px 0 0 -7px;
+        border-radius: 50%;
+        background: #efedf5;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+        transform: translate3d(var(--x), 0, 0);
+        cursor: grab;
+        touch-action: none;
+        z-index: 5;
+      }
+      .thumb::before {
+        content: "";
+        position: absolute;
+        inset: -13px;
+        border-radius: 50%;
+      }
+      .thumb:active {
+        cursor: grabbing;
+      }
+      .thumb.captured {
+        opacity: 0;
+      }
+      .track-zone:focus-visible {
+        outline: none;
+      }
+      .track-zone:focus-visible .rail {
+        box-shadow: 0 0 0 1px rgba(117, 107, 240, 0.55);
+      }
+
+      #fx {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        pointer-events: none;
+        z-index: 6;
+      }
+      .band {
+        fill: none;
+        stroke: var(--purple);
+        stroke-width: 1.55;
+        stroke-linecap: round;
+        opacity: 0;
+      }
+      .band-glow {
+        fill: none;
+        stroke: rgba(157, 144, 255, 0.55);
+        stroke-width: 2.25;
+        stroke-linecap: round;
+        opacity: 0;
+        filter: blur(0.55px);
+      }
+      .trajectory {
+        fill: none;
+        stroke: #918e9e;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-dasharray: 0.1 11;
+        opacity: 0;
+      }
+      .fork-glow {
+        stroke: var(--purple);
+        stroke-width: 2;
+        stroke-linecap: round;
+        opacity: 0;
+      }
+      .projectile {
+        position: absolute;
+        width: 19px;
+        height: 19px;
+        left: 0;
+        top: 0;
+        margin: -9.5px 0 0 -9.5px;
+        border-radius: 50%;
+        background: var(--purple);
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+          0 1px 2px rgba(0, 0, 0, 0.18);
+        transform: translate3d(-100px, -100px, 0);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 8;
+        will-change: transform, opacity, background-color, box-shadow;
+      }
+      .projectile.flying {
+        box-shadow:
+          inset 0 0 0 1.15px rgba(255, 255, 255, 0.45),
+          0 0 9px rgba(91, 78, 231, 0.16);
+      }
+      .trail {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 0;
+        top: 0;
+        margin: -8px 0 0 -8px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 7;
+        background: radial-gradient(
+          circle at 35% 35%,
+          rgba(255, 255, 255, 0.22),
+          rgba(117, 107, 240, 0.72) 42%,
+          rgba(91, 78, 231, 0.28) 72%,
+          rgba(91, 78, 231, 0) 100%
+        );
+        filter: blur(1px);
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+      .target-marker {
+        position: absolute;
+        width: 1px;
+        height: 18px;
+        background: var(--purple);
+        transform: translate(-0.5px, -9px);
+        opacity: 0;
+        z-index: 7;
+        pointer-events: none;
+      }
+      .target-label {
+        position: absolute;
+        left: 50%;
+        bottom: 17px;
+        transform: translateX(-50%);
+        color: var(--purple-soft);
+        font-size: 12px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 600px) {
+        .panel {
+          width: 78vw;
+          min-width: 300px;
+        }
+        .slider-row {
+          height: 88px;
+        }
+        .slider-head {
+          font-size: 13px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .trajectory,
+        .trail {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="viewport">
+      <div class="panel" id="panel" aria-label="Physics slingshot sliders">
+        <div
+          class="slider-row"
+          data-key="exposure"
+          data-min="-3"
+          data-max="3"
+          data-step="0.1"
+          data-value="0.4"
+        >
+          <div class="slider-head">
+            <span class="slider-name">Exposure</span
+            ><span class="slider-value"></span>
+          </div>
+          <div
+            class="track-zone"
+            role="slider"
+            tabindex="0"
+            aria-label="Exposure"
+          >
+            <div class="rail"><div class="fill"></div></div>
+            <div class="thumb"></div>
+          </div>
+        </div>
+        <div
+          class="slider-row"
+          data-key="bloom"
+          data-min="0"
+          data-max="100"
+          data-step="1"
+          data-value="16"
+        >
+          <div class="slider-head">
+            <span class="slider-name">Bloom</span
+            ><span class="slider-value"></span>
+          </div>
+          <div class="track-zone" role="slider" tabindex="0" aria-label="Bloom">
+            <div class="rail"><div class="fill"></div></div>
+            <div class="thumb"></div>
+          </div>
+        </div>
+        <div
+          class="slider-row"
+          data-key="fov"
+          data-min="40"
+          data-max="120"
+          data-step="1"
+          data-value="103"
+        >
+          <div class="slider-head">
+            <span class="slider-name">Field of view</span
+            ><span class="slider-value"></span>
+          </div>
+          <div
+            class="track-zone"
+            role="slider"
+            tabindex="0"
+            aria-label="Field of view"
+          >
+            <div class="rail"><div class="fill"></div></div>
+            <div class="thumb"></div>
+          </div>
+        </div>
+        <div
+          class="slider-row"
+          data-key="samples"
+          data-min="16"
+          data-max="256"
+          data-step="1"
+          data-value="64"
+        >
+          <div class="slider-head">
+            <span class="slider-name">Samples</span
+            ><span class="slider-value"></span>
+          </div>
+          <div
+            class="track-zone"
+            role="slider"
+            tabindex="0"
+            aria-label="Samples"
+          >
+            <div class="rail"><div class="fill"></div></div>
+            <div class="thumb"></div>
+          </div>
+        </div>
+
+        <svg id="fx" aria-hidden="true">
+          <path id="bandAGlow" class="band-glow" />
+          <path id="bandBGlow" class="band-glow" />
+          <path id="trajectory" class="trajectory" />
+          <path id="bandA" class="band" />
+          <path id="bandB" class="band" />
+          <line id="forkGlow" class="fork-glow" />
+        </svg>
+        <div id="target" class="target-marker">
+          <div id="targetLabel" class="target-label"></div>
+        </div>
+        <div id="ball" class="projectile"></div>
+      </div>
+    </div>
+    <script>
+      (() => {
+        "use strict";
+
+        const panel = document.getElementById("panel");
+        const ball = document.getElementById("ball");
+        const targetEl = document.getElementById("target");
+        const targetLabel = document.getElementById("targetLabel");
+        const bandA = document.getElementById("bandA");
+        const bandB = document.getElementById("bandB");
+        const bandAGlow = document.getElementById("bandAGlow");
+        const bandBGlow = document.getElementById("bandBGlow");
+        const trajectory = document.getElementById("trajectory");
+        const forkGlow = document.getElementById("forkGlow");
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        const BASE_TRACK = 452;
+        const BASE_GRAVITY = 3376;
+        const SLING_K = 11.2;
+        // Rigid-body-inspired solver settings. One tiny body, one static horizontal rail.
+        const PHYSICS_DT = 1 / 240; // fixed substep: stable on 60/120/144Hz displays
+        const MAX_FRAME_DT = 0.05; // avoid a tab-switch causing a giant physics jump
+        const AIR_DAMPING = 0.055; // s^-1, intentionally subtle; contact losses dominate
+        const RESTITUTION = 0.36; // normal coefficient of restitution
+        const FRICTION = 0.52; // Coulomb friction coefficient at rail contact
+        const REST_SPEED = 96; // px/s at BASE_TRACK; below this, collision becomes inelastic
+        const SLEEP_SPEED = 18; // px/s at BASE_TRACK
+        const GROUND_DECEL = 1250; // px/s² at BASE_TRACK, rolling/contact resistance
+
+        let active = null;
+        let raf = 0;
+
+        const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const hypot = (x, y) => Math.hypot(x, y);
+
+        function fmt(s, value) {
+          const key = s.key;
+          if (key === "exposure") {
+            const v = Math.round(value * 10) / 10;
+            if (Math.abs(v) < 0.05) return "0.0 EV";
+            return `${v > 0 ? "+" : ""}${v.toFixed(1)} EV`;
+          }
+          if (key === "bloom") return `${Math.round(value)}%`;
+          if (key === "fov") return `${Math.round(value)}°`;
+          return `${Math.round(value)}`;
+        }
+        function quantize(s, v) {
+          const q = Math.round((v - s.min) / s.step) * s.step + s.min;
+          return clamp(Number(q.toFixed(5)), s.min, s.max);
+        }
+        function valueToRatio(s, v) {
+          return (v - s.min) / (s.max - s.min);
+        }
+        function ratioToValue(s, r) {
+          return quantize(s, s.min + clamp(r, 0, 1) * (s.max - s.min));
+        }
+        function mixRGB(a, b, t) {
+          const ar = (a >> 16) & 255,
+            ag = (a >> 8) & 255,
+            ab = a & 255;
+          const br = (b >> 16) & 255,
+            bg = (b >> 8) & 255,
+            bb = b & 255;
+          const r = Math.round(lerp(ar, br, t)),
+            g = Math.round(lerp(ag, bg, t)),
+            bl = Math.round(lerp(ab, bb, t));
+          return `rgb(${r}, ${g}, ${bl})`;
+        }
+
+        class Slider {
+          constructor(row) {
+            this.row = row;
+            this.zone = row.querySelector(".track-zone");
+            this.rail = row.querySelector(".rail");
+            this.fill = row.querySelector(".fill");
+            this.thumb = row.querySelector(".thumb");
+            this.valueEl = row.querySelector(".slider-value");
+            this.key = row.dataset.key;
+            this.min = +row.dataset.min;
+            this.max = +row.dataset.max;
+            this.step = +row.dataset.step;
+            this.value = +row.dataset.value;
+            this.previewValue = this.value;
+            this.updateStatic();
+            this.bind();
+          }
+          geometry() {
+            const p = panel.getBoundingClientRect();
+            const r = this.rail.getBoundingClientRect();
+            return {
+              left: r.left - p.left,
+              right: r.right - p.left,
+              width: r.width,
+              y: r.top - p.top + r.height / 2,
+              scale: r.width / BASE_TRACK,
+            };
+          }
+          xForValue(v, g = this.geometry()) {
+            return g.left + valueToRatio(this, v) * g.width;
+          }
+          valueForX(x, g = this.geometry()) {
+            return ratioToValue(this, (x - g.left) / g.width);
+          }
+          updateStatic() {
+            const r = valueToRatio(this, this.value);
+            this.fill.style.width = `${r * 100}%`;
+            this.thumb.style.setProperty(
+              "--x",
+              `${r * this.rail.getBoundingClientRect().width}px`
+            );
+            this.valueEl.textContent = fmt(this, this.value);
+            this.zone.setAttribute("aria-valuemin", this.min);
+            this.zone.setAttribute("aria-valuemax", this.max);
+            this.zone.setAttribute("aria-valuenow", this.value);
+            this.zone.setAttribute("aria-valuetext", fmt(this, this.value));
+          }
+          setValue(v, visual = true) {
+            this.value = quantize(this, v);
+            if (visual) this.updateStatic();
+          }
+          bind() {
+            this.thumb.addEventListener("pointerdown", e => startDrag(this, e));
+            this.thumb.addEventListener("pointermove", e => moveDrag(this, e));
+            this.thumb.addEventListener("pointerup", e => endDrag(this, e));
+            this.thumb.addEventListener("pointercancel", e =>
+              cancelDrag(this, e)
+            );
+            this.zone.addEventListener("keydown", e => {
+              if (active) return;
+              const big = this.step * 10;
+              let d = 0;
+              if (e.key === "ArrowLeft" || e.key === "ArrowDown")
+                d = -this.step;
+              if (e.key === "ArrowRight" || e.key === "ArrowUp") d = this.step;
+              if (e.key === "PageDown") d = -big;
+              if (e.key === "PageUp") d = big;
+              if (e.key === "Home") {
+                this.setValue(this.min);
+                e.preventDefault();
+                return;
+              }
+              if (e.key === "End") {
+                this.setValue(this.max);
+                e.preventDefault();
+                return;
+              }
+              if (d) {
+                this.setValue(this.value + d);
+                e.preventDefault();
+              }
+            });
+          }
+        }
+
+        const sliders = [...document.querySelectorAll(".slider-row")].map(
+          r => new Slider(r)
+        );
+
+        const trailEls = [];
+        for (let i = 0; i < 7; i++) {
+          const t = document.createElement("div");
+          t.className = "trail";
+          panel.appendChild(t);
+          trailEls.push(t);
+        }
+
+        function setBallVisual(x, y, opts = {}) {
+          const {
+            opacity = 1,
+            vx = 0,
+            vy = 0,
+            stretch = 0,
+            squash = 0,
+            color = null,
+            glow = 0,
+            scaleBoost = 0,
+          } = opts;
+          const speed = hypot(vx, vy);
+          const ang = speed > 2 ? Math.atan2(vy, vx) : 0;
+          const anis = clamp(stretch + speed / 2800, 0, 0.34);
+          const contactSquash = Math.max(0, squash);
+          const aerialStretch = Math.max(0, -squash);
+          const sx =
+            1 + anis + scaleBoost + contactSquash * 0.34 - aerialStretch * 0.12;
+          const sy =
+            1 -
+            anis * 0.44 -
+            contactSquash * 0.46 +
+            scaleBoost * 0.06 +
+            aerialStretch * 0.18;
+          ball.style.transform = `translate3d(${x}px,${y}px,0) rotate(${ang}rad) scale(${sx},${Math.max(0.56, sy)})`;
+          ball.style.opacity = opacity;
+          ball.style.background = color || "var(--purple)";
+          ball.style.boxShadow =
+            glow > 0
+              ? `inset 0 0 0 1.15px rgba(255,255,255,.46), 0 0 ${7 + glow * 13}px rgba(117,107,240,${0.12 + glow * 0.21}), 0 1px 2px rgba(0,0,0,.18)`
+              : `inset 0 0 0 1px rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.18)`;
+        }
+
+        function setTarget(s, x, y, v, show = true) {
+          targetEl.style.left = `${x}px`;
+          targetEl.style.top = `${y}px`;
+          targetEl.style.opacity = show ? 1 : 0;
+          targetLabel.textContent = fmt(s, v);
+          s.valueEl.textContent = fmt(s, v);
+        }
+
+        function hideTrails() {
+          for (const t of trailEls) t.style.opacity = 0;
+        }
+        function hideFx() {
+          for (const el of [
+            bandA,
+            bandB,
+            bandAGlow,
+            bandBGlow,
+            trajectory,
+            forkGlow,
+          ])
+            el.style.opacity = 0;
+          targetEl.style.opacity = 0;
+          hideTrails();
+        }
+
+        function pathQuadratic(p0, pm, p2) {
+          const cx = 2 * pm.x - 0.5 * (p0.x + p2.x),
+            cy = 2 * pm.y - 0.5 * (p0.y + p2.y);
+          return `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} Q ${cx.toFixed(2)} ${cy.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+        }
+
+        function elasticBandPath(ax, ay, bx, by, side, tension) {
+          const dx = bx - ax,
+            dy = by - ay,
+            len = Math.max(1, hypot(dx, dy));
+          const nx = -dy / len,
+            ny = dx / len;
+          const loose = clamp(1 - tension * 0.78, 0, 1);
+          const curveAnchor = (12 + loose * 14 + tension * 4) * side;
+          const curveNeck = (2.5 + loose * 2.2 + tension * 1.2) * side;
+          const c1x = lerp(ax, bx, 0.26) + nx * curveAnchor;
+          const c1y = lerp(ay, by, 0.26) + ny * curveAnchor * 0.2 + loose * 5;
+          const c2x = lerp(ax, bx, 0.58) + nx * curveAnchor * 0.64;
+          const c2y = lerp(ay, by, 0.58) + ny * curveAnchor * 0.12 + loose * 2;
+          const c3x = lerp(ax, bx, 0.83) + nx * curveNeck;
+          const c3y = lerp(ay, by, 0.83) + ny * curveNeck * 0.1;
+          return `M ${ax.toFixed(2)} ${ay.toFixed(2)} C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${c3x.toFixed(2)} ${c3y.toFixed(2)} ${bx.toFixed(2)} ${by.toFixed(2)}`;
+        }
+
+        function renderBands(a, x, y, opacity = 1) {
+          const dx = x - a.forkX,
+            dy = y - a.forkY;
+          const dist = hypot(dx, dy);
+          const rawTension = clamp(dist / (112 * a.g.scale), 0, 1.35);
+          a.tension = lerp(a.tension ?? rawTension, rawTension, 0.38);
+          const hot = clamp((a.tension - 0.08) / 0.98, 0, 1);
+          const spread = (7 + a.tension * 7.2) * a.g.scale;
+          const leftX = a.forkX - spread,
+            rightX = a.forkX + spread;
+          const leftPath = elasticBandPath(leftX, a.forkY, x, y, -1, a.tension);
+          const rightPath = elasticBandPath(
+            rightX,
+            a.forkY,
+            x,
+            y,
+            1,
+            a.tension
+          );
+
+          bandA.setAttribute("d", leftPath);
+          bandB.setAttribute("d", rightPath);
+          bandAGlow.setAttribute("d", leftPath);
+          bandBGlow.setAttribute("d", rightPath);
+
+          const width = 1.32 + hot * 0.92;
+          bandA.style.strokeWidth = bandB.style.strokeWidth = width;
+          bandAGlow.style.strokeWidth = bandBGlow.style.strokeWidth =
+            width + 0.9;
+          bandA.style.stroke = bandB.style.stroke = mixRGB(
+            0x5b4ee7,
+            0x9d90ff,
+            hot * 0.78
+          );
+          bandAGlow.style.stroke = bandBGlow.style.stroke = mixRGB(
+            0x756bf0,
+            0xd8d2ff,
+            hot * 0.75
+          );
+
+          bandA.style.opacity = bandB.style.opacity = opacity * 0.9;
+          bandAGlow.style.opacity = bandBGlow.style.opacity =
+            opacity * (0.16 + hot * 0.52);
+
+          forkGlow.setAttribute("x1", leftX - 1.2);
+          forkGlow.setAttribute("y1", a.forkY);
+          forkGlow.setAttribute("x2", rightX + 1.2);
+          forkGlow.setAttribute("y2", a.forkY);
+          forkGlow.style.opacity = opacity * (0.42 + hot * 0.38);
+          forkGlow.style.strokeWidth = 1.78 + hot * 0.72;
+        }
+
+        function rememberTrail(a, t, x, y, vx, vy) {
+          const arr = a.trailHistory;
+          arr.push({ t, x, y, vx, vy });
+          while (arr.length && t - arr[0].t > 230) arr.shift();
+        }
+
+        function sampleTrail(arr, target) {
+          if (!arr.length) return null;
+          if (target <= arr[0].t) return arr[0];
+          if (target >= arr[arr.length - 1].t) return arr[arr.length - 1];
+          for (let i = arr.length - 1; i > 0; i--) {
+            const b = arr[i],
+              a = arr[i - 1];
+            if (target >= a.t && target <= b.t) {
+              const u = (target - a.t) / (b.t - a.t || 1);
+              return {
+                x: lerp(a.x, b.x, u),
+                y: lerp(a.y, b.y, u),
+                vx: lerp(a.vx, b.vx, u),
+                vy: lerp(a.vy, b.vy, u),
+                t: target,
+              };
+            }
+          }
+          return arr[0];
+        }
+
+        function updateTrails(a, now, x, y, vx = 0, vy = 0) {
+          if (reduced) {
+            hideTrails();
+            return;
+          }
+          rememberTrail(a, now, x, y, vx, vy);
+          const ages = [18, 34, 52, 74, 100, 132, 170];
+          for (let i = 0; i < trailEls.length; i++) {
+            const age = ages[i];
+            const p = sampleTrail(a.trailHistory, now - age);
+            if (!p) {
+              trailEls[i].style.opacity = 0;
+              continue;
+            }
+            const speed = hypot(p.vx, p.vy);
+            const fade = Math.exp(-age / 86) * clamp(speed / 1150, 0.08, 0.9);
+            const ang = speed > 1 ? Math.atan2(p.vy, p.vx) : 0;
+            const lengthen =
+              clamp(speed / 1700, 0, 0.38) * (1 - i / trailEls.length);
+            const sx = 1 + lengthen;
+            const sy = 1 - lengthen * 0.28;
+            trailEls[i].style.opacity = fade * 0.64;
+            trailEls[i].style.transform =
+              `translate3d(${p.x}px,${p.y}px,0) rotate(${ang}rad) scale(${sx},${sy})`;
+          }
+        }
+
+        function dampVelocity(v, dt) {
+          // Box2D-style first-order damping approximation: v(t+h) ~= v(t)/(1+c*h).
+          return v / (1 + AIR_DAMPING * dt);
+        }
+
+        function advanceFree(state, dt, gravity) {
+          // Semi-implicit Euler: update velocity first, then position.
+          state.vy += gravity * dt;
+          state.vx = dampVelocity(state.vx, dt);
+          state.vy = dampVelocity(state.vy, dt);
+          state.x += state.vx * dt;
+          state.y += state.vy * dt;
+        }
+
+        function lineCross(prevY, nextY, railY) {
+          const d = nextY - prevY;
+          return Math.abs(d) < 1e-9 ? 0 : clamp((railY - prevY) / d, 0, 1);
+        }
+
+        function pointsToPath(points) {
+          if (!points || points.length < 2) return "";
+          let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+          for (let i = 1; i < points.length; i++)
+            d += ` L ${points[i].x.toFixed(2)} ${points[i].y.toFixed(2)}`;
+          return d;
+        }
+
+        function simulateUntilRail(a, x, y, vx, vy, gravity, collect = true) {
+          const state = { x, y, vx, vy };
+          let crossedUp = false;
+          const points = [];
+          const maxSteps = Math.ceil(1.8 / PHYSICS_DT);
+          let sampleCounter = 0;
+
+          for (let i = 0; i < maxSteps; i++) {
+            const prev = { x: state.x, y: state.y, vx: state.vx, vy: state.vy };
+            advanceFree(state, PHYSICS_DT, gravity);
+
+            if (
+              !crossedUp &&
+              prev.y > a.forkY &&
+              state.y <= a.forkY &&
+              state.vy < 0
+            ) {
+              const alpha = lineCross(prev.y, state.y, a.forkY);
+              crossedUp = true;
+              if (collect)
+                points.push({ x: lerp(prev.x, state.x, alpha), y: a.forkY });
+            }
+
+            if (crossedUp) {
+              if (collect && ++sampleCounter % 4 === 0)
+                points.push({ x: state.x, y: state.y });
+              if (prev.y < a.forkY && state.y >= a.forkY && state.vy > 0) {
+                const alpha = lineCross(prev.y, state.y, a.forkY);
+                const hit = {
+                  x: lerp(prev.x, state.x, alpha),
+                  y: a.forkY,
+                  vx: lerp(prev.vx, state.vx, alpha),
+                  vy: lerp(prev.vy, state.vy, alpha),
+                };
+                if (collect) points.push({ x: hit.x, y: a.forkY });
+                return { launchable: true, hit, points };
+              }
+            }
+          }
+          return { launchable: false, hit: null, points: [] };
+        }
+
+        function predictTrajectory(a, x, y, gravity) {
+          const rawVx = (a.forkX - x) * SLING_K;
+          const rawVy = (a.forkY - y) * SLING_K;
+          let sol = simulateUntilRail(a, x, y, rawVx, rawVy, gravity, true);
+          if (!sol.launchable)
+            return { launchable: false, vx: rawVx, vy: rawVy, points: [] };
+
+          // Horizontal damping is linear in initial vx, so scaling vx scales horizontal displacement.
+          // This keeps the predicted landing point on the usable rail without breaking vertical physics.
+          const desiredX = clamp(sol.hit.x, a.g.left, a.g.right);
+          let vx = rawVx;
+          const rawDx = sol.hit.x - x;
+          if (
+            Math.abs(desiredX - sol.hit.x) > 0.01 &&
+            Math.abs(rawDx) > 0.001
+          ) {
+            vx *= (desiredX - x) / rawDx;
+            sol = simulateUntilRail(a, x, y, vx, rawVy, gravity, true);
+          }
+          return {
+            launchable: sol.launchable,
+            vx,
+            vy: rawVy,
+            hit: sol.hit,
+            points: sol.points,
+          };
+        }
+
+        function resolveRailCollision(a, state, incomingVx, incomingVy) {
+          const scale = a.g.scale;
+          const threshold = REST_SPEED * scale;
+          const e = incomingVy < threshold ? 0 : RESTITUTION;
+
+          // Static rail, unit-mass projectile. Normal n=(0,-1) in screen coordinates.
+          // j_n = -(1+e) * v_n, with v_n = -incomingVy.
+          const normalImpulse = (1 + e) * Math.max(0, incomingVy);
+          state.vy = -e * incomingVy;
+
+          // Coulomb friction impulse in the rail tangent. It may reduce vx to zero, but never reverse it spuriously.
+          const wantedTangentImpulse = -incomingVx;
+          const maxTangentImpulse = FRICTION * normalImpulse;
+          const tangentImpulse = clamp(
+            wantedTangentImpulse,
+            -maxTangentImpulse,
+            maxTangentImpulse
+          );
+          state.vx = incomingVx + tangentImpulse;
+          state.y = a.forkY;
+
+          const impulse = Math.hypot(normalImpulse, tangentImpulse);
+          if (e === 0) {
+            state.vy = 0;
+            state.grounded = true;
+          }
+          return {
+            incomingVy,
+            incomingVx,
+            restitution: e,
+            normalImpulse,
+            tangentImpulse,
+            impulse,
+          };
+        }
+
+        function stepRigidBody(a, state, dt) {
+          if (state.sleeping) return null;
+
+          if (state.grounded) {
+            const decel = GROUND_DECEL * a.g.scale * dt;
+            if (Math.abs(state.vx) <= decel) state.vx = 0;
+            else state.vx -= Math.sign(state.vx) * decel;
+            state.x += state.vx * dt;
+            state.x = clamp(state.x, a.g.left, a.g.right);
+            state.y = a.forkY;
+            if (Math.abs(state.vx) < SLEEP_SPEED * a.g.scale) {
+              state.vx = 0;
+              state.sleeping = true;
+            }
+            return null;
+          }
+
+          const prev = { x: state.x, y: state.y, vx: state.vx, vy: state.vy };
+          advanceFree(state, dt, a.gravity);
+
+          // The launch begins below the rail. Arm collision only after the ball has passed upward through it once.
+          if (
+            !state.collisionArmed &&
+            prev.y > a.forkY &&
+            state.y <= a.forkY &&
+            state.vy < 0
+          ) {
+            state.collisionArmed = true;
+          }
+
+          if (
+            state.collisionArmed &&
+            prev.y < a.forkY &&
+            state.y >= a.forkY &&
+            state.vy > 0
+          ) {
+            const alpha = lineCross(prev.y, state.y, a.forkY);
+            const hitX = lerp(prev.x, state.x, alpha);
+            const hitVx = lerp(prev.vx, state.vx, alpha);
+            const hitVy = lerp(prev.vy, state.vy, alpha);
+            state.x = hitX;
+            state.y = a.forkY;
+            state.vx = hitVx;
+            state.vy = hitVy;
+            const event = resolveRailCollision(a, state, hitVx, hitVy);
+            state.bounceCount++;
+
+            // Consume the remainder of this fixed substep with the post-impact velocity.
+            const remain = dt * (1 - alpha);
+            if (remain > 1e-6 && !state.grounded)
+              advanceFree(state, remain, a.gravity);
+            return event;
+          }
+          return null;
+        }
+
+        function startDrag(s, e) {
+          if (active) return;
+          e.preventDefault();
+          s.thumb.setPointerCapture(e.pointerId);
+          const g = s.geometry(),
+            p = panel.getBoundingClientRect();
+          const x = e.clientX - p.left,
+            y = e.clientY - p.top;
+          const forkX = s.xForValue(s.value, g);
+          active = {
+            s,
+            phase: "drag",
+            pointerId: e.pointerId,
+            g,
+            forkX,
+            forkY: g.y,
+            ballX: forkX,
+            ballY: g.y,
+            rawX: x,
+            rawY: y,
+            detached: false,
+            launchable: false,
+            targetX: forkX,
+            targetValue: s.value,
+            vx: 0,
+            vy: 0,
+            gravity: 0,
+            lastMoveT: performance.now(),
+            pointerVx: 0,
+            pointerVy: 0,
+            trailHistory: [],
+            tension: 0,
+            impactPulse: null,
+          };
+          s.row.classList.add("active");
+          s.thumb.classList.add("captured");
+          ball.classList.remove("flying");
+          setBallVisual(forkX, g.y, { opacity: 1 });
+          setTarget(s, forkX, g.y, s.value, false);
+          moveDrag(s, e);
+        }
+
+        function moveDrag(s, e) {
+          if (
+            !active ||
+            active.s !== s ||
+            active.pointerId !== e.pointerId ||
+            active.phase !== "drag"
+          )
+            return;
+          e.preventDefault();
+          const a = active,
+            p = panel.getBoundingClientRect();
+          let x = e.clientX - p.left,
+            y = e.clientY - p.top;
+          const now = performance.now();
+          const dt = Math.max(0.001, (now - a.lastMoveT) / 1000);
+          a.pointerVx = lerp(a.pointerVx, (x - a.rawX) / dt, 0.35);
+          a.pointerVy = lerp(a.pointerVy, (y - a.rawY) / dt, 0.35);
+          a.lastMoveT = now;
+          a.rawX = x;
+          a.rawY = y;
+
+          const dx = x - a.forkX,
+            dy = y - a.forkY,
+            dist = hypot(dx, dy);
+          const maxDist = 225 * a.g.scale;
+          if (dist > maxDist) {
+            const extra = dist - maxDist;
+            const damp =
+              maxDist + (extra * maxDist * 0.55) / (maxDist + extra * 0.55);
+            x = a.forkX + (dx / dist) * damp;
+            y = a.forkY + (dy / dist) * damp;
+          }
+
+          const detach = 6 * a.g.scale;
+          if (!a.detached && Math.abs(y - a.forkY) <= detach) {
+            const px = clamp(x, a.g.left, a.g.right),
+              v = s.valueForX(px, a.g);
+            s.value = v;
+            s.previewValue = v;
+            a.forkX = s.xForValue(v, a.g);
+            a.ballX = a.forkX;
+            a.ballY = a.forkY;
+            s.fill.style.width = `${valueToRatio(s, v) * 100}%`;
+            s.valueEl.textContent = fmt(s, v);
+            setBallVisual(a.ballX, a.ballY, { opacity: 1 });
+            targetEl.style.opacity = 0;
+            for (const el of [
+              bandA,
+              bandB,
+              bandAGlow,
+              bandBGlow,
+              trajectory,
+              forkGlow,
+            ])
+              el.style.opacity = 0;
+            hideTrails();
+            return;
+          }
+          if (!a.detached) {
+            a.detached = true;
+            a.forkX = s.xForValue(s.value, a.g);
+            a.forkY = a.g.y;
+          }
+
+          a.ballX = x;
+          a.ballY = y;
+          renderBands(a, x, y, 1);
+          const hot = clamp((a.tension - 0.1) / 0.9, 0, 1);
+          setBallVisual(x, y, {
+            opacity: 1,
+            vx: a.pointerVx,
+            vy: a.pointerVy,
+            stretch: hot * 0.1,
+            color: mixRGB(0x5b4ee7, 0x9d90ff, hot * 0.65),
+            glow: hot * 0.82,
+          });
+
+          a.gravity = BASE_GRAVITY * a.g.scale;
+          const sol = predictTrajectory(a, x, y, a.gravity);
+          a.vx = sol.vx;
+          a.vy = sol.vy;
+          a.launchable = sol.launchable;
+
+          if (sol.launchable) {
+            a.targetX = sol.hit.x;
+            a.targetValue = s.valueForX(a.targetX, a.g);
+            s.previewValue = a.targetValue;
+            setTarget(s, a.targetX, a.forkY, a.targetValue, true);
+            s.fill.style.width = `${valueToRatio(s, a.targetValue) * 100}%`;
+            if (!reduced) {
+              trajectory.setAttribute("d", pointsToPath(sol.points));
+              trajectory.style.opacity = 0.4 + hot * 0.18;
+            }
+          } else {
+            a.targetX = clamp(x, a.g.left, a.g.right);
+            a.targetValue = s.valueForX(a.targetX, a.g);
+            s.previewValue = a.targetValue;
+            setTarget(s, a.targetX, a.forkY, a.targetValue, true);
+            s.fill.style.width = `${valueToRatio(s, a.targetValue) * 100}%`;
+            trajectory.style.opacity = 0;
+          }
+        }
+
+        function endDrag(s, e) {
+          if (!active || active.s !== s || active.pointerId !== e.pointerId)
+            return;
+          e.preventDefault();
+          try {
+            s.thumb.releasePointerCapture(e.pointerId);
+          } catch {}
+          if (active.detached && active.launchable && !reduced) launch(active);
+          else springHome(active);
+        }
+        function cancelDrag(s, e) {
+          if (active && active.s === s) springHome(active, true);
+        }
+
+        function contactVisual(a, now) {
+          const p = a.impactPulse;
+          if (!p) return { squash: 0, glow: 0, color: null };
+          const age = now - p.time;
+          if (age > 92) {
+            a.impactPulse = null;
+            return { squash: 0, glow: 0, color: null };
+          }
+          const power = clamp(p.impulse / (1250 * a.g.scale), 0.08, 1);
+          // Fast compression peak, then a smaller elastic recovery lobe.
+          const compression = Math.exp(-age / 19) * (0.18 + 0.18 * power);
+          const recovery =
+            age > 24
+              ? Math.sin(clamp((age - 24) / 68, 0, 1) * Math.PI) * 0.045 * power
+              : 0;
+          const squash = Math.max(0, compression - recovery);
+          const glow = Math.exp(-age / 24) * (0.28 + 0.78 * power);
+          return {
+            squash,
+            glow,
+            color: mixRGB(0x5b4ee7, 0xd8d2ff, clamp(glow * 0.72, 0, 0.88)),
+          };
+        }
+
+        function launch(a) {
+          a.phase = "flight";
+          a.bandFadeStart = performance.now();
+          a.lastFrame = a.bandFadeStart;
+          a.accumulator = 0;
+          a.phys = {
+            x: a.ballX,
+            y: a.ballY,
+            vx: a.vx,
+            vy: a.vy,
+            collisionArmed: false,
+            grounded: false,
+            sleeping: false,
+            bounceCount: 0,
+          };
+          a.trailHistory = [];
+          trajectory.style.opacity = 0;
+          targetEl.style.opacity = 1;
+          ball.classList.add("flying");
+          if (raf) cancelAnimationFrame(raf);
+
+          const tick = now => {
+            if (active !== a) return;
+            const frameDt = Math.min(
+              MAX_FRAME_DT,
+              Math.max(0, (now - a.lastFrame) / 1000)
+            );
+            a.lastFrame = now;
+            a.accumulator += frameDt;
+            let steps = 0;
+            let strongestImpact = null;
+
+            while (
+              a.accumulator >= PHYSICS_DT &&
+              steps < 16 &&
+              !a.phys.sleeping
+            ) {
+              const evt = stepRigidBody(a, a.phys, PHYSICS_DT);
+              if (
+                evt &&
+                (!strongestImpact || evt.impulse > strongestImpact.impulse)
+              )
+                strongestImpact = evt;
+              a.accumulator -= PHYSICS_DT;
+              steps++;
+            }
+            if (steps === 16) a.accumulator = 0;
+
+            if (strongestImpact) {
+              a.impactPulse = { time: now, impulse: strongestImpact.impulse };
+              a.targetX = clamp(a.phys.x, a.g.left, a.g.right);
+              a.targetValue = a.s.valueForX(a.targetX, a.g);
+              a.s.previewValue = a.targetValue;
+              setTarget(a.s, a.targetX, a.forkY, a.targetValue, true);
+              a.s.fill.style.width = `${valueToRatio(a.s, a.targetValue) * 100}%`;
+            }
+
+            const fade = clamp(1 - (now - a.bandFadeStart) / 120, 0, 1);
+            if (fade > 0 && !a.phys.collisionArmed)
+              renderBands(a, a.phys.x, a.phys.y, fade);
+            else
+              for (const el of [bandA, bandB, bandAGlow, bandBGlow, forkGlow])
+                el.style.opacity = 0;
+
+            const vis = contactVisual(a, now);
+            const speed = hypot(a.phys.vx, a.phys.vy);
+            const heat = clamp(speed / 1600, 0, 1);
+            const baseColor = mixRGB(0x5b4ee7, 0x9d90ff, heat * 0.5);
+            setBallVisual(a.phys.x, a.phys.y, {
+              opacity: 1,
+              vx: a.phys.vx,
+              vy: a.phys.vy,
+              stretch: a.phys.grounded ? 0 : 0.08 + heat * 0.13,
+              squash: vis.squash,
+              color: vis.color || baseColor,
+              glow: Math.max(vis.glow, 0.18 + heat * 0.42),
+            });
+            updateTrails(a, now, a.phys.x, a.phys.y, a.phys.vx, a.phys.vy);
+
+            if (a.phys.sleeping) {
+              a.targetX = clamp(a.phys.x, a.g.left, a.g.right);
+              a.targetValue = a.s.valueForX(a.targetX, a.g);
+              a.s.previewValue = a.targetValue;
+              settle(a);
+              return;
+            }
+            raf = requestAnimationFrame(tick);
+          };
+          raf = requestAnimationFrame(tick);
+        }
+
+        function springHome(a, cancel = false) {
+          a.phase = "spring";
+          trajectory.style.opacity = 0;
+          for (const el of [bandA, bandB, bandAGlow, bandBGlow, forkGlow])
+            el.style.opacity = 0;
+          const s = a.s,
+            targetX = cancel ? s.xForValue(s.value, a.g) : a.targetX,
+            targetValue = cancel ? s.value : a.targetValue;
+          setTarget(s, targetX, a.forkY, targetValue, true);
+          const state = {
+            x: a.ballX,
+            y: a.ballY,
+            vx: 0,
+            vy: 0,
+            last: performance.now(),
+          };
+          const stiffness = 205,
+            damping = 24;
+          const tick = now => {
+            if (active !== a) return;
+            let dt = Math.min(0.024, (now - state.last) / 1000);
+            state.last = now;
+            const steps = Math.max(1, Math.ceil(dt / 0.008)),
+              h = dt / steps;
+            for (let i = 0; i < steps; i++) {
+              const ax = stiffness * (targetX - state.x) - damping * state.vx;
+              const ay = stiffness * (a.forkY - state.y) - damping * state.vy;
+              state.vx += ax * h;
+              state.vy += ay * h;
+              state.x += state.vx * h;
+              state.y += state.vy * h;
+            }
+            const dist = hypot(targetX - state.x, a.forkY - state.y),
+              energy = clamp(
+                dist / (90 * a.g.scale) + hypot(state.vx, state.vy) / 1600,
+                0,
+                1
+              );
+            setBallVisual(state.x, state.y, {
+              opacity: 1,
+              vx: state.vx,
+              vy: state.vy,
+              stretch: energy * 0.07,
+              color: mixRGB(0x5b4ee7, 0x8b7dff, energy * 0.42),
+              glow: energy * 0.34,
+            });
+            updateTrails(a, now, state.x, state.y, state.vx, state.vy);
+            if (dist < 0.35 && hypot(state.vx, state.vy) < 7) {
+              s.value = targetValue;
+              s.previewValue = targetValue;
+              settle(a);
+              return;
+            }
+            raf = requestAnimationFrame(tick);
+          };
+          if (raf) cancelAnimationFrame(raf);
+          raf = requestAnimationFrame(tick);
+        }
+
+        function settle(a) {
+          if (active !== a) return;
+          const s = a.s;
+          s.value = quantize(s, s.previewValue);
+          s.updateStatic();
+          s.row.classList.remove("active");
+          s.thumb.classList.remove("captured");
+          targetEl.style.opacity = 0;
+          hideFx();
+          ball.classList.remove("flying");
+          setBallVisual(s.xForValue(s.value, a.g), a.forkY, { opacity: 1 });
+          const started = performance.now();
+          const fade = now => {
+            if (active !== a) return;
+            const q = clamp((now - started) / 140, 0, 1);
+            ball.style.opacity = 1 - q;
+            if (q < 1) raf = requestAnimationFrame(fade);
+            else {
+              ball.style.opacity = 0;
+              active = null;
+              raf = 0;
+            }
+          };
+          raf = requestAnimationFrame(fade);
+        }
+
+        const ro = new ResizeObserver(() => {
+          if (!active) sliders.forEach(s => s.updateStatic());
+        });
+        ro.observe(panel);
+        window.__slingshotDemo = {
+          sliders,
+          get active() {
+            return active;
+          },
+        };
+      })();
+    </script>
+  </body>
+</html>
