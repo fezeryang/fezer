@@ -20,6 +20,11 @@ type BlogExperienceProps = {
   initialSection?: "cover" | "surface";
 };
 
+// Swap scenes only while the opaque fluid completely covers the viewport.
+const SCENE_HANDOFF = 0.4;
+const MASK_RETREAT_START = 0.44;
+const MASK_RETREAT_END = 0.97;
+
 const KINETIC_TYPES = ["perlin", "orbit", "wave", "particles", "grid"] as const;
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
@@ -144,6 +149,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
   const contentSectionRef = useRef<HTMLElement>(null);
   const surfaceEntryRefs = useRef<Array<HTMLDivElement | null>>([]);
   const progressRef = useRef(0);
+  const reducedMotionRef = useRef(false);
 
   const { posts, loadError } = useMemo(() => {
     try {
@@ -160,27 +166,29 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
 
   const applyTransitionStyles = useCallback((rawProgress: number) => {
     const progress = clamp01(rawProgress);
-    const revealProgress = smoothstep(0.52, 0.9, progress);
-    const contentOpacity = revealProgress;
-    const contentTranslateY = 50 * (1 - revealProgress);
-    const canvasOpacity = 1 - smoothstep(0.66, 0.92, progress);
-    const maskLayerOpacity =
-      smoothstep(0.08, 0.34, progress) * (1 - smoothstep(0.84, 0.97, progress));
-    const showMask = progress < 0.97;
+    const reducedMotion = reducedMotionRef.current;
+    const showCover = progress < SCENE_HANDOFF;
+    const showContent = !showCover;
+    const maskLayerOpacity = reducedMotion ? 0 :
+      smoothstep(0.08, 0.26, progress) * (1 - smoothstep(0.92, 0.98, progress));
 
     if (visualContainerRef.current) {
-      visualContainerRef.current.style.opacity = canvasOpacity.toFixed(3);
-      visualContainerRef.current.style.visibility = canvasOpacity < 0.01 ? "hidden" : "visible";
+      visualContainerRef.current.style.opacity = showCover ? "1" : "0";
+      visualContainerRef.current.style.visibility = showCover ? "visible" : "hidden";
     }
 
     if (maskContainerRef.current) {
       maskContainerRef.current.style.opacity = maskLayerOpacity.toFixed(3);
-      maskContainerRef.current.style.visibility = showMask ? "visible" : "hidden";
+      maskContainerRef.current.style.visibility = maskLayerOpacity > 0 ? "visible" : "hidden";
     }
 
     if (contentSectionRef.current) {
-      contentSectionRef.current.style.opacity = contentOpacity.toFixed(3);
-      contentSectionRef.current.style.transform = `translate3d(0, ${contentTranslateY.toFixed(2)}px, 0)`;
+      // Never crossfade the article scene with the 3D scene. The fluid above
+      // both layers hides this swap, then uncovers fully opaque, readable cards.
+      contentSectionRef.current.style.opacity = showContent ? "1" : "0";
+      contentSectionRef.current.style.visibility = showContent ? "visible" : "hidden";
+      contentSectionRef.current.style.transform = "none";
+      contentSectionRef.current.inert = !showContent;
     }
   }, []);
 
@@ -193,6 +201,7 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
   useEffect(() => {
     let rafId = 0;
     let scheduled = false;
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const syncByScroll = () => {
       scheduled = false;
@@ -210,11 +219,18 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
       rafId = window.requestAnimationFrame(syncByScroll);
     };
 
-    scheduleSync();
+    const syncMotionPreference = () => {
+      reducedMotionRef.current = motionPreference.matches;
+      scheduleSync();
+    };
+
+    syncMotionPreference();
+    motionPreference.addEventListener("change", syncMotionPreference);
     window.addEventListener("scroll", scheduleSync, { passive: true });
     window.addEventListener("resize", scheduleSync);
 
     return () => {
+      motionPreference.removeEventListener("change", syncMotionPreference);
       window.removeEventListener("scroll", scheduleSync);
       window.removeEventListener("resize", scheduleSync);
       if (rafId) {
@@ -229,7 +245,6 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
     }
 
     const p5 = window.p5 as any;
-    let smoothedScrollY = 0;
     const monoliths: Array<Array<{ h: number; baseH: number }>> = [];
     const isCompactViewport = window.innerWidth < 1024;
     const cols = isCompactViewport ? 10 : 12;
@@ -278,11 +293,9 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
           return;
         }
 
-        const targetScrollY = window.scrollY;
-        smoothedScrollY = p.lerp(smoothedScrollY, targetScrollY, 0.08);
-        const progress = p.constrain(smoothedScrollY / p.height, 0, 1);
+        const progress = progressRef.current;
 
-        if (progress > 0.93) {
+        if (progress >= SCENE_HANDOFF) {
           p.clear();
           return;
         }
@@ -350,83 +363,96 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
     }
 
     const p5 = window.p5 as any;
-    let smoothedScrollY = 0;
-    const particles: Array<{ x: number; y: number; size: number; speed: number }> = [];
+    const particles: Array<{ x: number; y: number; size: number; speed: number; phase: number }> = [];
     const particleCount = window.innerWidth < 768 ? 56 : 84;
+    let lastProgress = -1;
+    let lastWidth = 0;
+    let lastHeight = 0;
+    let lastReducedMotion = false;
 
     const sketch = (p: any) => {
       p.setup = function () {
-        p.pixelDensity(1);
+        p.pixelDensity(Math.min(window.devicePixelRatio || 1, 1.5));
+        p.randomSeed(417);
+        p.noiseSeed(417);
         const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
         canvas.parent("p5-transition-mask");
         canvas.elt.style.pointerEvents = "none";
+        canvas.elt.style.filter = "url(#blog-mask-fusion)";
 
         for (let i = 0; i < particleCount; i++) {
-            particles.push({
-              x: p.random(p.width),
-              y: p.random(p.height),
-              size: p.random(80, 220),
-              speed: p.random(0.5, 2),
-            });
-          }
+          particles.push({
+            x: p.random(),
+            y: p.random(),
+            size: p.random(80, 220),
+            speed: p.random(0.5, 2),
+            phase: p.random(p.TWO_PI),
+          });
+        }
       };
 
       p.draw = function () {
-        const targetScrollY = window.scrollY;
-        smoothedScrollY = p.lerp(smoothedScrollY, targetScrollY, 0.08);
-        const progress = p.constrain(smoothedScrollY / p.height, 0, 1);
-
-        const maskStrength =
-          p.lerp(0.16, 0.88, smoothstep(0.12, 0.58, progress)) *
-          (1 - smoothstep(0.8, 0.97, progress));
-
-        if (maskStrength < 0.01) {
-          p.clear();
-          return;
-        }
-
+        // Use the same progress as the cover and DOM fade: no separate lag.
+        const progress = progressRef.current;
+        const reducedMotion = reducedMotionRef.current;
+        if (progress === lastProgress && p.width === lastWidth &&
+            p.height === lastHeight && reducedMotion === lastReducedMotion) return;
+        lastProgress = progress;
+        lastWidth = p.width;
+        lastHeight = p.height;
+        lastReducedMotion = reducedMotion;
         p.clear();
-        p.noStroke();
-        p.fill(10, 10, 10, maskStrength * 255);
+        if (reducedMotion || progress <= 0.08 || progress >= 0.98) return;
 
-        p.beginShape();
-        p.vertex(0, 0);
-
-        const segments = 24;
-        const step = p.width / segments;
-        const baseHeight = p.height * (1.08 - progress * 1.58);
-
+        const scale = Math.min(1, p.width / 900);
+        const segments = 48;
+        const retreat = smoothstep(MASK_RETREAT_START, MASK_RETREAT_END, progress);
+        const approach = smoothstep(0.08, 0.28, progress);
+        // Hold beyond the bottom edge during the scene handoff. Even the
+        // highest part of the curved contour stays outside the viewport.
+        const baseHeight = p.height * (-0.22 + approach * 1.5 - retreat * 1.78);
+        const edge: Array<{ x: number; y: number }> = [];
         for (let i = 0; i <= segments; i++) {
-          const x = i * step;
-          const noiseValue = p.noise(i * 0.2, smoothedScrollY * 0.005);
-          const wave = p.map(noiseValue, 0, 1, -90, 90) * (1 - progress * 0.55);
-          const drip = p.sin(i * 0.52 + smoothedScrollY * 0.01) * 34 * progress;
-
-          let y = baseHeight + wave + drip;
-          if (i % 4 === 0) {
-            y += 130 * progress * p.noise(i, smoothedScrollY * 0.0012);
-          }
-
-          p.vertex(x, y);
+          const x = i * p.width / segments;
+          // Broad noise and continuous lobes replace the old pointed, every-fourth-vertex drips.
+          const noise = p.noise(i * 0.1, retreat * 2.8);
+          const wave = (noise * 2 - 1) * 90 * (1 - retreat * 0.55);
+          const lobe = Math.pow((Math.sin(i * 0.26 + retreat * 4) + 1) / 2, 3);
+          const drip = lobe * 105 * retreat;
+          edge.push({ x, y: baseHeight + (wave + drip) * Math.max(0.55, scale) });
         }
 
-        p.vertex(p.width, 0);
-        p.endShape(p.CLOSE);
-
-        const particleScale = 1 - progress * 0.88;
-
-        if (progress > 0.08 && progress < 0.9 && particleScale > 0.03) {
-          p.fill(10, 10, 10, particleScale * maskStrength * 255);
-
-          for (const particle of particles) {
-            let driftY = particle.y - smoothedScrollY * particle.speed * 0.9;
-            if (driftY < -200) {
-              driftY = p.height + 200;
-            }
-
-            p.ellipse(particle.x, driftY, particle.size * particleScale);
-          }
+        const ctx = p.drawingContext as CanvasRenderingContext2D;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(p.width, 0);
+        ctx.lineTo(edge[segments].x, edge[segments].y);
+        // Quadratic joins maintain a smooth contour through each liquid lobe.
+        for (let i = segments - 1; i > 0; i--) {
+          ctx.quadraticCurveTo(edge[i].x, edge[i].y,
+            (edge[i].x + edge[i - 1].x) / 2, (edge[i].y + edge[i - 1].y) / 2);
         }
+        ctx.lineTo(edge[0].x, edge[0].y);
+        ctx.closePath();
+
+        const particleScale = 1 - retreat * 0.88;
+        const separation = smoothstep(0.08, 0.2, progress);
+        for (const particle of particles) {
+          const x = particle.x * p.width + Math.sin(particle.phase + progress * 2.5) * 12 * scale;
+          const y = particle.y * p.height - retreat * p.height * particle.speed * 0.9;
+          const radius = particle.size * 0.5 * particleScale * separation * Math.max(0.55, scale);
+          if (radius < 0.5 || y + radius < 0 || y - radius > p.height) continue;
+          // Slight, continuous deformation retains the original dark blobs without rigid circles.
+          const stretch = 1 + Math.sin(particle.phase + progress * 5) * 0.09;
+          ctx.moveTo(x + radius * stretch, y);
+          ctx.ellipse(x, y, radius * stretch, radius / stretch, 0, 0, Math.PI * 2);
+          ctx.closePath();
+        }
+        // Fill the whole silhouette once so overlapping blobs merge, rather than stack opacity.
+        ctx.fillStyle = "#0a0a0a";
+        ctx.fill();
+        ctx.restore();
       };
 
       p.windowResized = function () {
@@ -547,13 +573,21 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
 
       <div
         ref={maskContainerRef}
-        className="pointer-events-none fixed inset-0 z-[6]"
+        className="pointer-events-none fixed inset-0 z-30"
         style={{
           visibility: "visible",
           opacity: 0,
         }}
       >
-        <div id="p5-transition-mask" className="h-full w-full" />
+        <svg className="absolute h-0 w-0" aria-hidden="true" focusable="false">
+          <defs>
+            <filter id="blog-mask-fusion" x="-5%" y="-5%" width="110%" height="110%" colorInterpolationFilters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="4" edgeMode="duplicate" />
+              <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" />
+            </filter>
+          </defs>
+        </svg>
+        <div id="p5-transition-mask" className="h-full w-full" aria-hidden="true" />
       </div>
 
       <DampedScrollView>
@@ -563,15 +597,12 @@ export default function BlogExperience({ initialSection = "cover" }: BlogExperie
 
         <section
           ref={contentSectionRef}
-          className="relative z-20 w-full min-h-screen bg-[#f5f5f5] px-6 pb-16 pt-[10vh] text-[#3e3c3a] md:px-10 xl:w-[60vw] xl:max-w-[60vw]"
+          className="relative z-20 w-full min-h-screen bg-transparent px-6 pb-16 pt-[10vh] text-[#3e3c3a] md:px-10 xl:w-[60vw] xl:max-w-[60vw]"
           style={{
             opacity: 0,
-            transform: "translate3d(0, 50px, 0)",
-            willChange: "opacity, transform",
+            visibility: "hidden",
           }}
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-transparent via-[#f2f0ed]/72 to-[#f2f0ed]" />
-
           <div className="mx-auto flex w-full flex-col gap-8" id="blog-feed-surface">
             {loadError ? (
               <div className="rounded-2xl border border-red-400/30 bg-red-100/70 p-4 text-sm text-red-900">

@@ -674,3 +674,95 @@
 .font-songti {
   font-family: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
 }
+
+.site-navigation .nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 10px;
+}
+
+.site-navigation .nav-link:focus-visible,
+.home-hero-link:focus-visible,
+.home-section-link:focus-visible,
+.home-preview:focus-visible {
+  outline: 2px solid var(--text-main);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.home-hero-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  border: 1px solid rgb(0 0 0 / 20%);
+  border-radius: 999px;
+  background: rgb(233 229 217 / 85%);
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.home-hero-link--primary {
+  background: var(--text-main);
+  color: var(--sand-base);
+}
+
+.home-hero-link:hover {
+  border-color: var(--accent-lava);
+}
+
+.home-section-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: var(--text-main);
+  font-size: 12px;
+}
+
+.home-section-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.home-preview:focus-visible .home-preview__shutter {
+  transform: translateY(100%);
+}
+
+.home-preview:focus-visible .home-preview__image {
+  opacity: 0.15;
+  transform: none;
+}
+
+@media (max-width: 639px) {
+  .site-navigation__items {
+    padding: 2px 6px;
+    border: 1px solid rgb(0 0 0 / 10%);
+    border-radius: 999px;
+    background: rgb(233 229 217 / 92%);
+    backdrop-filter: blur(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-preview,
+  .home-preview * {
+    transition: none !important;
+  }
+
+  .home-preview:hover,
+  .home-preview:focus-visible {
+    height: auto;
+    min-height: 80px;
+  }
+
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

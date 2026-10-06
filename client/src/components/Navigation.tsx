@@ -27,13 +27,13 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 flex justify-end items-center p-8 pointer-events-none ${
+      className={`site-navigation fixed top-0 left-0 right-0 z-50 flex justify-center sm:justify-end items-center px-3 py-4 sm:p-8 pointer-events-none ${
         isEditorial ? "navigation--editorial" : ""
       }`}
-      aria-label="Primary navigation"
+      aria-label="主导航"
     >
       <div
-        className={`flex gap-8 pointer-events-auto ${
+        className={`site-navigation__items flex gap-1 sm:gap-8 pointer-events-auto ${
           isEditorial ? "navigation__items" : ""
         }`}
       >
@@ -41,6 +41,7 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
           <Link
             key={item.href}
             href={item.href}
+            aria-current={isItemActive(item.href) ? "page" : undefined}
             className={`nav-link ${
               isItemActive(item.href) ? "nav-link--active text-accent-lava" : ""
             }`}

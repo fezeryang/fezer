@@ -51,7 +51,7 @@ function ShutterItem({
       preview.style.transform = `translateX(40px) scale(1.1)`;
     };
 
-    if (window.matchMedia("(hover: hover)").matches) {
+    if (window.matchMedia("(hover: hover) and (prefers-reduced-motion: no-preference)").matches) {
       item.addEventListener("mousemove", handleMouseMove);
       item.addEventListener("mouseleave", handleMouseLeave);
     }
@@ -66,34 +66,34 @@ function ShutterItem({
     <div className="reveal opacity-0 translate-y-8 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]">
       <Link
         href={href}
-        className={`group block w-full cursor-pointer overflow-hidden border-b border-black/10 bg-transparent transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] h-[80px] hover:h-[180px] ${
+        className={`home-preview group block w-full cursor-pointer overflow-hidden border-b border-black/10 bg-transparent transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] min-h-[80px] sm:h-[80px] sm:hover:h-[180px] sm:focus-visible:h-[180px] ${
           isProject ? "border-l-4 border-l-transparent hover:border-l-accent-lava" : ""
         }`}
       >
-        <div ref={itemRef} className="relative flex h-full w-full items-center">
-          <div className="absolute inset-0 z-[1] origin-top bg-white/60 backdrop-blur-md transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-full" />
+        <div ref={itemRef} className="relative flex min-h-[80px] h-full w-full items-center">
+          <div className="home-preview__shutter absolute inset-0 z-[1] origin-top bg-white/60 backdrop-blur-md transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-full" />
 
           <div
             ref={previewRef}
-            className="pointer-events-none absolute right-0 top-0 z-0 h-full w-2/5 translate-x-10 scale-110 opacity-0 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100 group-hover:translate-x-0 group-hover:opacity-15"
+            className="home-preview__image pointer-events-none absolute right-0 top-0 z-0 h-full w-2/5 translate-x-10 scale-110 opacity-0 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100 group-hover:translate-x-0 group-hover:opacity-15"
             style={{ filter: "grayscale(1) contrast(1.1)" }}
           >
             {imageUrl ? (
-              <img src={imageUrl} alt={title} className="h-full w-full object-cover" />
+              <img src={imageUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
             ) : (
               <div className="h-full w-full bg-black/20" />
             )}
           </div>
 
-          <div className="relative z-[2] flex w-full items-center justify-between px-4 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:px-8">
-            <div className="flex items-center gap-8 md:gap-16">
-              <span className="font-mono text-xs text-black/40">{index}</span>
-              <h2 className={`text-xl md:text-2xl font-normal tracking-tight transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-5 ${!isProject ? "group-hover:text-black/60" : ""}`}>
+          <div className="relative z-[2] flex w-full items-center justify-between gap-3 px-2 py-5 sm:px-4 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:group-hover:px-8">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-8 md:gap-16">
+              <span className="shrink-0 font-mono text-xs text-black/60">{index}</span>
+              <h3 className={`break-words text-lg sm:text-xl md:text-2xl font-normal tracking-tight transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:group-hover:translate-x-5 ${!isProject ? "group-hover:text-black/60" : ""}`}>
                 {title}
-              </h2>
+              </h3>
             </div>
             <span
-              className="font-chill-huofangsong rounded-full border border-black/10 px-3 py-1 text-[10px] md:text-[11px] text-black/40 opacity-50 transition-all duration-400 group-hover:border-accent-lava group-hover:bg-accent-lava group-hover:text-white group-hover:opacity-100"
+              className="shrink-0 font-chill-huofangsong rounded-full border border-black/15 px-3 py-1 text-[10px] md:text-[11px] text-black/65 transition-all duration-400 group-hover:border-accent-lava group-hover:bg-accent-lava group-hover:text-white"
             >
               {tag}
             </span>
@@ -335,9 +335,9 @@ function TimePrismSection() {
 
       <div className="relative mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
 
-        <main className="relative flex items-center justify-center md:pr-6">
-          <div ref={canvasContainerRef} className="relative z-10 flex h-[320px] w-[320px] items-center justify-center mix-blend-multiply md:h-[500px] md:w-[500px]" />
-        </main>
+        <div className="relative flex min-w-0 items-center justify-center md:pr-6">
+          <div ref={canvasContainerRef} className="relative z-10 flex aspect-square w-full max-w-[500px] items-center justify-center mix-blend-multiply" />
+        </div>
 
         <section className="flex flex-col justify-center md:pl-8">
           <div className="mb-10">
@@ -645,11 +645,14 @@ export default function Home() {
       });
     }, observerOptions);
 
-    setTimeout(() => {
+    const timer = window.setTimeout(() => {
       document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
     }, 100);
 
-    return () => observer.disconnect();
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+    };
   }, [latestWorks, latestPosts]);
 
   return (
@@ -661,8 +664,8 @@ export default function Home() {
 
       <DampedScrollView>
 
-      <section className="relative z-10 flex h-screen w-full flex-col items-center justify-center px-6 text-center">
-        <h1 className="mb-4 text-7xl font-bold leading-none text-black transition-colors duration-300 hover:text-transparent md:text-9xl">
+      <section className="relative z-10 flex min-h-[100svh] w-full flex-col items-center justify-center px-6 py-28 text-center">
+        <h1 className="mb-4 text-7xl font-bold leading-none text-black md:text-9xl">
           FEZER
         </h1>
 
@@ -688,6 +691,11 @@ export default function Home() {
           </p>
         </div>
 
+        <div className="mt-10 flex items-center gap-3">
+          <Link href="/portfolio" className="home-hero-link home-hero-link--primary">探索作品 <span aria-hidden="true">↗</span></Link>
+          <Link href="/about" className="home-hero-link">认识我 <span aria-hidden="true">↗</span></Link>
+        </div>
+
         <div className="absolute bottom-8 right-8 text-right font-mono text-xs text-text-main">
           <div>坐标: {coords.x}, {coords.y}</div>
           <div>状态: 活跃</div>
@@ -697,12 +705,13 @@ export default function Home() {
       <div className="relative z-20 w-full bg-gradient-to-b from-transparent via-[#e9e5d9]/28 to-[#e9e5d9]/38 pt-32 pb-20 backdrop-blur-[1px]">
         <section className="mx-auto mb-32 w-full max-w-[1400px] px-6 md:px-10">
           <div className="mb-12 flex items-center gap-4">
-            <p
+            <h2
               className="font-chill-huofangsong text-sm tracking-[0.14em] text-black/45"
             >
               最新项目 / 近期作品
-            </p>
+            </h2>
             <div className="h-px flex-grow bg-black/10" />
+            <Link href="/portfolio" className="home-section-link">全部作品 <span aria-hidden="true">↗</span></Link>
           </div>
 
           {loadError ? (
@@ -728,12 +737,13 @@ export default function Home() {
 
         <section className="mx-auto mb-20 w-full max-w-[1400px] px-6 md:px-10">
           <div className="mb-12 flex items-center gap-4">
-            <p
+            <h2
               className="font-chill-huofangsong text-sm tracking-[0.14em] text-black/45"
             >
               最新文章 / 日志
-            </p>
+            </h2>
             <div className="h-px flex-grow bg-black/10" />
+            <Link href="/blog" className="home-section-link">全部文章 <span aria-hidden="true">↗</span></Link>
           </div>
 
           {loadError ? (
